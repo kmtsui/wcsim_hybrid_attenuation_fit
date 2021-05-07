@@ -3,7 +3,8 @@
 Simple analysis to extract water attenuation length from wcsim_hybrid diffuser MC
 
 Setup your ROOT and $WCSIMDIR before compilation
-  $ make
+
+    $ make
   
 The analysis is done in two steps. First use analysis_absorption to perform data reduction.
 
