@@ -207,14 +207,14 @@ void fit_all(   std::string filename, int nmPMT_on=0, // number of mPMT modules 
     TFile* f = hitRate_pmtType1->GetFile();
 
     double nHits, nPE, dist, costh, cosths, timetof;
-    int mPMT_id;
+    int PMT_id;
 
     TH2D* hPMT1 = new TH2D("","",nbins_costh,costh_min,costh_max,nbins_dist,dist_min,dist_max);
     TTree* pmt_type1 = (TTree*)f->Get("pmt_type1");
     pmt_type1->SetBranchAddress("dist",&dist);
     pmt_type1->SetBranchAddress("costh",&costh);
     pmt_type1->SetBranchAddress("cosths",&cosths);
-    pmt_type1->SetBranchAddress("mPMT_id",&mPMT_id);
+    pmt_type1->SetBranchAddress("PMT_id",&PMT_id);
 
     // uniformly masking mPMT modules when requested
     int nPMTpermPMT = 19;
@@ -245,7 +245,7 @@ void fit_all(   std::string filename, int nmPMT_on=0, // number of mPMT modules 
         mPMT_R.push_back(dist);
         mPMT_costh.push_back(-costh);
         if (nmPMT_on>0)
-            if (mPMT_mask[mPMT_id]==1) continue; // ignore masked PMT
+            if (mPMT_mask[PMT_id]==1) continue; // ignore masked PMT
         if (cosths>cosths_min) // only include PMT within the source opening angle 
         {
             hPMT1->Fill(-costh,dist); 
@@ -265,16 +265,16 @@ void fit_all(   std::string filename, int nmPMT_on=0, // number of mPMT modules 
     hitRate_pmtType1->SetBranchAddress("nHits",&nHits);
     hitRate_pmtType1->SetBranchAddress("nPE",&nPE);
     hitRate_pmtType1->SetBranchAddress("timetof",&timetof);
-    hitRate_pmtType1->SetBranchAddress("mPMT_id",&mPMT_id);
+    hitRate_pmtType1->SetBranchAddress("PMT_id",&PMT_id);
 
     for (ULong64_t i=0;i<hitRate_pmtType1->GetEntries();i++) {
         hitRate_pmtType1->GetEntry(i);
         if (nmPMT_on>0)
-            if (mPMT_mask[mPMT_id]==1) continue;
+            if (mPMT_mask[PMT_id]==1) continue;
         if (cosths>cosths_min&&timetof>timetof_min&&timetof<timetof_max) // only hits within the decided time window and the source opening angle  
         {
             double weight = nPE;
-            hRate1->Fill(mPMT_id+0.5,weight);
+            hRate1->Fill(PMT_id+0.5,weight);
             hBinnedRate->Fill(-costh,dist,weight);
         }
     }
