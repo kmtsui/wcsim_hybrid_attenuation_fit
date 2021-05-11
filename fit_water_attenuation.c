@@ -286,7 +286,12 @@ void fit_all(   std::string filename, int nmPMT_on=0, // number of mPMT modules 
     c1->SaveAs(Form("R_theta_BinnedRate_%i.pdf",nmPMT_on));
     hPMT1->GetXaxis()->SetTitle("cos(#theta_{PMT})");
     hPMT1->GetYaxis()->SetTitle("R (cm)");
+    hPMT1->Draw("colz");
     c1->SaveAs(Form("PMT_R_theta_map_%i.pdf",nmPMT_on));
+    TH2D* hBinnedRate_ratio = (TH2D*)hBinnedRate->Clone();
+    hBinnedRate_ratio->Divide(hPMT1);
+    hBinnedRate_ratio->Draw("colz");
+    c1->SaveAs(Form("R_theta_BinnedRate_ratio_%i.pdf",nmPMT_on));
 
     int nonzerobins=0;
     for (int i=1;i<=hBinnedRate->GetNbinsX();i++)
