@@ -142,7 +142,7 @@ int main(int argc, char **argv){
   cout<<"File "<<outfilename<<" is open for writing"<<endl;
 
   double nHits, nPE, dist, costh, timetof, cosths;
-  int PMT_id, mPMT_id, mPMT_PMTNo;
+  int PMT_id, mPMT_PMTNo; //mPMT_id
   // TTree for storing the hit information. One for B&L PMT<, one for mPMT
   TTree* hitRate_pmtType0 = new TTree("hitRate_pmtType0","hitRate_pmtType0");
   hitRate_pmtType0->Branch("nHits",&nHits); // dummy variable, always equal to 1
@@ -159,7 +159,7 @@ int main(int argc, char **argv){
   hitRate_pmtType1->Branch("costh",&costh);
   hitRate_pmtType1->Branch("cosths",&cosths);
   hitRate_pmtType1->Branch("timetof",&timetof);
-  hitRate_pmtType1->Branch("mPMT_id",&mPMT_id);
+  hitRate_pmtType1->Branch("PMT_id",&PMT_id);
   hitRate_pmtType1->Branch("mPMT_PMTNo",&mPMT_PMTNo); //sub-ID of PMT inside a mPMT module
 
   double vtxpos[3];
@@ -306,8 +306,9 @@ int main(int argc, char **argv){
         if(pmtType == 0) pmt = geo->GetPMT(tubeNumber-1,false);
         else pmt  = geo->GetPMT(tubeNumber-1,true);
 
-        if (pmtType == 0) PMT_id = tubeNumber-1;
-        else mPMT_id = (tubeNumber-1.);
+        //if (pmtType == 0) PMT_id = tubeNumber-1;
+        //else mPMT_id = (tubeNumber-1.);
+        PMT_id = tubeNumber-1;
         
 
         double PMTpos[3];
@@ -407,8 +408,9 @@ int main(int argc, char **argv){
         if(pmtType == 0) pmt = geo->GetPMT(tubeNumber-1,false);
         else pmt  = geo->GetPMT(tubeNumber-1,true); 
 
-        if(pmtType == 0) PMT_id = (tubeNumber-1.);
-        else mPMT_id = (tubeNumber-1.);
+        //if(pmtType == 0) PMT_id = (tubeNumber-1.);
+        //else mPMT_id = (tubeNumber-1.);
+        PMT_id = (tubeNumber-1.);
         
         double PMTpos[3];
         double PMTdir[3];                   
@@ -481,7 +483,7 @@ int main(int argc, char **argv){
   pmt_type1->Branch("dist",&dist);
   pmt_type1->Branch("costh",&costh);
   pmt_type1->Branch("cosths",&cosths);
-  pmt_type1->Branch("mPMT_id",&mPMT_id);
+  pmt_type1->Branch("PMT_id",&PMT_id);
   pmt_type1->Branch("mPMT_PMTNo",&mPMT_PMTNo);
   double vDirSource[3];
   double endcapZ=3000;
@@ -509,7 +511,7 @@ int main(int argc, char **argv){
       else pmt = geo->GetPMT(i,true);
       if (pmtType == 0) PMT_id = i;
       else {
-          mPMT_id = i;
+          PMT_id = i;
           mPMT_PMTNo = pmt.GetmPMT_PMTNo();
       }
       double PMTpos[3];
