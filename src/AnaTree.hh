@@ -40,10 +40,6 @@ private:
     std::vector<double> m_timetof_range;
     std::vector<double> m_cosths_range;
 
-    inline void SetTimetofCut(std::vector<double> vec) { m_timetof_range = vec; }
-    inline const std::vector<double>& GetTimetofCut() const { return m_timetof_range; }
-    inline void SetCosthsCut(std::vector<double> vec) { m_cosths_range = vec; }
-    inline const std::vector<double>& GetCosthsCut() const { return m_cosths_range; }
 
 public:
     AnaTree(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name);
@@ -55,6 +51,11 @@ public:
     void SetBranches();
     void SetPMTBranches();
     void GetEvents(AnaSample* ana_sample);
+
+    inline void SetTimetofCut(double val1, double val2) { m_timetof_range.clear(); m_timetof_range.push_back(val1); m_timetof_range.push_back(val2); }
+    inline const std::vector<double>& GetTimetofCut() const { return m_timetof_range; }
+    inline void SetCosthsCut(double val1, double val2) { m_cosths_range.clear(); m_cosths_range.push_back(val1); m_cosths_range.push_back(val2); }
+    inline const std::vector<double>& GetCosthsCut() const { return m_cosths_range; }
 };
 
 #endif

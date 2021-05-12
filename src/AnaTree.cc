@@ -16,8 +16,7 @@ AnaTree::~AnaTree()
 {
     if(fChain != nullptr)
         delete fChain->GetCurrentFile();
-    if (f_pmt != nullptr)
-        delete f_pmt;
+
 }
 
 void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
