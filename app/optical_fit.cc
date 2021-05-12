@@ -40,35 +40,44 @@ int main(int argc, char** argv)
     // Add analysis samples:
     std::vector<AnaSample*> samples;
     BinManager* bm = new BinManager(10,0.5,1,10,1000,9000);
-    auto s = new AnaSample(0, "Sample mPMT", bm, 1);
-    samples.push_back(s);
+    auto s0 = new AnaSample(0, "B&L_PMT", bm, 0);
+    samples.push_back(s0);
+    auto s1 = new AnaSample(1, "mPMT", bm, 1);
+    samples.push_back(s1);
 
     //read events
-    AnaTree selTree(fname_input.c_str(), "hitRate_pmtType1", "pmt_type1");
-    selTree.SetTimetofCut(-950,-940);
-    selTree.SetCosthsCut(0.766,1);
-    selTree.GetEvents(samples.at(0));
+    AnaTree selTree0(fname_input.c_str(), "hitRate_pmtType0", "pmt_type0");
+    selTree0.SetTimetofCut(-950,-940);
+    selTree0.SetCosthsCut(0.766,1);
+    selTree0.GetEvents(samples.at(0));
+
+    AnaTree selTree1(fname_input.c_str(), "hitRate_pmtType1", "pmt_type1");
+    selTree1.SetTimetofCut(-950,-940);
+    selTree1.SetCosthsCut(0.766,1);
+    selTree1.GetEvents(samples.at(1));
 
     samples.at(0)->InitEventMap();
+    samples.at(1)->InitEventMap();
 
     TFile* fout = TFile::Open(fname_output.c_str(), "RECREATE");
 
     Fitter fitter(fout,0,8);
 
     std::vector<FitParameter> fitpara;
-    std::string parname[6]={"alpha","norm1","norm2","norm3","norm4","norm5"};
-    int par_type[6]={0,1,1,1,1,1}; // 0: attenuation length, 1: angular response
-    int pmt_type[6]={-1,1,1,1,1,1}; // 0: apply to B&L PMTs, 1: apply to mPMTs, -1: apply to both
-    std::string var[6]={"R","costh","costh","costh","costh","costh"};
-    double var_low[6]={0,0.5,0.6,0.7,0.8,0.9};
-    double var_high[6]={1.e4,0.6,0.7,0.8,0.9,1.0};
-    double prior[6]={1.e4,2.,2.,2.,2.,2};
-    double step[6]={1.e4,1.,1.,1.,1.,1};
-    double low[6]={0,0,0,0,0,0,};
-    double high[6]={1.e5,1.e2,1.e2,1.e2,1.e2,1.e2};
-    int random[6]={0,0,0,0,0,0};
-    bool fixed[6]={false,false,false,false,false,false};
-    for (int i=0;i<6;i++) {
+    const int npar = 11;
+    std::string parname[npar]={"alpha","norm0_1","norm0_2","norm0_3","norm0_4","norm0_5","norm1_1","norm1_2","norm1_3","norm1_4","norm1_5"};
+    int par_type[npar]={0,1,1,1,1,1,1,1,1,1,1}; // 0: attenuation length, 1: angular response
+    int pmt_type[npar]={-1,0,0,0,0,0,1,1,1,1,1}; // 0: apply to B&L PMTs, 1: apply to mPMTs, -1: apply to both
+    std::string var[npar]={"R","costh","costh","costh","costh","costh","costh","costh","costh","costh","costh"};
+    double var_low[npar]={0,0.5,0.6,0.7,0.8,0.9,0.5,0.6,0.7,0.8,0.9};
+    double var_high[npar]={1.e4,0.6,0.7,0.8,0.9,1.0,0.6,0.7,0.8,0.9,1.0};
+    double prior[npar]={1.e4,100,100,100,100,100,2.,2.,2.,2.,2};
+    double step[npar]={1.e4,100,100,100,100,100,1.,1.,1.,1.,1};
+    double low[npar]={0,0,0,0,0,0,0,0,0,0,0};
+    double high[npar]={1.e5,1.e3,1.e3,1.e3,1.e3,1.e3,1.e3,1.e3,1.e3,1.e3,1.e3};
+    int random[npar]={0,0,0,0,0,0,0,0,0,0,0};
+    bool fixed[npar]={false,false,false,false,false,false,false,false,false,false,false};
+    for (int i=0;i<npar;i++) {
         FitParameter fp;
         fp.name = parname[i];
         fp.par_type=par_type[i];
