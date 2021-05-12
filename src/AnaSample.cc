@@ -167,7 +167,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
 
     for(const auto& e : m_events)
     {
-        const double weight = e.GetEvWght();
+        const double weight = e.GetEvWght()*e.GetPE();
         const int reco_bin  = e.GetSampleBin();
         m_hdata->Fill(reco_bin + 0.5, weight);
     }

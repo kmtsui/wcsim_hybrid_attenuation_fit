@@ -1,0 +1,123 @@
+#ifndef __Fitter_hh__
+#define __Fitter_hh__
+
+#include <algorithm>
+#include <cmath>
+#include <functional>
+#include <iostream>
+#include <iterator>
+#include <numeric>
+#include <sstream>
+#include <string>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#include <TFile.h>
+#include <TGraph.h>
+#include <TMatrixT.h>
+#include <TMatrixTSym.h>
+#include <TMatrixDSym.h>
+#include <TRandom3.h>
+#include <TVectorT.h>
+#include <TMath.h>
+
+#include "Math/Factory.h"
+#include "Math/Functor.h"
+#include "Math/Minimizer.h"
+
+#include "AnaSample.hh"
+
+struct MinSettings
+{
+    std::string minimizer;
+    std::string algorithm;
+    std::string likelihood;
+    int print_level;
+    int strategy;
+    double tolerance;
+    double max_iter;
+    double max_fcn;
+};
+
+struct FitParameter
+{
+    std::string name;
+    int par_type; // 0: attenuation length, 1: angular response
+    int pmt_type; // 0: apply to B&L PMTs, 1: apply to mPMTs, -1: apply to both
+    std::string var;
+    double var_low;
+    double var_high;
+    double prior;
+    double step;
+    double low;
+    double high;
+    int random;
+    bool fixed;
+};
+
+
+class Fitter
+{
+public:
+    Fitter(TDirectory* dirout, const int seed);
+    Fitter(TDirectory* dirout, const int seed, const int num_threads);
+    ~Fitter();
+    double CalcLikelihood(const double* par);
+    void InitFitter(std::vector<FitParameter>& fitpara);
+    void InitParameterMap();
+
+    void FixParameter(const std::string& par_name, const double& value);
+    bool Fit(const std::vector<AnaSample*>& samples, bool stat_fluc);
+    void ParameterScans(const std::vector<int>& param_list, unsigned int nsteps);
+
+    void SetMinSettings(const MinSettings& ms);
+    void SetSeed(int seed);
+    void SetZeroSyst(bool flag) { m_zerosyst = flag; }
+    void SetNumThreads(const unsigned int num) { m_threads = num; }
+    void SetSaveFreq(int freq, bool flag = true)
+    {
+        m_freq = freq;
+        m_save = flag;
+    }
+    void SetSaveEvents(bool flag = true) { m_save_events = flag; };
+
+    inline const std::vector<FitParameter>& GetFitParameters() const { return m_fitpara; }
+
+private:
+    double FillSamples(std::vector<double>& new_pars);
+    void SaveParams(const std::vector<double>& new_pars);
+    void SaveEventHist(bool is_final = false);
+    void SaveChi2();
+    void SaveResults(const std::vector<double>& parresults,
+                     const std::vector<double>& parerrors);
+
+    ROOT::Math::Minimizer* m_fitter;
+    ROOT::Math::Functor* m_fcn;
+
+    TTree* m_outtree;
+    TRandom3* rng;
+    TDirectory* m_dir;
+    bool m_save;
+    bool m_save_events;
+    bool m_zerosyst;
+    int m_threads;
+    int m_npar, m_calls, m_freq;
+    std::vector<std::string> par_names;
+    std::vector<double> par_prefit;
+    std::vector<double> par_postfit;
+    std::vector<int> par_type;
+    std::vector<int> par_pmttype;
+    std::vector<std::string> par_var;
+    std::vector<double> par_var_low;
+    std::vector<double> par_var_high;
+    std::vector<double> vec_chi2_stat;
+    std::vector<double> vec_chi2_sys;
+    std::vector<double> vec_chi2_reg;
+    std::vector<FitParameter> m_fitpara;
+    std::vector<AnaSample*> m_samples;
+
+    MinSettings min_settings;
+};
+#endif

@@ -72,8 +72,23 @@ class AnaEvent
                       << "Weight MC   " << GetEvWghtMC() << std::endl;
         }
 
+        double GetEventVar(const std::string& var) const
+        {
+            if(var == "R")
+                return m_R;
+            else if(var == "costh")
+                return m_costh;
+            else
+                return -1;
+        }
+
+
         inline const std::vector<double>& GetRecoVar() const { return reco_var; }
         inline void SetRecoVar(std::vector<double> vec) { reco_var = vec; }
+        
+        inline void ResetParList() { par_list.clear(); }
+        inline void AddPar(int val) { par_list.push_back(val); }
+        inline const std::vector<int>& GetParList() const { return par_list; }
 
     private:
         long int m_evid;   //unique event id
@@ -87,7 +102,7 @@ class AnaEvent
         double m_timetof;  //hittime-tof
         double m_wght;     //event weight
         double m_wghtMC;   //event weight from original MC
-
+        std::vector<int> par_list;
         std::vector<double> reco_var;
 
 };

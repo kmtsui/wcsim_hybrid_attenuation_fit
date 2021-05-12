@@ -4,12 +4,14 @@ set(HEADERS
     AnaEvent.hh
     AnaTree.hh
     AnaSample.hh
+    Fitter.hh
 )
 
 add_library(OpticalFit SHARED 
     BinManager.cc
     AnaTree.cc
     AnaSample.cc
+    Fitter.cc
 )
 
 set_target_properties(OpticalFit PROPERTIES 

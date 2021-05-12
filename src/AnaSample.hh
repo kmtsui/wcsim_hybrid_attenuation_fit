@@ -56,6 +56,7 @@ public:
     inline double GetNorm() const { return m_norm; }
     inline int GetSampleID() const { return m_sample_id; }
     inline std::string GetName() const { return m_name; }
+    inline int GetPMTType() const { return m_pmttype; }
 
 protected:
     int m_sample_id;
