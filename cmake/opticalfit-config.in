@@ -1,0 +1,89 @@
+#!/bin/bash
+
+#Modify this if moving install from original prefix
+INSTALL_ROOT="@CMAKE_INSTALL_PREFIX@"
+SCRIPTNAME=$0
+
+if [ ${#} -eq 0 ]; then
+  echo -n "${SCRIPTNAME} [--features] [--has-feature <feature name>] [--incdir] [--cflags] [--libdir] [--libs] [--rootflags]"
+  echo " [--version]"
+  exit 0
+fi
+
+while [[ ${#} -gt 0 ]]; do
+
+  key="$1"
+  case $key in
+
+      --incdir)
+      echo -n "${INSTALL_ROOT}/include "
+      ;;
+
+      --cflags)
+      echo -n "-I${INSTALL_ROOT}/include "
+      ;;
+
+      --libdir)
+      echo -n "${INSTALL_ROOT}/lib "
+      ;;
+
+      --libs)
+      echo -n "@OPTICALFIT_LIB_LIST@ "
+      ;;
+
+      --libflags)
+      echo -n "@OPTICALFIT_LIBFLAG_LIST@ "
+      ;;
+
+      --linkflags)
+      echo -n "-L${INSTALL_ROOT}/lib @OPTICALFIT_LIBFLAG_LIST@ "
+      ;;
+
+      --rootflags)
+      echo -n "@ROOT_FLAGS@ "
+      ;;
+
+      --features)
+      echo -n "@OPTICALFIT_FEATURES@ "
+      ;;
+
+      --has-feature)
+      shift
+      TEST_FEATURE=$1
+        if [[ "@OPTICALFIT_FEATURES@" =~ (^|[[:space:]])${TEST_FEATURE}($|[[:space:]]) ]]; then
+          exit 0
+        else 
+          exit 1
+        fi
+      ;;
+
+      --version)
+      echo -n "@OPTICALFIT_VERSION@ "
+      ;;
+
+      -?|--help)
+
+      echo "[RUNLIKE] ${SCRIPTNAME}"
+      echo -e "\t--incdir                   : Print location of installed header files."
+      echo -e "\t--cflags                   : Print compiler include flag for installed header files."
+      echo -e "\t--libdir                   : Print location of installed libraries."
+      echo -e "\t--libs                     : Print list of NIWG library names."
+      echo -e "\t--libflags                 : Print linker flags to link against NIWG libraries."
+      echo -e "\t--linkflags                : Print linker flags to link against NIWG libraries, including the libdir."
+      echo -e "\t--rootflags                : Print compiler flags used when compiling against ROOT"
+      echo -e "\t--features                 : Print list of features."
+      echo -e "\t--has-feature <feature>    : Returns 0 if has feature, 1 if not."
+      echo -e "\t--version                  : Print OPTICALFIT version."
+      echo -e "\t-?|--help                  : Print this message."
+      exit 0
+      ;;
+
+      *)
+              # unknown option
+      echo "Unknown option $1"
+      exit 1
+      ;;
+  esac
+  shift # past argument or value
+done
+echo ""
