@@ -23,7 +23,7 @@
 class AnaSample
 {
 public:
-    AnaSample(int sample_id, const std::string& name, BinManager* binning);
+    AnaSample(int sample_id, const std::string& name, BinManager* binning, int pmt_type);
     ~AnaSample();
 
     inline int GetN() const { return m_events.size(); }
@@ -61,6 +61,7 @@ protected:
     int m_sample_id;
     int m_nbins;
     double m_norm;
+    int m_pmttype;
 
     std::string m_name;
     std::vector<AnaEvent> m_events;

@@ -1,8 +1,9 @@
 #include "AnaSample.hh"
 
-AnaSample::AnaSample(int sample_id, const std::string& name, BinManager* binning)
+AnaSample::AnaSample(int sample_id, const std::string& name, BinManager* binning, int pmt_type)
     : m_sample_id(sample_id)
     , m_norm(1.0)
+    , m_pmttype(pmt_type)
     , m_name(name)
     , m_bm(binning)
     , m_hpred(nullptr)
