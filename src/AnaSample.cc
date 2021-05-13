@@ -227,12 +227,10 @@ void AnaSample::FillDataHist(bool stat_fluc)
     {
         std::cout << "Applying statistical fluctuations..." << std::endl;
 
-        TRandom3* rng = new TRandom3();
-
         for(int j = 1; j <= m_hdata->GetNbinsX(); ++j)
         {
             double val = m_hdata->GetBinContent(j);
-            val = rng->Poisson(val);
+            val = gRandom->Poisson(val);
 #ifndef NDEBUG
             if(val <= 0.0)
             {
