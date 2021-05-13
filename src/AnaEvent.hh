@@ -51,7 +51,7 @@ class AnaEvent
 
         inline void SetEvWght(double val){ m_wght  = val; }
         inline double GetEvWght() const { return m_wght; }
-
+        inline void AddEvWght(double val){ m_wght *= val; }
         inline void SetEvWghtMC(double val){ m_wghtMC  = val; }
         inline double GetEvWghtMC() const { return m_wghtMC; }
 

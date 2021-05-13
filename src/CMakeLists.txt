@@ -5,6 +5,8 @@ set(HEADERS
     AnaTree.hh
     AnaSample.hh
     Fitter.hh
+    AnaFitParameters.hh
+    ParameterFunction.hh
 )
 
 add_library(OpticalFit SHARED 
@@ -12,6 +14,7 @@ add_library(OpticalFit SHARED
     AnaTree.cc
     AnaSample.cc
     Fitter.cc
+    AnaFitParameters.cc
 )
 
 set_target_properties(OpticalFit PROPERTIES 

@@ -7,3 +7,15 @@ names = [
 
 BnL_PMT = [ 0, "out.root", "hitRate_pmtType0", "pmt_type0", [["timetof",-950,-940], ["cosths",0.766,1], ["costh",0.5,1]], ["sample_binning.txt",["costh","R"]] ]
 mPMT    = [ 1, "out.root", "hitRate_pmtType1", "pmt_type1", [["timetof",-950,-940], ["cosths",0.766,1], ["costh",0.5,1]], ["sample_binning.txt",["costh","R"]] ]
+
+[fitparameters]
+
+names = [
+    "alpha",
+    "BnL_PMT_norm",
+    "mPMT_norm"
+]
+
+alpha        = [ -1, "Attenuation", 1, [["alpha",        10000, 10000, 0, 100000, false]] , ["R_binning.txt",    ["R"]]     ]
+BnL_PMT_norm = [  0, "Identity",    5, [["BnL_PMT_norm", 100,   100,   0, 1000,   false]] , ["costh_binning.txt",["costh"]] ]
+mPMT_norm    = [  0, "Identity",    5, [["mPMT_norm",    2,     1,     0, 1000,   false]] , ["costh_binning.txt",["costh"]] ]
