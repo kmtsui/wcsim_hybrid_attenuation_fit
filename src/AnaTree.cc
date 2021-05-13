@@ -100,22 +100,26 @@ void AnaTree::SetPMTBranches()
     t_pmt->SetBranchAddress("PMT_id", &PMT_id);
     
 }
-void AnaTree::GetEvents(AnaSample* ana_sample)
+
+std::vector<std::vector<AnaEvent>> AnaTree::GetEvents()
 {
-    if(fChain == nullptr || ana_sample == nullptr)
-        return;
-    
+    std::vector<std::vector<AnaEvent>> event_vec;
+
+    if(fChain == nullptr)
+    {
+        std::cout<<"[Error] Reading no evenets in AnaTree::GetEvents()"<<std::endl;
+        return event_vec;
+    }
     long int nentries = fChain->GetEntries();
     long int nbytes   = 0;
 
-    std::cout  << "Reading events for "<<ana_sample->GetName()<<"...\n";
+    std::cout  << "Reading PMT hits...\n";
     SetBranches();
+    std::vector<AnaEvent> hit_vec;
     for(long int jentry = 0; jentry < nentries; jentry++)
     {
         nbytes += fChain->GetEntry(jentry); 
 
-        if (timetof<m_timetof_range.at(0) || timetof>m_timetof_range.at(1)) continue;
-        if (cosths<m_cosths_range.at(0) || cosths>m_cosths_range.at(1)) continue;
         if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
 
         AnaEvent ev(jentry);
@@ -130,17 +134,18 @@ void AnaTree::GetEvents(AnaSample* ana_sample)
         reco_var.emplace_back(-costh); reco_var.emplace_back(dist);
         ev.SetRecoVar(reco_var);
 
-        ana_sample->AddEvent(ev);
+        hit_vec.push_back(ev);
 
     }
+    event_vec.emplace_back(hit_vec);
 
-    std::cout  << "Reading PMT geometry for "<<ana_sample->GetName()<<"...\n";
+    std::cout  << "Reading PMT geometry...\n";
     SetPMTBranches();
+    std::vector<AnaEvent> pmt_vec;
     for(long int jentry = 0; jentry < t_pmt->GetEntries(); jentry++)
     {
         t_pmt->GetEntry(jentry);
 
-        if (cosths<m_cosths_range.at(0) || cosths>m_cosths_range.at(1)) continue;
         if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
 
         AnaEvent ev(jentry);
@@ -153,9 +158,10 @@ void AnaTree::GetEvents(AnaSample* ana_sample)
         reco_var.emplace_back(-costh); reco_var.emplace_back(dist);
         ev.SetRecoVar(reco_var);
 
-        ana_sample->AddPMT(ev);
+        pmt_vec.push_back(ev);
 
     }
+    event_vec.emplace_back(pmt_vec);
 
-    ana_sample->PrintStats();
+    return event_vec;
 }

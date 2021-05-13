@@ -4,6 +4,8 @@ AnaSample::AnaSample(int sample_id, const std::string& name, BinManager* binning
     : m_sample_id(sample_id)
     , m_norm(1.0)
     , m_pmttype(pmt_type)
+    , m_pmtmask(0)
+    , m_nPMTpermPMT(19)
     , m_name(name)
     , m_bm(binning)
     , m_hpred(nullptr)
@@ -30,6 +32,46 @@ AnaSample::~AnaSample()
 
     if(m_hdata != nullptr)
         delete m_hdata;
+}
+
+void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name)
+{
+    AnaTree selTree(file_name, tree_name, pmt_tree_name);
+    if (m_pmtmask>0) selTree.MaskPMT(m_pmtmask, m_pmttype, m_nPMTpermPMT);
+
+    std::cout  << "Reading events for from "<<file_name<<"...\n";
+    std::vector<std::vector<AnaEvent>> event_vec = selTree.GetEvents();
+
+    // Add PMT hits
+    std::vector<AnaEvent> hit_vec = event_vec[0];
+    for (long int i=0;i<hit_vec.size();i++) {
+        bool skip = false;
+        for (int j=0;j<m_cutvar.size();j++) {
+            double val = hit_vec[i].GetEventVar(m_cutvar[j]);
+            if (val<m_cutlow[j] || val>m_cuthigh[j]) {
+                skip=true;
+                break;
+            }
+        }
+        if (!skip) AddEvent(hit_vec[i]);
+    }
+
+    // Add PMT geometry
+    std::vector<AnaEvent> pmt_vec = event_vec[1];
+    for (long int i=0;i<pmt_vec.size();i++) {
+        bool skip = false;
+        for (int j=0;j<m_cutvar.size();j++) {
+            if (m_cutvar[j]=="nPE"||m_cutvar[j]=="timetof") continue;
+            double val = pmt_vec[i].GetEventVar(m_cutvar[j]);
+            if (val<m_cutlow[j] || val>m_cuthigh[j]) {
+                skip=true;
+                break;
+            }
+        }
+        if (!skip) AddPMT(pmt_vec[i]);
+    }
+
+    PrintStats();
 }
 
 AnaEvent* AnaSample::GetEvent(const unsigned int evnum)

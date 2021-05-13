@@ -78,6 +78,12 @@ class AnaEvent
                 return m_R;
             else if(var == "costh")
                 return m_costh;
+            else if(var == "cosths")
+                return m_cosths;
+            else if(var == "timetof")
+                return m_timetof;
+            else if(var == "nPE")
+                return m_nPE;
             else
                 return -1;
         }

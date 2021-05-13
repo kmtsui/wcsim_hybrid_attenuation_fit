@@ -17,6 +17,7 @@
 #include <TTree.h>
 
 #include "AnaEvent.hh"
+#include "AnaTree.hh"
 #include "BinManager.hh"
 #include "Likelihoods.hh"
 
@@ -39,6 +40,8 @@ public:
 
     AnaEvent* GetPMT(const unsigned int evnum);
 
+    void LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name);
+
     void PrintStats() const;
     void MakeHistos();
     void SetNorm(const double val) { m_norm = val; }
@@ -58,11 +61,23 @@ public:
     inline std::string GetName() const { return m_name; }
     inline int GetPMTType() const { return m_pmttype; }
 
+    inline void SetCut(const std::string& var_name, const double cut_low, const double cut_high) { m_cutvar.push_back(var_name); m_cutlow.push_back(cut_low); m_cuthigh.push_back(cut_high);}
+    inline void ResetCut() { m_cutvar.clear(); m_cutlow.clear(); m_cuthigh.clear(); }
+
+    inline void MaskPMT(const int nPMT) { m_pmtmask = nPMT; }
+    inline void SetnPMTpermPMT(const int nPMTpermPMT) { m_nPMTpermPMT = nPMTpermPMT; }
+
 protected:
     int m_sample_id;
     int m_nbins;
     double m_norm;
     int m_pmttype;
+    int m_pmtmask;
+    int m_nPMTpermPMT;
+
+    std::vector<std::string> m_cutvar;
+    std::vector<double> m_cutlow;
+    std::vector<double> m_cuthigh;
 
     std::string m_name;
     std::vector<AnaEvent> m_events;

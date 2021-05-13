@@ -41,20 +41,17 @@ int main(int argc, char** argv)
     std::vector<AnaSample*> samples;
     BinManager* bm = new BinManager(10,0.5,1,10,1000,9000);
     auto s0 = new AnaSample(0, "B&L_PMT", bm, 0);
+    s0->SetCut("timetof",-950,-940);
+    s0->SetCut("cosths",0.766,1);
+    s0->SetCut("costh",0.5,1);
+    s0->LoadEventsFromFile(fname_input,"hitRate_pmtType0", "pmt_type0");
     samples.push_back(s0);
     auto s1 = new AnaSample(1, "mPMT", bm, 1);
+    s1->SetCut("timetof",-950,-940);
+    s1->SetCut("cosths",0.766,1);
+    s1->SetCut("costh",0.5,1);
+    s1->LoadEventsFromFile(fname_input,"hitRate_pmtType1", "pmt_type1");
     samples.push_back(s1);
-
-    //read events
-    AnaTree selTree0(fname_input.c_str(), "hitRate_pmtType0", "pmt_type0");
-    selTree0.SetTimetofCut(-950,-940);
-    selTree0.SetCosthsCut(0.766,1);
-    selTree0.GetEvents(samples.at(0));
-
-    AnaTree selTree1(fname_input.c_str(), "hitRate_pmtType1", "pmt_type1");
-    selTree1.SetTimetofCut(-950,-940);
-    selTree1.SetCosthsCut(0.766,1);
-    selTree1.GetEvents(samples.at(1));
 
     samples.at(0)->InitEventMap();
     samples.at(1)->InitEventMap();

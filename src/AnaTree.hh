@@ -15,7 +15,6 @@
 #include <TTree.h>
 
 #include "AnaEvent.hh"
-#include "AnaSample.hh"
 
 class AnaTree
 {
@@ -37,9 +36,6 @@ private:
     int PMT_id;
     float weight;
 
-    std::vector<double> m_timetof_range;
-    std::vector<double> m_cosths_range;
-
 
 public:
     AnaTree(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name);
@@ -50,12 +46,8 @@ public:
     long int GetEntry(long int entry) const;
     void SetBranches();
     void SetPMTBranches();
-    void GetEvents(AnaSample* ana_sample);
+    std::vector<std::vector<AnaEvent>> GetEvents();
 
-    inline void SetTimetofCut(double val1, double val2) { m_timetof_range.clear(); m_timetof_range.push_back(val1); m_timetof_range.push_back(val2); }
-    inline const std::vector<double>& GetTimetofCut() const { return m_timetof_range; }
-    inline void SetCosthsCut(double val1, double val2) { m_cosths_range.clear(); m_cosths_range.push_back(val1); m_cosths_range.push_back(val2); }
-    inline const std::vector<double>& GetCosthsCut() const { return m_cosths_range; }
 };
 
 #endif
