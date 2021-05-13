@@ -21,3 +21,6 @@ LinkToROOT(OpticalFit)
 
 install(TARGETS OpticalFit DESTINATION lib/
 		PUBLIC_HEADER DESTINATION include/OpticalFit)
+
+install(DIRECTORY toml DESTINATION include/)
+execute_process(COMMAND ln -s ${CMAKE_SOURCE_DIR}/src/toml ${CMAKE_BINARY_DIR}/toml OUTPUT_QUIET ERROR_QUIET)
