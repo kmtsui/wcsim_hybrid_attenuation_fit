@@ -125,13 +125,13 @@ std::vector<std::vector<AnaEvent>> AnaTree::GetEvents()
         AnaEvent ev(jentry);
         ev.SetPE(nPE);
         ev.SetR(dist);
-        ev.SetCosth(-costh);
+        ev.SetCosth(costh);
         ev.SetCosths(cosths); 
         ev.SetTimetof(timetof); 
         ev.SetPMTID(PMT_id);
         
         std::vector<double> reco_var;
-        reco_var.emplace_back(-costh); reco_var.emplace_back(dist);
+        reco_var.emplace_back(costh); reco_var.emplace_back(dist);
         ev.SetRecoVar(reco_var);
 
         hit_vec.push_back(ev);
@@ -150,12 +150,12 @@ std::vector<std::vector<AnaEvent>> AnaTree::GetEvents()
 
         AnaEvent ev(jentry);
         ev.SetR(dist);
-        ev.SetCosth(-costh);
+        ev.SetCosth(costh);
         ev.SetCosths(cosths);
         ev.SetPMTID(PMT_id);
         
         std::vector<double> reco_var;
-        reco_var.emplace_back(-costh); reco_var.emplace_back(dist);
+        reco_var.emplace_back(costh); reco_var.emplace_back(dist);
         ev.SetRecoVar(reco_var);
 
         pmt_vec.push_back(ev);

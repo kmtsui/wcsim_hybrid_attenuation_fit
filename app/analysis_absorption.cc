@@ -353,7 +353,7 @@ int main(int argc, char **argv){
         ////////////////////////////////////////////////////////////////////////////
         
         timetof = time-tof;
-        nHits = 1; nPE = peForTube; dist = Norm; costh = vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2];
+        nHits = 1; nPE = peForTube; dist = Norm; costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
         cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
@@ -454,7 +454,7 @@ int main(int argc, char **argv){
 
         timetof = time-tof+triggerTime[pmtType]-triggerShift[pmtType];
 
-        nHits = 1; nPE = peForTube; dist = Norm; costh = vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2];
+        nHits = 1; nPE = peForTube; dist = Norm; costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
         cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
@@ -534,7 +534,7 @@ int main(int argc, char **argv){
         vOrientation[j] /= NormOrientation;
       }
       dist = Norm;
-      costh = vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2];
+      costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
       cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
       if (pmtType==0) pmt_type0->Fill();
       if (pmtType==1) pmt_type1->Fill();
