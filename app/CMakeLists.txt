@@ -8,4 +8,4 @@ foreach(app analysis_absorption optical_fit)
 endforeach(app)
 
 
-#install(DIRECTORY config DESTINATION var/OPTICALFIT)
+install(DIRECTORY config DESTINATION var/OPTICALFIT)

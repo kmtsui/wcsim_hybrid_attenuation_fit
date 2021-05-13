@@ -1,0 +1,9 @@
+[samples]
+
+names = [
+    "BnL_PMT",
+    "mPMT"
+]
+
+BnL_PMT = [ 0, "out.root", "hitRate_pmtType0", "pmt_type0", [["timetof",-950,-940], ["cosths",0.766,1], ["costh",0.5,1]], ["sample_binning.txt",["costh","R"]] ]
+mPMT    = [ 1, "out.root", "hitRate_pmtType1", "pmt_type1", [["timetof",-950,-940], ["cosths",0.766,1], ["costh",0.5,1]], ["sample_binning.txt",["costh","R"]] ]

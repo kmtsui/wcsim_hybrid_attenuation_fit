@@ -24,7 +24,7 @@
 class AnaSample
 {
 public:
-    AnaSample(int sample_id, const std::string& name, BinManager* binning, int pmt_type);
+    AnaSample(int sample_id, const std::string& name, const std::string& binning, int pmt_type);
     ~AnaSample();
 
     inline int GetN() const { return m_events.size(); }
@@ -67,6 +67,9 @@ public:
     inline void MaskPMT(const int nPMT) { m_pmtmask = nPMT; }
     inline void SetnPMTpermPMT(const int nPMTpermPMT) { m_nPMTpermPMT = nPMTpermPMT; }
 
+    inline const std::vector<std::string>& GetBinVar() const { return m_binvar; }
+    inline void SetBinVar(std::vector<std::string> vec) { m_binvar = vec; }
+
 protected:
     int m_sample_id;
     int m_nbins;
@@ -75,15 +78,18 @@ protected:
     int m_pmtmask;
     int m_nPMTpermPMT;
 
+    std::vector<std::string> m_binvar;
+
     std::vector<std::string> m_cutvar;
     std::vector<double> m_cutlow;
     std::vector<double> m_cuthigh;
 
     std::string m_name;
+    std::string m_binning;
     std::vector<AnaEvent> m_events;
     std::vector<AnaEvent> m_pmts;  // PMT geometry has the same kind of information as hits except T/Q
 
-    BinManager* m_bm;
+    BinManager m_bm;
     CalcLLHFunc* m_llh;
 
     TH1D* m_hpred;

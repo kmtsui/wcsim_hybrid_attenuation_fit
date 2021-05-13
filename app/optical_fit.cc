@@ -11,13 +11,16 @@
 #include "OPTICALFIT/BinManager.hh"
 #include "OPTICALFIT/Fitter.hh"
 
+#include "toml/toml_helper.h"
+
 int main(int argc, char** argv)
 {
     std::string fname_input;
     std::string fname_output;
+    std::string config_file;
 
     char option;
-    while((option = getopt(argc, argv, "j:f:o:s:t:nh")) != -1)
+    while((option = getopt(argc, argv, "j:f:o:c:s:t:nh")) != -1)
     {
         switch(option)
         {
@@ -27,34 +30,66 @@ int main(int argc, char** argv)
             case 'o':
                 fname_output = optarg;
                 break;
+            case 'c':
+                config_file = optarg;
+                break;
             case 'h':
                 std::cout << "USAGE: "
                           << argv[0] << "\nOPTIONS:\n"
                           << "-f : Input file\n"
-                          << "-o : Output file\n";
+                          << "-o : Output file\n"
+                          << "-c : Config file\n";
             default:
                 return 0;
         }
     }
 
+    auto const &card_toml = toml_h::parse_card(config_file);
+    auto const &samples_config = toml_h::find(card_toml, "samples");
+
     // Add analysis samples:
     std::vector<AnaSample*> samples;
     BinManager* bm = new BinManager(10,0.5,1,10,1000,9000);
-    auto s0 = new AnaSample(0, "B&L_PMT", bm, 0);
-    s0->SetCut("timetof",-950,-940);
-    s0->SetCut("cosths",0.766,1);
-    s0->SetCut("costh",0.5,1);
-    s0->LoadEventsFromFile(fname_input,"hitRate_pmtType0", "pmt_type0");
-    samples.push_back(s0);
-    auto s1 = new AnaSample(1, "mPMT", bm, 1);
-    s1->SetCut("timetof",-950,-940);
-    s1->SetCut("cosths",0.766,1);
-    s1->SetCut("costh",0.5,1);
-    s1->LoadEventsFromFile(fname_input,"hitRate_pmtType1", "pmt_type1");
-    samples.push_back(s1);
 
-    samples.at(0)->InitEventMap();
-    samples.at(1)->InitEventMap();
+    for (auto const &name : toml_h::find<std::vector<std::string>>(samples_config, "names"))
+    {
+        std::cout << "Sample name: " << name << std::endl;
+        auto const &ele = toml_h::find<toml::array>(samples_config, name);
+        auto pmttype = toml_h::find<int>(ele,0);
+        auto filename = toml_h::find<std::string>(ele,1);
+        auto ev_tree_name = toml_h::find<std::string>(ele,2);
+        auto pmt_treename = toml_h::find<std::string>(ele,3);
+        std::cout << " pmttype =  "<<pmttype<<", filename =  "<<filename<<", ev_tree_name =  "<<ev_tree_name<<", pmt_treename =  "<<pmt_treename<<std::endl;
+
+        auto binning = toml_h::find<toml::array>(ele,5);
+        auto binning_file = toml_h::find<std::string>(binning,0);
+        if (binning_file.find_first_of("/")!=0) {
+            std::size_t found = config_file.find_last_of("/");
+            if (found!= std::string::npos) {
+                std::string prefix = config_file.substr(0,found+1);
+                binning_file = prefix+binning_file;
+            }
+        }
+        auto binning_var = toml_h::find<std::vector<std::string>>(binning,1);
+        std::cout<< "binning_file = "<<binning_file<<", binning_var = [ ";
+        for (auto t : binning_var) std::cout<< t <<", ";
+        std::cout<<"]"<<std::endl;
+
+        auto s = new AnaSample(samples.size(), name , binning_file, pmttype);
+        s->SetBinVar(binning_var);
+
+        for (auto const &cut : toml_h::find<toml::array>(ele,4)){
+            auto cutvar = toml_h::find<std::string>(cut,0);
+            auto cutlow = toml_h::find<double>(cut,1);
+            auto cuthigh = toml_h::find<double>(cut,2);
+            std::cout << " cutvar =  "<<cutvar<<", cutlow =  "<<cutlow<<", cuthigh =  "<<cuthigh<<std::endl;
+            s->SetCut(cutvar,cutlow,cuthigh);
+        }
+
+        s->LoadEventsFromFile(filename,ev_tree_name,pmt_treename);
+        s->InitEventMap();
+        samples.push_back(s);
+    }
 
     TFile* fout = TFile::Open(fname_output.c_str(), "RECREATE");
 

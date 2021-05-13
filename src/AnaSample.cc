@@ -1,13 +1,13 @@
 #include "AnaSample.hh"
 
-AnaSample::AnaSample(int sample_id, const std::string& name, BinManager* binning, int pmt_type)
+AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& binning, int pmt_type)
     : m_sample_id(sample_id)
     , m_norm(1.0)
     , m_pmttype(pmt_type)
     , m_pmtmask(0)
     , m_nPMTpermPMT(19)
     , m_name(name)
-    , m_bm(binning)
+    , m_binning(binning)
     , m_hpred(nullptr)
     , m_hdata(nullptr)
 {
@@ -15,8 +15,9 @@ AnaSample::AnaSample(int sample_id, const std::string& name, BinManager* binning
 
     std::cout  << "Sample: " << m_name << " (ID: " << m_sample_id << ")" << std::endl;
 
-    m_bm->Print();
-    m_nbins = m_bm->GetNbins();
+    m_bm.SetBinning(m_binning);
+    m_bm.Print();
+    m_nbins = m_bm.GetNbins();
 
     m_llh = new PoissonLLH;
 
@@ -140,7 +141,10 @@ void AnaSample::InitEventMap()
 {
     for(auto& e : m_events)
     {
-        const int b = m_bm->GetBinIndex(e.GetRecoVar());
+        std::vector<double> binvar;
+        for (auto t : m_binvar)
+            binvar.push_back(e.GetEventVar(t));
+        const int b = m_bm.GetBinIndex(binvar);
 #ifndef NDEBUG
         if(b < 0)
         {
@@ -158,7 +162,10 @@ void AnaSample::InitEventMap()
 
     for(auto& e : m_pmts)
     {
-        const int b = m_bm->GetBinIndex(e.GetRecoVar());
+        std::vector<double> binvar;
+        for (auto t : m_binvar)
+            binvar.push_back(e.GetEventVar(t));
+        const int b = m_bm.GetBinIndex(binvar);
 #ifndef NDEBUG
         if(b < 0)
         {
