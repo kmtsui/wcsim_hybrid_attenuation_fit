@@ -28,6 +28,7 @@
 #include "Math/Minimizer.h"
 
 #include "AnaSample.hh"
+#include "AnaFitParameters.hh"
 
 struct MinSettings
 {
@@ -41,22 +42,6 @@ struct MinSettings
     double max_fcn;
 };
 
-struct FitParameter
-{
-    std::string name;
-    int par_type; // 0: attenuation length, 1: angular response
-    int pmt_type; // 0: apply to B&L PMTs, 1: apply to mPMTs, -1: apply to both
-    std::string var;
-    double var_low;
-    double var_high;
-    double prior;
-    double step;
-    double low;
-    double high;
-    int random;
-    bool fixed;
-};
-
 
 class Fitter
 {
@@ -65,8 +50,7 @@ public:
     Fitter(TDirectory* dirout, const int seed, const int num_threads);
     ~Fitter();
     double CalcLikelihood(const double* par);
-    void InitFitter(std::vector<FitParameter>& fitpara);
-    void InitParameterMap();
+    void InitFitter(std::vector<AnaFitParameters*>& fitpara);
 
     void FixParameter(const std::string& par_name, const double& value);
     bool Fit(const std::vector<AnaSample*>& samples, bool stat_fluc);
@@ -83,15 +67,13 @@ public:
     }
     void SetSaveEvents(bool flag = true) { m_save_events = flag; };
 
-    inline const std::vector<FitParameter>& GetFitParameters() const { return m_fitpara; }
-
 private:
-    double FillSamples(std::vector<double>& new_pars);
-    void SaveParams(const std::vector<double>& new_pars);
+    double FillSamples(std::vector<std::vector<double>>& new_pars);
+    void SaveParams(const std::vector<std::vector<double>>& new_pars);
     void SaveEventHist(bool is_final = false);
     void SaveChi2();
-    void SaveResults(const std::vector<double>& parresults,
-                     const std::vector<double>& parerrors);
+    void SaveResults(const std::vector<std::vector<double>>& parresults,
+                     const std::vector<std::vector<double>>& parerrors);
 
     ROOT::Math::Minimizer* m_fitter;
     ROOT::Math::Functor* m_fcn;
@@ -115,7 +97,7 @@ private:
     std::vector<double> vec_chi2_stat;
     std::vector<double> vec_chi2_sys;
     std::vector<double> vec_chi2_reg;
-    std::vector<FitParameter> m_fitpara;
+    std::vector<AnaFitParameters*> m_fitpara;
     std::vector<AnaSample*> m_samples;
 
     MinSettings min_settings;

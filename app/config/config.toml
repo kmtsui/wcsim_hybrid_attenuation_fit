@@ -17,5 +17,5 @@ names = [
 ]
 
 alpha        = [ -1, "Attenuation", 1, [["alpha",        10000, 10000, 0, 100000, false]] , ["R_binning.txt",    ["R"]]     ]
-BnL_PMT_norm = [  0, "Identity",    5, [["BnL_PMT_norm", 100,   100,   0, 1000,   false]] , ["costh_binning.txt",["costh"]] ]
-mPMT_norm    = [  0, "Identity",    5, [["mPMT_norm",    2,     1,     0, 1000,   false]] , ["costh_binning.txt",["costh"]] ]
+BnL_PMT_norm = [  0, "Identity",    5, [["BnL_PMT_norm", 200,   20,    0, 1000,   false]] , ["costh_binning.txt",["costh"]] ]
+mPMT_norm    = [  1, "Identity",    5, [["mPMT_norm",    5,     1,     0, 100,    false]] , ["costh_binning.txt",["costh"]] ]

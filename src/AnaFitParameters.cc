@@ -72,6 +72,8 @@ void AnaFitParameters::InitParameters(std::vector<std::string> names, std::vecto
 
     Npar = pars_name.size();
     pars_original = pars_prior;
+
+    std::cout<<"Number of parameters = "<<Npar<<std::endl;
 }
 
 void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
@@ -114,7 +116,7 @@ void AnaFitParameters::ReWeight(std::vector<AnaSample*>& sample, std::vector<dou
     for(std::size_t s=0; s < sample.size(); s++)
     {
         if (m_pmttype >=0 && sample[s]->GetPMTType() != m_pmttype) continue;
-
+#pragma omp parallel for num_threads(m_threads)
         for(int i=0; i < sample[s] -> GetNPMTs(); i++)
         {
             const int bin = m_evmap[s][i];

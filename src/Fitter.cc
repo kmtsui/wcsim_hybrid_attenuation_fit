@@ -82,41 +82,41 @@ void Fitter::SetMinSettings(const MinSettings& ms)
     }
 }
 
-void Fitter::InitFitter(std::vector<FitParameter>& fitpara)
+void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
 {
     m_fitpara = fitpara;
     std::vector<double> par_step, par_low, par_high;
     std::vector<bool> par_fixed;
 
-    m_npar = m_fitpara.size();
-
     //TRandom3 rng(0);
     for(std::size_t i = 0; i < m_fitpara.size(); i++)
     {
+        m_npar += m_fitpara[i]->GetNpar();
 
-        par_names.push_back(m_fitpara[i].name);
+        std::vector<std::string> vec0;
+        m_fitpara[i]->GetParNames(vec0);
+        par_names.insert(par_names.end(), vec0.begin(), vec0.end());
 
-        if(m_fitpara[i].random)
+        std::vector<double> vec1, vec2;
+        m_fitpara[i]->GetParPriors(vec1);
+        if(m_fitpara[i]->DoRNGstart())
         {
-            std::cout << "Randomizing start point for " << m_fitpara[i].name << std::endl;
-            m_fitpara[i].prior = m_fitpara[i].prior*(1.+rng->Gaus(0.0, 0.1));
+            std::cout << "Randomizing start point for " << m_fitpara[i]->GetName() << std::endl;
+            for(auto& p : vec1)
+                p += (p * rng->Gaus(0.0, 0.1));
         }
-        par_prefit.push_back(m_fitpara[i].prior);
+        par_prefit.insert(par_prefit.end(), vec1.begin(), vec1.end());
 
-        par_step.push_back(m_fitpara[i].step);
+        m_fitpara[i]->GetParSteps(vec1);
+        par_step.insert(par_step.end(), vec1.begin(), vec1.end());
 
+        m_fitpara[i]->GetParLimits(vec1, vec2);
+        par_low.insert(par_low.end(), vec1.begin(), vec1.end());
+        par_high.insert(par_high.end(), vec2.begin(), vec2.end());
 
-        par_low.push_back(m_fitpara[i].low);
-        par_high.push_back(m_fitpara[i].high);
-
-        par_fixed.push_back(m_fitpara[i].fixed);
-
-        par_type.push_back(m_fitpara[i].par_type);
-        par_pmttype.push_back(m_fitpara[i].pmt_type);
-
-        par_var.push_back(m_fitpara[i].var);
-        par_var_low.push_back(m_fitpara[i].var_low);
-        par_var_high.push_back(m_fitpara[i].var_high);
+        std::vector<bool> vec3;
+        m_fitpara[i]->GetParFixed(vec3);
+        par_fixed.insert(par_fixed.end(), vec3.begin(), vec3.end());
     }
 
     if(m_npar == 0)
@@ -148,7 +148,7 @@ void Fitter::InitFitter(std::vector<FitParameter>& fitpara)
     m_fitter->SetTolerance(min_settings.tolerance);
     m_fitter->SetMaxIterations(min_settings.max_iter);
     m_fitter->SetMaxFunctionCalls(min_settings.max_fcn);
-
+    std::cout<<"m_npar = "<<m_npar<<std::endl;
     for(int i = 0; i < m_npar; ++i)
     {
         m_fitter->SetVariable(i, par_names[i], par_prefit[i], par_step[i]);
@@ -165,50 +165,32 @@ void Fitter::InitFitter(std::vector<FitParameter>& fitpara)
 
     TH1D h_prefit("hist_prefit_par_all", "hist_prefit_par_all", m_npar, 0, m_npar);
     TVectorD v_prefit_original(m_npar);
-    TVectorD v_prefit_decomp(m_npar);
     TVectorD v_prefit_start(m_npar, par_prefit.data());
 
     int num_par = 1;
     for(int i = 0; i < m_fitpara.size(); ++i)
     {
-        h_prefit.SetBinContent(i+1, m_fitpara[i].prior);
-        h_prefit.SetBinError(i+1, 0);
+        for(int j = 0; j < m_fitpara[i]->GetNpar(); ++j)
+        {
+            h_prefit.SetBinContent(num_par, m_fitpara[i]->GetParPrior(j));
+            h_prefit.SetBinError(num_par, 0);
+
+            v_prefit_original[num_par-1] = m_fitpara[i]->GetParOriginal(j);
+            num_par++;
+        }
     }
+
 
     m_dir->cd();
     h_prefit.Write();
+    v_prefit_original.Write("vec_prefit_original");
     v_prefit_start.Write("vec_prefit_start");
-}
-
-void Fitter::InitParameterMap(){
-    for(int s = 0; s < m_samples.size(); ++s)
-    {
-        int pmt_type = m_samples[s]->GetPMTType();
-        const unsigned int N  = m_samples[s]->GetNPMTs();
-#pragma omp parallel for num_threads(m_threads)
-        for(unsigned int i = 0; i < N; ++i)
-        {
-            AnaEvent* ev = m_samples[s]->GetPMT(i);
-            ev->ResetParList();
-            for(int j = 0; j < m_fitpara.size(); ++j)
-            {
-                if (m_fitpara[j].par_type==0) ev->AddPar(j);
-                else if (m_fitpara[j].pmt_type==-1||m_fitpara[j].pmt_type==pmt_type)
-                {
-                    double val = ev->GetEventVar(m_fitpara[j].var);
-                    if (val>m_fitpara[j].var_low&&val<=m_fitpara[j].var_high) ev->AddPar(j);
-                } 
-            }
-        }
-    }
 }
 
 bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 {
     std::cout << "Starting to fit." << std::endl;
     m_samples = samples;
-
-    InitParameterMap();
 
     if(m_fitter == nullptr)
     {
@@ -288,13 +270,36 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
         postfit_globalcc[i] = m_fitter->GlobalCC(i);
 
     TVectorD postfit_param(ndim, &par_val_vec[0]);
-    std::vector<double> res_pars;
-    std::vector<double> err_pars;
+    std::vector<std::vector<double>> res_pars;
+    std::vector<std::vector<double>> err_pars;
+    int k = 0;
+    for(int i = 0; i < m_fitpara.size(); i++)
+    {
+        const unsigned int npar = m_fitpara[i]->GetNpar();
+        std::vector<double> vec_res;
+        std::vector<double> vec_err;
+
+        for(int j = 0; j < npar; j++)
+        {
+            vec_res.push_back(par_val_vec[k]);
+            vec_err.push_back(std::sqrt(cov_matrix[k][k]));
+            k++;
+        }
+
+        res_pars.emplace_back(vec_res);
+        err_pars.emplace_back(vec_err);
+    }
 
     for(int i = 0; i < m_fitpara.size(); i++)
     {
         res_pars.emplace_back(par_val_vec[i]);
         err_pars.emplace_back(std::sqrt(cov_matrix[i][i]));
+    }
+
+    if(k != ndim)
+    {
+        std::cout << "Number of parameters does not match." << std::endl;
+        return false;
     }
 
     m_dir->cd();
@@ -314,7 +319,7 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 }
 
 
-double Fitter::FillSamples(std::vector<double>& new_pars)
+double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
 {
     double chi2      = 0.0;
     bool output_chi2 = false;
@@ -325,33 +330,22 @@ double Fitter::FillSamples(std::vector<double>& new_pars)
     for(int s = 0; s < m_samples.size(); ++s)
     {
         const unsigned int num_pmts = m_samples[s]->GetNPMTs();
-#pragma omp parallel for num_threads(m_threads)
         for(unsigned int i = 0; i < num_pmts; ++i)
         {
             AnaEvent* ev = m_samples[s]->GetPMT(i);
-            if (ev->GetSampleBin()<0) continue;
-            std::vector<int> parlist = ev->GetParList();
-            double weight = 1.;
-            double R = ev->GetR();
-            weight*=1./R/R*25.e6;
-            for(int j = 0; j < parlist.size(); ++j)
-            {
-                int par = parlist[j];
-                if (m_fitpara[par].par_type==0) {
-                    weight *= TMath::Exp(-R/new_pars[par]);
-                }
-                else
-                {
-                    weight*=new_pars[par];
-                }
-            }
-            ev->SetEvWght(weight);
+            ev->ResetEvWght();
         }
+    }
 
+    for(int i = 0; i < m_fitpara.size(); ++i)
+    {
+        m_fitpara[i]->ReWeight(m_samples, new_pars[i]);
+    }
+
+    for(int s = 0; s < m_samples.size(); ++s)
+    {
         m_samples[s]->FillEventHist();
-        //double sample_chi2 = m_samples[s]->CalcChi2();
         double sample_chi2 = m_samples[s]->CalcLLH();
-        //double sample_chi2 = m_samples[s]->CalcEffLLH();
         chi2 += sample_chi2;
 
         if(output_chi2)
@@ -373,14 +367,21 @@ double Fitter::CalcLikelihood(const double* par)
        || (m_calls > 1001 && m_calls % 1000 == 0))
         output_chi2 = true;
 
+    int k           = 0;
     double chi2_sys = 0.0;
     double chi2_reg = 0.0;
-
-    std::vector<double> new_pars;
+    std::vector<std::vector<double>> new_pars;
     for(int i = 0; i < m_fitpara.size(); ++i)
     {
-        new_pars.push_back(par[i]);
+        const unsigned int npar = m_fitpara[i]->GetNpar();
+        std::vector<double> vec;
+        for(int j = 0; j < npar; ++j)
+        {
+            vec.push_back(par[k++]);
+        }
+        new_pars.push_back(vec);
     }
+
 
     double chi2_stat = FillSamples(new_pars);
     vec_chi2_stat.push_back(chi2_stat);
@@ -423,22 +424,32 @@ void Fitter::SaveEventHist(bool is_final)
 }
 
 
-void Fitter::SaveParams(const std::vector<double>& new_pars)
+void Fitter::SaveParams(const std::vector<std::vector<double>>& new_pars)
 {
-    const unsigned int npar = m_fitpara.size();
-
-    std::stringstream ss;
-    ss << "hist_iter" << m_calls;
-    TH1D h_par(ss.str().c_str(), ss.str().c_str(), npar, 0, npar);
-
+    std::vector<double> temp_vec;
     for(size_t i = 0; i < m_fitpara.size(); i++)
     {
-        h_par.GetXaxis()->SetBinLabel(i + 1, m_fitpara[i].name.c_str());
-        h_par.SetBinContent(i + 1, new_pars[i]);
+        const unsigned int npar = m_fitpara[i]->GetNpar();
+        const std::string name  = m_fitpara[i]->GetName();
+        std::stringstream ss;
+
+        ss << "hist_" << name << "_iter" << m_calls;
+        TH1D h_par(ss.str().c_str(), ss.str().c_str(), npar, 0, npar);
+
+        std::vector<std::string> vec_names;
+        m_fitpara[i]->GetParNames(vec_names);
+        for(int j = 0; j < npar; j++)
+        {
+            h_par.GetXaxis()->SetBinLabel(j + 1, vec_names[j].c_str());
+            h_par.SetBinContent(j + 1, new_pars[i][j]);
+            temp_vec.emplace_back(new_pars[i][j]);
+        }
+        m_dir->cd();
+        h_par.Write();
     }
 
-    m_dir->cd();
-    h_par.Write();
+    TVectorD root_vec(temp_vec.size(), &temp_vec[0]);
+    root_vec.Write(Form("vec_par_all_iter%d", m_calls));
 }
 
 void Fitter::SaveChi2()
@@ -475,26 +486,47 @@ void Fitter::SaveChi2()
     chi2_pstfit.Write("chi2_tuple_postfit");
 }
 
-void Fitter::SaveResults(const std::vector<double>& par_results,
-                             const std::vector<double>& par_errors)
+void Fitter::SaveResults(const std::vector<std::vector<double>>& par_results,
+                         const std::vector<std::vector<double>>& par_errors)
 {
-    const unsigned int npar = m_fitpara.size();
-    TH1D h_par_final("hist_result", "hist_result", npar, 0, npar);
-    TH1D h_par_prior("hist_prior", "hist_prior", npar, 0, npar);
-    TH1D h_err_final("hist_error_final", "hist_error_final", npar, 0, npar);
     for(std::size_t i = 0; i < m_fitpara.size(); i++)
     {
-        h_par_final.GetXaxis()->SetBinLabel(i + 1, m_fitpara[i].name.c_str());
-        h_par_final.SetBinContent(i + 1, par_results[i]);
-        h_par_prior.GetXaxis()->SetBinLabel(i + 1, m_fitpara[i].name.c_str());
-        h_par_prior.SetBinContent(i + 1, m_fitpara[i].prior);
-        h_err_final.GetXaxis()->SetBinLabel(i + 1, m_fitpara[i].name.c_str());
-        h_err_final.SetBinContent(i + 1, par_errors[i]);
+        const unsigned int npar = m_fitpara[i]->GetNpar();
+        const std::string name  = m_fitpara[i]->GetName();
+        std::vector<double> par_original;
+        m_fitpara[i]->GetParOriginal(par_original);
+
+        std::stringstream ss;
+
+        ss << "hist_" << name << "_result";
+        TH1D h_par_final(ss.str().c_str(), ss.str().c_str(), npar, 0, npar);
+
+        ss.str("");
+        ss << "hist_" << name << "_prior";
+        TH1D h_par_prior(ss.str().c_str(), ss.str().c_str(), npar, 0, npar);
+
+        ss.str("");
+        ss << "hist_" << name << "_error_final";
+        TH1D h_err_final(ss.str().c_str(), ss.str().c_str(), npar, 0, npar);
+
+        std::vector<std::string> vec_names;
+        m_fitpara[i]->GetParNames(vec_names);
+        for(int j = 0; j < npar; j++)
+        {
+            h_par_final.GetXaxis()->SetBinLabel(j + 1, vec_names[j].c_str());
+            h_par_final.SetBinContent(j + 1, par_results[i][j]);
+            h_par_prior.GetXaxis()->SetBinLabel(j + 1, vec_names[j].c_str());
+            h_par_prior.SetBinContent(j + 1, par_original[j]);
+            h_err_final.GetXaxis()->SetBinLabel(j + 1, vec_names[j].c_str());
+            h_err_final.SetBinContent(j + 1, par_errors[i][j]);
+        }
+
+        m_dir->cd();
+        h_par_final.Write();
+        h_par_prior.Write();
+        h_err_final.Write();
     }
-    m_dir->cd();
-    h_par_final.Write();
-    h_par_prior.Write();
-    h_err_final.Write();
+
 }
 
 void Fitter::ParameterScans(const std::vector<int>& param_list, unsigned int nsteps)
