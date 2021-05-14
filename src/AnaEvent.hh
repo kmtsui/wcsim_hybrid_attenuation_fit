@@ -84,6 +84,8 @@ class AnaEvent
                 return m_timetof;
             else if(var == "nPE")
                 return m_nPE;
+            else if(var == "sample")
+                return m_sample;
             else
                 return -1;
         }

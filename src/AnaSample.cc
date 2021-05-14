@@ -54,6 +54,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
                 break;
             }
         }
+        hit_vec[i].SetSampleType(m_sample_id);
         if (!skip) AddEvent(hit_vec[i]);
     }
 
@@ -69,6 +70,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
                 break;
             }
         }
+        pmt_vec[i].SetSampleType(m_sample_id);
         if (!skip) AddPMT(pmt_vec[i]);
     }
 
