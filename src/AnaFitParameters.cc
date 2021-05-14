@@ -102,7 +102,7 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
     }
 }
 
-void AnaFitParameters::ReWeight(std::vector<AnaSample*>& sample, std::vector<double>& params)
+void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params)
 {
 #ifndef NDEBUG
     if(m_evmap.empty()) //need to build an event map first
@@ -113,31 +113,23 @@ void AnaFitParameters::ReWeight(std::vector<AnaSample*>& sample, std::vector<dou
     }
 #endif
 
-    for(std::size_t s=0; s < sample.size(); s++)
-    {
-        if (m_pmttype >=0 && sample[s]->GetPMTType() != m_pmttype) continue;
-#pragma omp parallel for num_threads(m_threads)
-        for(int i=0; i < sample[s] -> GetNPMTs(); i++)
-        {
-            const int bin = m_evmap[s][i];
-            if(bin == PASSEVENT || bin == BADBIN)
-                continue;
-            else
-            {
-                AnaEvent* ev = sample[s] -> GetPMT(i);
-#ifndef NDEBUG
-                if(bin > params.size())
-                {
-                    std::cout  << "In AnaFitParameters::ReWeight()\n"
-                               << "Number of bins in " << m_name << " does not match num of parameters.\n"
-                               << "Setting event weight to zero." << std::endl;
-                    ev -> AddEvWght(0.0);
-                }
-#endif
-                double wgt = (*m_func)(params[bin],*ev);
-                ev -> AddEvWght(wgt);
-            }
-        }
-    }
+    if (m_pmttype >=0 && pmttype != m_pmttype) return;
 
+    const int bin = m_evmap[nsample][nevent];
+    if(bin == PASSEVENT || bin == BADBIN)
+        return;
+    else
+    {
+#ifndef NDEBUG
+        if(bin > params.size())
+        {
+            std::cout  << "In AnaFitParameters::ReWeight()\n"
+                        << "Number of bins in " << m_name << " does not match num of parameters.\n"
+                        << "Setting event weight to zero." << std::endl;
+            event -> AddEvWght(0.0);
+        }
+#endif
+        double wgt = (*m_func)(params[bin],*event);
+        event -> AddEvWght(wgt);
+    }
 }

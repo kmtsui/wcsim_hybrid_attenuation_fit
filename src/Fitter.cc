@@ -330,20 +330,19 @@ double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
     for(int s = 0; s < m_samples.size(); ++s)
     {
         const unsigned int num_pmts = m_samples[s]->GetNPMTs();
+        const int pmttype = m_samples[s]->GetPMTType();
+#pragma omp parallel for num_threads(m_threads)
         for(unsigned int i = 0; i < num_pmts; ++i)
         {
             AnaEvent* ev = m_samples[s]->GetPMT(i);
             ev->ResetEvWght();
+            for(int j = 0; j < m_fitpara.size(); ++j)
+            {
+                if (m_fitpara[j]->GetPMTType()>=0 && m_fitpara[j]->GetPMTType() != pmttype) continue;
+                m_fitpara[j]->ReWeight(ev, pmttype, s, i, new_pars[j]);
+            }
         }
-    }
 
-    for(int i = 0; i < m_fitpara.size(); ++i)
-    {
-        m_fitpara[i]->ReWeight(m_samples, new_pars[i]);
-    }
-
-    for(int s = 0; s < m_samples.size(); ++s)
-    {
         m_samples[s]->FillEventHist();
         double sample_chi2 = m_samples[s]->CalcLLH();
         chi2 += sample_chi2;

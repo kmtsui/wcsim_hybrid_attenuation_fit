@@ -11,10 +11,6 @@
 #include <TMatrixTSym.h>
 using TMatrixDSym = TMatrixTSym<double>;
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
 #include "AnaSample.hh"
 #include "BinManager.hh"
 #include "ParameterFunction.hh"
@@ -32,7 +28,7 @@ public:
     void InitParameters(std::vector<std::string> names, std::vector<double> priors, std::vector<double> steps, 
                         std::vector<double> lows, std::vector<double> highs, std::vector<bool> fixed);
     void InitEventMap(std::vector<AnaSample*>& sample);
-    void ReWeight(std::vector<AnaSample*>& sample, std::vector<double>& params);
+    void ReWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
 
     std::string GetName() const { return m_name; }
 
@@ -73,9 +69,8 @@ public:
 
     void SetParameterFunction(const std::string& func_name);
 
-    void SetPMTType(const int val) { m_pmttype = val; }
-
-    void SetNumThreads(const unsigned int num) { m_threads = num; }
+    inline void SetPMTType(const int val) { m_pmttype = val; }
+    inline int GetPMTType() const { return m_pmttype; }
 
 protected:
     bool CheckDims(const std::vector<double>& params) const;
@@ -99,8 +94,6 @@ protected:
     int m_pmttype;
     std::vector<std::string> m_binvar;
     BinManager m_bm;
-
-    int m_threads;
 
     ParameterFunction* m_func;
 };

@@ -170,8 +170,6 @@ int main(int argc, char** argv)
         fitpara->SetBinning(binning_file);
         fitpara->InitEventMap(samples);
 
-        fitpara->SetNumThreads(num_threads);
-
         fitparas.push_back(fitpara);
     }
 
