@@ -1,21 +1,64 @@
+# List of PMT samples input to the fitter
+# Each sample contains the PMT hits and geometry information of a particular source-PMT setup
 [samples]
 
+# Names of samples
 names = [
     "BnL_PMT",
     "mPMT"
 ]
 
+# Entry for each sample name
+# Each entry is specified as:
+# [pmt_type, input_file, pmt_hit_tree_name, pmt_geo_treename, [vectors of cut], [binning_config] ]
+# pmt_type: 0 = B&L PMT, 1 = mPMT
+# input_file, pmt_hit_tree_name, pmt_geo_treename: input file and tree names
+# [vectors of cut]: simple rectangular cuts to select events of interest, each cut is specified by [variable name, cut_low, cut_high]
+# [binning_config]: defines the sample binning, each bin sums over the number of PE observed in PMTs
+# [binning_config] = [binning_file,[bin_vars]]: binning_file is the binning file input to BinManager class, [bin_vars] is the vector of binning variables
+# binning_file: first line defines the number of dimensions, each subsequent line defines the bin edges 
+
+# The example here specifies two samples, from the input file, with different pmt tree names
+# Three sets of cut are applied to the variables timetof, cosths, costh
+# Binning is defined by sample_binning.txt, on the variables {costh, R}
 BnL_PMT = [ 0, "out.root", "hitRate_pmtType0", "pmt_type0", [["timetof",-950,-940], ["cosths",0.766,1], ["costh",0.5,1]], ["sample_binning.txt",["costh","R"]] ]
 mPMT    = [ 1, "out.root", "hitRate_pmtType1", "pmt_type1", [["timetof",-950,-940], ["cosths",0.766,1], ["costh",0.5,1]], ["sample_binning.txt",["costh","R"]] ]
 
+
+# List of fit parameters input to fitter
+# Each parameter represents a multiplicative factor to parameterize the number of PE expected in each PMT
 [fitparameters]
 
+# Names of the class of fit parameters
 names = [
+    "norm",
     "alpha",
-    "BnL_PMT_norm",
-    "mPMT_norm"
+    "BnL_angular",
+    "mPMT_angular"
 ]
 
+# Entry for each parameter class
+# Each entry is specified as:
+# [pmt_type, function_name, npar, [par_setup], [binning_config]]
+# pmt_type: 0 = apply to B&L PMT only, 1 = apply to mPMT only, -1 = apply to both PMTs
+# function_name: defines the functional form of the multiplicative factor derived from the fit parameter, modify AnaFitParameters class and ParameterFunction.hh to include new functions
+# npar: number of parameters in this class
+# [par_setup]: vector of fit parameter set, each parameter is specified as [parameter name, prior, step, limit_low, limit_high, fixed]
+# [binning_config]: defines the parameter mapping for each PMT, each PMT is affected by at most one parameter in each class
+
+# The example here specifies four classes of parameters
+# norm is the overall normalization for each sample, you may need to trial and error to get the prior right
+# alpha is the light attenuation parameter which parameterizes the scale factor as exp(-R/alpha)/R/R
+# BnL_angular and mPMT_angular are the angular response parameters. The parameter corresponding to costh={0.8,1} is fixed at 1.
+norm         = [ -1, "Identity",    2, [["BnL_norm", 200, 20, 0, 1000, false], ["mPMT_norm", 5, 1, 0, 100, false]], ["sampleId_binning.txt", ["sample"]] ]
 alpha        = [ -1, "Attenuation", 1, [["alpha",        10000, 10000, 0, 100000, false]] , ["R_binning.txt",    ["R"]]     ]
-BnL_PMT_norm = [  0, "Identity",    5, [["BnL_PMT_norm", 200,   20,    0, 1000,   false]] , ["costh_binning.txt",["costh"]] ]
-mPMT_norm    = [  1, "Identity",    5, [["mPMT_norm",    5,     1,     0, 100,    false]] , ["costh_binning.txt",["costh"]] ]
+BnL_angular  = [  0, "Identity",    5, [["BnL_angular1", 1, 0.1, 0, 1, false],
+                                        ["BnL_angular2", 1, 0.1, 0, 1, false],
+                                        ["BnL_angular3", 1, 0.1, 0, 1, false],
+                                        ["BnL_angular4", 1, 0.1, 0, 1, false],
+                                        ["BnL_angular5", 1, 0.1, 0, 1, true]] , ["costh_binning.txt",["costh"]] ]
+mPMT_angular = [  1, "Identity",    5, [["mPMT_angular1",1, 0.1, 0, 1, false],
+                                        ["mPMT_angular2",1, 0.1, 0, 1, false],
+                                        ["mPMT_angular3",1, 0.1, 0, 1, false],
+                                        ["mPMT_angular4",1, 0.1, 0, 1, false],
+                                        ["mPMT_angular5",1, 0.1, 0, 1, true]] , ["costh_binning.txt",["costh"]] ]
