@@ -37,13 +37,14 @@ int main(int argc, char** argv)
                 break;
             case 'n':
                 num_threads = std::stoi(optarg);
+                if (num_threads<1) num_threads = 1;
                 break;
             case 'h':
                 std::cout << "USAGE: "
                           << argv[0] << "\nOPTIONS:\n"
-                          << "-f : Input file\n"
                           << "-o : Output file\n"
-                          << "-c : Config file\n";
+                          << "-c : Config file\n"
+                          << "-n : Number of threads\n";
             default:
                 return 0;
         }
@@ -52,6 +53,7 @@ int main(int argc, char** argv)
     auto const &card_toml = toml_h::parse_card(config_file);
     auto const &samples_config = toml_h::find(card_toml, "samples");
     auto const &fitparameters_config = toml_h::find(card_toml, "fitparameters");
+    auto const &minimizer_config = toml_h::find(card_toml, "Minimizer");
 
     // Add analysis samples:
     std::vector<AnaSample*> samples;
@@ -169,8 +171,19 @@ int main(int argc, char** argv)
 
     TFile* fout = TFile::Open(fname_output.c_str(), "RECREATE");
 
-    Fitter fitter(fout,0,num_threads);
+    // Load minimizer config
+    MinSettings min_settings;
+    min_settings.minimizer = toml_h::find<std::string>(minimizer_config, "minimizer");
+    min_settings.algorithm = toml_h::find<std::string>(minimizer_config, "algorithm");
+    min_settings.likelihood = toml_h::find<std::string>(minimizer_config, "likelihood");
+    min_settings.print_level = toml_h::find<int>(minimizer_config, "print_level");
+    min_settings.strategy = toml_h::find<int>(minimizer_config, "strategy");
+    min_settings.tolerance = toml_h::find<double>(minimizer_config, "tolerance");
+    min_settings.max_iter = toml_h::find<double>(minimizer_config, "max_iter");
+    min_settings.max_fcn = toml_h::find<double>(minimizer_config, "max_fcn");
 
+    Fitter fitter(fout,0,num_threads);
+    fitter.SetMinSettings(min_settings);
     fitter.InitFitter(fitparas);
 
     bool did_converge = false;

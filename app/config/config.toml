@@ -1,3 +1,15 @@
+# Minimizer config
+[Minimizer]
+
+minimizer = "Minuit2"
+algorithm = "Migrad"
+likelihood = "Poisson"
+print_level = 1
+tolerance = 1E-3
+strategy = 1
+max_iter = 1E6
+max_fcn = 1E9
+
 # List of PMT samples input to the fitter
 # Each sample contains the PMT hits and geometry information of a particular source-PMT setup
 [samples]
