@@ -4,7 +4,7 @@
 minimizer = "Minuit2"
 algorithm = "Migrad"
 likelihood = "Poisson"
-print_level = 1
+print_level = 2
 tolerance = 1E-3
 strategy = 1
 max_iter = 1E6
