@@ -20,6 +20,7 @@ int main(int argc, char** argv)
     std::string fname_output;
     std::string config_file;
     int num_threads = 1;
+    int seed = 0;
 
     char option;
     while((option = getopt(argc, argv, "j:f:o:c:n:s:t:h")) != -1)
@@ -39,11 +40,16 @@ int main(int argc, char** argv)
                 num_threads = std::stoi(optarg);
                 if (num_threads<1) num_threads = 1;
                 break;
+            case 's':
+                seed = std::stoi(optarg);
+                if (seed<0) seed = 0;
+                break;
             case 'h':
                 std::cout << "USAGE: "
                           << argv[0] << "\nOPTIONS:\n"
                           << "-o : Output file\n"
                           << "-c : Config file\n"
+                          << "-s : RNG seed \n"
                           << "-n : Number of threads\n";
             default:
                 return 0;
@@ -182,7 +188,7 @@ int main(int argc, char** argv)
     min_settings.max_iter = toml_h::find<double>(minimizer_config, "max_iter");
     min_settings.max_fcn = toml_h::find<double>(minimizer_config, "max_fcn");
 
-    Fitter fitter(fout,0,num_threads);
+    Fitter fitter(fout,seed,num_threads);
     fitter.SetMinSettings(min_settings);
     fitter.InitFitter(fitparas);
 
