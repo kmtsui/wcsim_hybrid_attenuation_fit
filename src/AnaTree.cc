@@ -83,25 +83,51 @@ long int AnaTree::GetEntry(long int entry) const
         return fChain->GetEntry(entry);
 }
 
-void AnaTree::SetBranches()
-{
+void AnaTree::SetDataBranches(std::vector<std::string> binvar, std::vector<std::string> cutvar)
+{    
     // Set branch addresses and branch pointers
 
     fChain->SetBranchAddress("nPE", &nPE);
-    fChain->SetBranchAddress("dist", &dist);
+    fChain->SetBranchAddress("R", &R);
     fChain->SetBranchAddress("costh", &costh);
     fChain->SetBranchAddress("cosths", &cosths);
     fChain->SetBranchAddress("omega", &omega);
     fChain->SetBranchAddress("timetof", &timetof);
     fChain->SetBranchAddress("PMT_id", &PMT_id);
 
+    m_bins = binvar;
+    m_cuts = cutvar;
+}
+
+void AnaTree::SetLeafs()
+{
+    leafs_bins.clear();
+    leafs_cuts.clear();
+
+    for (int i=0;i<m_bins.size();i++) {
+        TLeaf *leaf = fChain->GetLeaf(m_bins[i].c_str());
+        if (leaf == nullptr) {
+            std::cout<<"[Error] AnaTree: Cannot find bin variable "<<m_bins[i]<<", skipping this variable"<<std::endl;
+            continue;
+        }
+        leafs_bins.push_back(leaf);
+    }
+
+    for (int i=0;i<m_cuts.size();i++) {
+        TLeaf *leaf = fChain->GetLeaf(m_cuts[i].c_str());
+        if (leaf == nullptr) {
+            std::cout<<"[Error] AnaTree: Cannot find cut variable "<<m_cuts[i]<<", skipping this variable"<<std::endl;
+            continue;
+        }
+        leafs_cuts.push_back(leaf);
+    }
 }
 
 void AnaTree::SetPMTBranches()
 {
     // Set branch addresses and branch pointers
 
-    t_pmt->SetBranchAddress("dist", &dist);
+    t_pmt->SetBranchAddress("R", &R);
     t_pmt->SetBranchAddress("costh", &costh);
     t_pmt->SetBranchAddress("cosths", &cosths);
     t_pmt->SetBranchAddress("omega", &omega);
@@ -109,21 +135,18 @@ void AnaTree::SetPMTBranches()
     
 }
 
-std::vector<std::vector<AnaEvent>> AnaTree::GetEvents()
+std::vector<AnaEvent> AnaTree::GetPMTs()
 {
-    std::vector<std::vector<AnaEvent>> event_vec;
-
-    if(fChain == nullptr)
-    {
-        std::cout<<"[Error] Reading no evenets in AnaTree::GetEvents()"<<std::endl;
-        return event_vec;
-    }
-    long int nentries = fChain->GetEntries();
-    long int nbytes   = 0;
-
-    std::cout  << "Reading PMT geometry...\n";
-    SetPMTBranches();
     std::vector<AnaEvent> pmt_vec;
+
+    if(t_pmt == nullptr)
+    {
+        std::cout<<"[Error] Reading no PMTs in AnaTree::GetPMTs()"<<std::endl;
+        return pmt_vec;
+    }
+    unsigned long nentries = fChain->GetEntries();
+
+    SetPMTBranches();
     for(long int jentry = 0; jentry < t_pmt->GetEntries(); jentry++)
     {
         t_pmt->GetEntry(jentry);
@@ -131,48 +154,115 @@ std::vector<std::vector<AnaEvent>> AnaTree::GetEvents()
         if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
 
         AnaEvent ev(jentry);
-        ev.SetR(dist);
+        ev.SetR(R);
         ev.SetCosth(costh);
         ev.SetCosths(cosths);
         ev.SetOmega(omega); 
         ev.SetPMTID(PMT_id);
         
         std::vector<double> reco_var;
-        reco_var.emplace_back(costh); reco_var.emplace_back(dist);
+        reco_var.emplace_back(costh); reco_var.emplace_back(R);
         ev.SetRecoVar(reco_var);
 
         pmt_vec.push_back(ev);
 
     }
 
-    std::cout  << "Reading PMT hits...\n";
-    SetBranches();
-    std::vector<AnaEvent> hit_vec;
-    for(long int jentry = 0; jentry < nentries; jentry++)
+    return pmt_vec;
+}
+
+/*void AnaTree::GetData(std::vector<std::vector<double>>& data_vec, std::vector<std::vector<double>>& cut_vec, std::vector<double>& weight_vec)
+{
+    std::cout<<"Reading PMT hit data..."<<std::endl;
+    if(fChain == nullptr)
     {
-        nbytes += fChain->GetEntry(jentry); 
+        std::cout<<"[Error] Reading no evenets in AnaTree::GetData()"<<std::endl;
+        return;
+    }
+    unsigned long nentries = fChain->GetEntries();
+
+    int currentTreeNumber = -1;
+    for (unsigned long entry=0;entry<nentries;entry++) 
+    {
+        fChain->GetEntry(entry);
+
+        if (currentTreeNumber != fChain->GetTreeNumber()) 
+        {
+            SetLeafs();
+            currentTreeNumber = fChain->GetTreeNumber();
+        }
 
         if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
 
-        AnaEvent ev(jentry);
-        ev.SetPE(nPE);
-        ev.SetR(dist);
-        ev.SetCosth(costh);
-        ev.SetCosths(cosths); 
-        ev.SetOmega(omega); 
-        ev.SetTimetof(timetof); 
-        ev.SetPMTID(PMT_id);
-        
-        std::vector<double> reco_var;
-        reco_var.emplace_back(costh); reco_var.emplace_back(dist);
-        ev.SetRecoVar(reco_var);
+        std::vector<double> vec;
+        for (int i=0;i<leafs_bins.size();i++)
+        {
+            vec.push_back(leafs_bins[i]->GetValue(0));
+        }
+        data_vec.emplace_back(vec);
 
-        hit_vec.push_back(ev);
+        vec.clear();
+        for (int i=0;i<leafs_cuts.size();i++)
+        {
+            vec.push_back(leafs_cuts[i]->GetValue(0));
+        }
+        cut_vec.emplace_back(vec);
 
+        weight_vec.push_back(nPE);
     }
-    event_vec.emplace_back(hit_vec);
+}*/
 
-    event_vec.emplace_back(pmt_vec);
+void AnaTree::GetData(std::vector<std::vector<double>>& data_vec, std::vector<std::vector<double>>& cut_vec, std::vector<double>& weight_vec)
+{
+    std::cout<<"Reading PMT hit data..."<<std::endl;
+    if(fChain == nullptr)
+    {
+        std::cout<<"[Error] Reading no evenets in AnaTree::GetData()"<<std::endl;
+        return;
+    }
+    unsigned long nentries = fChain->GetEntries();
 
-    return event_vec;
+    for (unsigned long entry=0;entry<nentries;entry++) 
+    {
+        fChain->GetEntry(entry);
+
+        if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
+
+        std::vector<double> vec;
+        for (int i=0;i<m_bins.size();i++)
+        {
+            vec.push_back(GetEventVar(m_bins[i]));
+        }
+        data_vec.emplace_back(vec);
+
+        vec.clear();
+        for (int i=0;i<m_cuts.size();i++)
+        {
+            vec.push_back(GetEventVar(m_cuts[i]));
+        }
+        cut_vec.emplace_back(vec);
+
+        weight_vec.push_back(nPE);
+    }
+}
+
+bool AnaTree::GetDataEntry(unsigned long entry, std::vector<double>& data_vec, std::vector<double>& cut_vec, double& weight)
+{
+    fChain->GetEntry(entry);
+
+    if (m_maskpmt) if (pmt_mask.at(PMT_id)) return false;
+
+    for (int i=0;i<m_bins.size();i++)
+    {
+        data_vec.push_back(GetEventVar(m_bins[i]));
+    }
+
+    for (int i=0;i<m_cuts.size();i++)
+    {
+        cut_vec.push_back(GetEventVar(m_cuts[i]));
+    }
+
+    weight = nPE;
+
+    return true;
 }

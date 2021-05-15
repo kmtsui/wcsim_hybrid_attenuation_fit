@@ -187,7 +187,7 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
     v_prefit_start.Write("vec_prefit_start");
 }
 
-bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
+bool Fitter::Fit(const std::vector<AnaSample*>& samples)
 {
     std::cout << "Starting to fit." << std::endl;
     m_samples = samples;
@@ -202,7 +202,7 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
     for(const auto& s : m_samples)
     {
         s->FillEventHist();
-        s->FillDataHist(stat_fluc);
+        //s->FillDataHist(stat_fluc);
     }
 
     SaveEventHist();

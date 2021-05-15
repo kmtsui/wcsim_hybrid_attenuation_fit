@@ -6,6 +6,7 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_pmttype(pmt_type)
     , m_pmtmask(0)
     , m_nPMTpermPMT(19)
+    , m_stat_fluc(false)
     , m_name(name)
     , m_binning(binning)
     , m_hpred(nullptr)
@@ -41,25 +42,12 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     if (m_pmtmask>0) selTree.MaskPMT(m_pmtmask, m_pmttype, m_nPMTpermPMT);
 
     std::cout  << "Reading events for from "<<file_name<<"...\n";
-    std::vector<std::vector<AnaEvent>> event_vec = selTree.GetEvents();
 
-    // Add PMT hits
-    std::vector<AnaEvent> hit_vec = event_vec[0];
-    for (long int i=0;i<hit_vec.size();i++) {
-        bool skip = false;
-        for (int j=0;j<m_cutvar.size();j++) {
-            double val = hit_vec[i].GetEventVar(m_cutvar[j]);
-            if (val<m_cutlow[j] || val>m_cuthigh[j]) {
-                skip=true;
-                break;
-            }
-        }
-        hit_vec[i].SetSampleType(m_sample_id);
-        if (!skip) AddEvent(hit_vec[i]);
-    }
+    std::cout  << "Reading PMT geometry...\n";
+    std::vector<AnaEvent> pmt_vec = selTree.GetPMTs();
 
+    m_pmts.clear();
     // Add PMT geometry
-    std::vector<AnaEvent> pmt_vec = event_vec[1];
     for (long int i=0;i<pmt_vec.size();i++) {
         bool skip = false;
         for (int j=0;j<m_cutvar.size();j++) {
@@ -72,6 +60,89 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         }
         pmt_vec[i].SetSampleType(m_sample_id);
         if (!skip) AddPMT(pmt_vec[i]);
+    }
+
+    //std::vector<std::vector<double>> data_vec;
+    //std::vector<std::vector<double>> cut_vec;
+    //std::vector<double> weight_vec;
+    std::vector<double> data_vec;
+    std::vector<double> cut_vec;
+    double weight;
+    selTree.SetDataBranches(m_binvar,m_cutvar);
+    //selTree.GetData(data_vec, cut_vec, weight_vec);
+
+    unsigned long nDataEntries = selTree.GetDataEntries();
+
+#ifndef NDEBUG
+    if(m_hdata == nullptr)
+    {
+        std::cerr << "In AnaSample::LoadEventsFromFile() m_hdata is a nullptr!"
+                  << "Returning from function." << std::endl;
+        return;
+    }
+#endif
+    m_hdata->Reset();
+
+    std::cout<<"Reading PMT hit data..."<<std::endl;
+    for (unsigned long i=0;i<nDataEntries;i++)
+    {
+        data_vec.clear();
+        cut_vec.clear();
+
+        if (!selTree.GetDataEntry(i,data_vec,cut_vec,weight)) continue;
+
+        bool skip = false;
+
+        for (int j=0;j<m_cutvar.size();j++) {
+            if (cut_vec[j]<m_cutlow[j] || cut_vec[j]>m_cuthigh[j]) {
+                skip = true;   
+                break;
+            }
+        }
+
+        if (skip) continue;
+        const int b = m_bm.GetBinIndex(data_vec);
+        m_hdata->Fill(b+0.5, weight);
+    }
+
+/*    for (unsigned long i=0;i<data_vec.size();i++)
+    {
+        bool skip=false;
+        for (int j=0;j<m_cutvar.size();j++) {
+            if (cut_vec[i][j]<m_cutlow[j] || cut_vec[i][j]>m_cuthigh[j]) {
+                skip = true;   
+                break;
+            }
+        }
+        if (skip) continue;
+        const int b = m_bm.GetBinIndex(data_vec[i]);
+        m_hdata->Fill(b+0.5, weight_vec[i]);
+    }
+*/
+
+    m_hdata->Scale(m_norm);
+
+    std::cout<<"Number of entries in data hist = "<<m_hdata->GetEntries()<<std::endl;
+
+    if(m_stat_fluc) 
+    {
+        std::cout << "Applying statistical fluctuations..." << std::endl;
+
+        for(int j = 1; j <= m_hdata->GetNbinsX(); ++j)
+        {
+            double val = m_hdata->GetBinContent(j);
+            val = gRandom->Poisson(val);
+#ifndef NDEBUG
+            if(val <= 0.0)
+            {
+                std::cout   << "In AnaSample::FillEventHist()\n"
+                            << "In Sample " <<  m_name << ", bin " << j
+                            << " has 0 (or negative) entries. This may cause a problem with chi2 computations."
+                            << std::endl;
+            }
+#endif
+            m_hdata->SetBinContent(j, val);
+        }
     }
 
     PrintStats();
@@ -119,11 +190,10 @@ AnaEvent* AnaSample::GetPMT(const unsigned int evnum)
 
 void AnaSample::PrintStats() const
 {
-    const double mem_kb = sizeof(m_events) * m_events.size() / 1000.0;
+    const double mem_kb = sizeof(m_pmts) * m_pmts.size() / 1000.0;
     std::cout << "Sample " << m_name << " ID = " << m_sample_id << std::endl;
-    std::cout << "Num of events = " << m_events.size() << std::endl;
-    std::cout << "Memory used   = " << mem_kb << " kB." << std::endl;
     std::cout << "Num of PMTs   = " << m_pmts.size() << std::endl;
+    std::cout << "Memory used   = " << mem_kb << " kB." << std::endl;
 }
 
 void AnaSample::MakeHistos()

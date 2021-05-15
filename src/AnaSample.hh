@@ -70,6 +70,8 @@ public:
     inline const std::vector<std::string>& GetBinVar() const { return m_binvar; }
     inline void SetBinVar(std::vector<std::string> vec) { m_binvar = vec; }
 
+    inline void SetStatFluc(bool val) { m_stat_fluc = val; }
+
 protected:
     int m_sample_id;
     int m_nbins;
@@ -77,6 +79,7 @@ protected:
     int m_pmttype;
     int m_pmtmask;
     int m_nPMTpermPMT;
+    bool m_stat_fluc;
 
     std::vector<std::string> m_binvar;
 

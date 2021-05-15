@@ -190,7 +190,7 @@ int main(int argc, char** argv)
 
     bool did_converge = false;
 
-    did_converge = fitter.Fit(samples, false);
+    did_converge = fitter.Fit(samples);
     if(!did_converge)
         std::cout << "Fit did not coverge." << std::endl;
 

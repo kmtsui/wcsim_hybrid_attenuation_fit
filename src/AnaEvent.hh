@@ -93,6 +93,8 @@ class AnaEvent
                 return m_sample;
             else if(var == "omega")
                 return m_omega;
+            else if(var == "PMT_id")
+                return m_pmtid;
             else
             {
                 std::cout<<" Error! Variable "<<var<<" not available in AnaEvent"<<std::endl;
