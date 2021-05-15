@@ -26,6 +26,40 @@ using namespace std;
 const int nPMTtypes = 2;
 double PMTradius[nPMTtypes];
 
+double CalcSolidAngle(double r, double R, double costh)
+{
+  // analytic way to calculate solid angle subtended by PMT
+  // r = radius of PMT, R = distance to source, costh = cos angle of source relative to PMT
+  // assume the PMT is a perfect hemisphere
+  // calculate the slope of lines that connects the source and tangent to the PMT surface
+  // then calculate thne angle subtended by the two lines
+  double sinth = sqrt(1-costh*costh);
+  double cosc;
+  if (R*sinth-r>0) // one of the line limited by the edge of hemisphere
+  {
+    double m1 = (R*R*sinth*costh-r*sqrt(R*R-r*r))/(R*R*sinth*sinth-r*r);
+    double c1 = -m1*R*sinth+R*costh;
+    double c = sqrt(c1*c1+r*r);
+    double a = sqrt(R*sinth*R*sinth+(R*costh-c1)*(R*costh-c1));
+    double b = sqrt(R*costh*R*costh+(R*sinth-r)*(R*sinth-r));
+    cosc = (a*a+b*b-c*c)/2/a/b;
+  }
+  else 
+  {
+    double m1 = (R*R*sinth*costh+r*sqrt(R*R-r*r))/(R*R*sinth*sinth-r*r);
+    double m2 = (R*R*sinth*costh-r*sqrt(R*R-r*r))/(R*R*sinth*sinth-r*r);
+    double c1 = -m1*R*sinth+R*costh;
+    double c2 = R*sinth-R*costh/m2;
+    double c = sqrt(c1*c1+c2*c2);
+    double a = sqrt(R*sinth*R*sinth+(R*costh-c1)*(R*costh-c1));
+    double b = sqrt(R*costh*R*costh+(R*sinth-c2)*(R*sinth-c2));
+    cosc = (a*a+b*b-c*c)/2/a/b;
+  }
+  
+  double coshalfc = sqrt((cosc+1)/2);
+  return (1-coshalfc)*2*TMath::Pi();
+}
+
 int main(int argc, char **argv){
   
   char * filename=NULL;
@@ -119,6 +153,8 @@ int main(int argc, char **argv){
       exit(9);
   }
   geotree->GetEntry(0);
+  PMTradius[0]=geo->GetWCPMTRadius();
+  PMTradius[1]=geo->GetWCPMTRadius(true);
 
   // Options tree - only need 1 "event"
   TTree *opttree = (TTree*)file->Get("wcsimRootOptionsT");
@@ -141,7 +177,7 @@ int main(int argc, char **argv){
   TFile * outfile = new TFile(outfilename,"RECREATE");
   cout<<"File "<<outfilename<<" is open for writing"<<endl;
 
-  double nHits, nPE, dist, costh, timetof, cosths;
+  double nHits, nPE, dist, costh, timetof, cosths, omega;
   int PMT_id, mPMT_PMTNo; //mPMT_id
   // TTree for storing the hit information. One for B&L PMT<, one for mPMT
   TTree* hitRate_pmtType0 = new TTree("hitRate_pmtType0","hitRate_pmtType0");
@@ -150,6 +186,7 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Branch("dist",&dist); // distance to source
   hitRate_pmtType0->Branch("costh",&costh); // photon incident angle relative to PMT
   hitRate_pmtType0->Branch("cosths",&cosths); // PMT angle relative to source
+  hitRate_pmtType0->Branch("omega",&omega); // solid angle subtended by PMT
   hitRate_pmtType0->Branch("timetof",&timetof); // hittime-tof
   hitRate_pmtType0->Branch("PMT_id",&PMT_id);
   TTree* hitRate_pmtType1 = new TTree("hitRate_pmtType1","hitRate_pmtType1");
@@ -158,6 +195,7 @@ int main(int argc, char **argv){
   hitRate_pmtType1->Branch("dist",&dist);
   hitRate_pmtType1->Branch("costh",&costh);
   hitRate_pmtType1->Branch("cosths",&cosths);
+  hitRate_pmtType1->Branch("omega",&omega);
   hitRate_pmtType1->Branch("timetof",&timetof);
   hitRate_pmtType1->Branch("PMT_id",&PMT_id);
   hitRate_pmtType1->Branch("mPMT_PMTNo",&mPMT_PMTNo); //sub-ID of PMT inside a mPMT module
@@ -355,6 +393,8 @@ int main(int argc, char **argv){
         timetof = time-tof;
         nHits = 1; nPE = peForTube; dist = Norm; costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
         cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
+        double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
+        omega = CalcSolidAngle(pmtradius,dist,costh);
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
 
@@ -456,6 +496,8 @@ int main(int argc, char **argv){
 
         nHits = 1; nPE = peForTube; dist = Norm; costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
         cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
+        double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
+        omega = CalcSolidAngle(pmtradius,dist,costh);
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
 
@@ -478,11 +520,13 @@ int main(int argc, char **argv){
   pmt_type0->Branch("dist",&dist);
   pmt_type0->Branch("costh",&costh);
   pmt_type0->Branch("cosths",&cosths);
+  pmt_type0->Branch("omega",&omega);
   pmt_type0->Branch("PMT_id",&PMT_id);
   TTree* pmt_type1 = new TTree("pmt_type1","pmt_type1");
   pmt_type1->Branch("dist",&dist);
   pmt_type1->Branch("costh",&costh);
   pmt_type1->Branch("cosths",&cosths);
+  pmt_type1->Branch("omega",&omega);
   pmt_type1->Branch("PMT_id",&PMT_id);
   pmt_type1->Branch("mPMT_PMTNo",&mPMT_PMTNo);
   double vDirSource[3];
@@ -536,6 +580,8 @@ int main(int argc, char **argv){
       dist = Norm;
       costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
       cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
+      double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
+      omega = CalcSolidAngle(pmtradius,dist,costh);
       if (pmtType==0) pmt_type0->Fill();
       if (pmtType==1) pmt_type1->Fill();
     }
