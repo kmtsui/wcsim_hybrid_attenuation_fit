@@ -31,7 +31,7 @@ The analysis is done in two steps. First use `analysis_absorption` to perform da
 
     $ analysis_absorption -f wcsim_output.root 
 
-The program assumes a single source of photons in simulation and store the basic PMT hits and PMT geometry (relative to the store) information in `TTree` format. Modify the code if you want to store extra information.
+The program assumes a diffuser simulation and store the basic PMT hits and PMT geometry (relative to the source) information in `TTree` format. Modify the code if you want to store extra information.
 
 In WCSIM hybridPMT branch, there are the mPMTs in addition to the ordinary PMTs. The two types of PMT hits and geometries are stored in separate trees.
 
