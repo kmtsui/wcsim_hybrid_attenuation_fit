@@ -5,7 +5,7 @@ minimizer = "Minuit2"
 algorithm = "Migrad"
 likelihood = "Poisson"
 print_level = 2
-tolerance = 1E-3
+tolerance = 1E-6
 strategy = 1
 max_iter = 1E6
 max_fcn = 1E9
@@ -64,13 +64,19 @@ names = [
 # BnL_angular and mPMT_angular are the angular response parameters. The parameter corresponding to costh={0.8,1} is fixed at 1.
 norm         = [ -1, "Identity",    2, [["BnL_norm", 1E6, 1E5, 0, 1E8, false], ["mPMT_norm", 1E6, 1E5, 0, 1E8, false]], ["sampleId_binning.txt", ["sample"]] ]
 alpha        = [ -1, "Attenuation", 1, [["alpha", 10000, 10000, 0, 100000, false]] , ["R_binning.txt",    ["R"]]     ]
-BnL_angular  = [  0, "Identity",    5, [["BnL_angular1", 1, 0.1, 0, 1, false],
-                                        ["BnL_angular2", 1, 0.1, 0, 1, false],
-                                        ["BnL_angular3", 1, 0.1, 0, 1, false],
-                                        ["BnL_angular4", 1, 0.1, 0, 1, false],
-                                        ["BnL_angular5", 1, 0.1, 0, 1, true]] , ["costh_binning.txt",["costh"]] ]
-mPMT_angular = [  1, "Identity",    5, [["mPMT_angular1",1, 0.1, 0, 1, false],
-                                        ["mPMT_angular2",1, 0.1, 0, 1, false],
-                                        ["mPMT_angular3",1, 0.1, 0, 1, false],
-                                        ["mPMT_angular4",1, 0.1, 0, 1, false],
-                                        ["mPMT_angular5",1, 0.1, 0, 1, true]] , ["costh_binning.txt",["costh"]] ]
+BnL_angular  = [  0, "Identity",    6, [["BnL_angular1", 1, 0.1, 0, 10, false],
+                                        ["BnL_angular2", 1, 0.1, 0, 10, false],
+                                        ["BnL_angular3", 1, 0.1, 0, 10, false],
+                                        ["BnL_angular4", 1, 0.1, 0, 10, false],
+                                        ["BnL_angular5", 1, 0.1, 0, 10, false],
+                                        ["BnL_angular6", 1, 0.1, 0, 10, true]] , ["BnL_costh_binning.txt",["costh"]] ]
+mPMT_angular = [  1, "Identity",   10, [["mPMT_angular1",1, 0.1, 0, 10, false],
+                                        ["mPMT_angular2",1, 0.1, 0, 10, false],
+                                        ["mPMT_angular3",1, 0.1, 0, 10, false],
+                                        ["mPMT_angular4",1, 0.1, 0, 10, false],
+                                        ["mPMT_angular5",1, 0.1, 0, 10, false],
+                                        ["mPMT_angular6",1, 0.1, 0, 10, false],
+                                        ["mPMT_angular7",1, 0.1, 0, 10, false],
+                                        ["mPMT_angular8",1, 0.1, 0, 10, false],
+                                        ["mPMT_angular9",1, 0.1, 0, 10, false],
+                                        ["mPMT_angular10",1, 0.1, 0, 10, true]] , ["costh_binning.txt",["costh"]] ]
