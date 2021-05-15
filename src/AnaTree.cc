@@ -5,8 +5,14 @@ AnaTree::AnaTree(const std::string& file_name, const std::string& tree_name, con
     fChain = new TChain(tree_name.c_str());
     fChain->Add(file_name.c_str());
 
-    f_pmt = fChain->GetFile();
+    std::cout<<"Loading data files: "<<file_name.c_str()<<std::endl;
+
+    std::string single_file_name = fChain->GetFile()->GetName();
+
+    f_pmt = new TFile(single_file_name.c_str());
     t_pmt = (TTree*)f_pmt->Get(pmt_tree_name.c_str());
+
+    std::cout<<"Loading PMT tree from : "<<f_pmt->GetName()<<std::endl;
 
     m_maskpmt = false;
 
@@ -115,6 +121,30 @@ std::vector<std::vector<AnaEvent>> AnaTree::GetEvents()
     long int nentries = fChain->GetEntries();
     long int nbytes   = 0;
 
+    std::cout  << "Reading PMT geometry...\n";
+    SetPMTBranches();
+    std::vector<AnaEvent> pmt_vec;
+    for(long int jentry = 0; jentry < t_pmt->GetEntries(); jentry++)
+    {
+        t_pmt->GetEntry(jentry);
+
+        if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
+
+        AnaEvent ev(jentry);
+        ev.SetR(dist);
+        ev.SetCosth(costh);
+        ev.SetCosths(cosths);
+        ev.SetOmega(omega); 
+        ev.SetPMTID(PMT_id);
+        
+        std::vector<double> reco_var;
+        reco_var.emplace_back(costh); reco_var.emplace_back(dist);
+        ev.SetRecoVar(reco_var);
+
+        pmt_vec.push_back(ev);
+
+    }
+
     std::cout  << "Reading PMT hits...\n";
     SetBranches();
     std::vector<AnaEvent> hit_vec;
@@ -142,29 +172,6 @@ std::vector<std::vector<AnaEvent>> AnaTree::GetEvents()
     }
     event_vec.emplace_back(hit_vec);
 
-    std::cout  << "Reading PMT geometry...\n";
-    SetPMTBranches();
-    std::vector<AnaEvent> pmt_vec;
-    for(long int jentry = 0; jentry < t_pmt->GetEntries(); jentry++)
-    {
-        t_pmt->GetEntry(jentry);
-
-        if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
-
-        AnaEvent ev(jentry);
-        ev.SetR(dist);
-        ev.SetCosth(costh);
-        ev.SetCosths(cosths);
-        ev.SetOmega(omega); 
-        ev.SetPMTID(PMT_id);
-        
-        std::vector<double> reco_var;
-        reco_var.emplace_back(costh); reco_var.emplace_back(dist);
-        ev.SetRecoVar(reco_var);
-
-        pmt_vec.push_back(ev);
-
-    }
     event_vec.emplace_back(pmt_vec);
 
     return event_vec;
