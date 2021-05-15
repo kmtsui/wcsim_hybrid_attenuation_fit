@@ -16,7 +16,6 @@
 
 int main(int argc, char** argv)
 {
-    std::string fname_input;
     std::string fname_output;
     std::string config_file;
     int num_threads = 1;
@@ -27,9 +26,6 @@ int main(int argc, char** argv)
     {
         switch(option)
         {
-            case 'f':
-                fname_input = optarg;
-                break;
             case 'o':
                 fname_output = optarg;
                 break;
@@ -75,7 +71,8 @@ int main(int argc, char** argv)
 
         auto binning = toml_h::find<toml::array>(ele,5);
         auto binning_file = toml_h::find<std::string>(binning,0);
-        if (binning_file.find_first_of("/")!=0) {
+        if (binning_file.find_first_of("/")!=0) 
+        {  //assume the binning file lives in the same directory of config_file
             std::size_t found = config_file.find_last_of("/");
             if (found!= std::string::npos) {
                 std::string prefix = config_file.substr(0,found+1);
@@ -151,7 +148,8 @@ int main(int argc, char** argv)
 
         auto binning = toml_h::find<toml::array>(ele,4);
         auto binning_file = toml_h::find<std::string>(binning,0);
-        if (binning_file.find_first_of("/")!=0) {
+        if (binning_file.find_first_of("/")!=0) 
+        {   //assume the binning file lives in the same directory of config_file
             std::size_t found = config_file.find_last_of("/");
             if (found!= std::string::npos) {
                 std::string prefix = config_file.substr(0,found+1);
