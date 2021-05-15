@@ -183,7 +183,7 @@ int main(int argc, char **argv){
   TTree* hitRate_pmtType0 = new TTree("hitRate_pmtType0","hitRate_pmtType0");
   hitRate_pmtType0->Branch("nHits",&nHits); // dummy variable, always equal to 1
   hitRate_pmtType0->Branch("nPE",&nPE); // number of PE
-  hitRate_pmtType0->Branch("dist",&dist); // distance to source
+  hitRate_pmtType0->Branch("R",&dist); // distance to source
   hitRate_pmtType0->Branch("costh",&costh); // photon incident angle relative to PMT
   hitRate_pmtType0->Branch("cosths",&cosths); // PMT angle relative to source
   hitRate_pmtType0->Branch("omega",&omega); // solid angle subtended by PMT
@@ -192,7 +192,7 @@ int main(int argc, char **argv){
   TTree* hitRate_pmtType1 = new TTree("hitRate_pmtType1","hitRate_pmtType1");
   hitRate_pmtType1->Branch("nHits",&nHits);
   hitRate_pmtType1->Branch("nPE",&nPE);
-  hitRate_pmtType1->Branch("dist",&dist);
+  hitRate_pmtType1->Branch("R",&dist);
   hitRate_pmtType1->Branch("costh",&costh);
   hitRate_pmtType1->Branch("cosths",&cosths);
   hitRate_pmtType1->Branch("omega",&omega);
@@ -517,13 +517,13 @@ int main(int argc, char **argv){
   hitRate_pmtType1->Write();
   // Save also PMT geometry information
   TTree* pmt_type0 = new TTree("pmt_type0","pmt_type0");
-  pmt_type0->Branch("dist",&dist);
+  pmt_type0->Branch("R",&dist);
   pmt_type0->Branch("costh",&costh);
   pmt_type0->Branch("cosths",&cosths);
   pmt_type0->Branch("omega",&omega);
   pmt_type0->Branch("PMT_id",&PMT_id);
   TTree* pmt_type1 = new TTree("pmt_type1","pmt_type1");
-  pmt_type1->Branch("dist",&dist);
+  pmt_type1->Branch("R",&dist);
   pmt_type1->Branch("costh",&costh);
   pmt_type1->Branch("cosths",&cosths);
   pmt_type1->Branch("omega",&omega);
