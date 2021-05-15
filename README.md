@@ -6,7 +6,7 @@ Simple analysis to extract detector parameters from wcsim_hybrid MC.
 
 Requirements:
 - c++11 compiler
-- cmake2.8+
+- cmake 2.8+
 - ROOT 5.34.34+ or 6+
 - WCSIM hybridPMT branch
 
@@ -48,3 +48,5 @@ The sample and fit configurations are defined in the toml file `config.toml`. Se
 `AnaFitParameters` class defines the fit parameters which parameterize the number of hits expected in each PMT. The expected numbers are compared with the observation in `AnaSample` to compute a chi2.
 
 `Fitter` class does the chi2 minimization with respect to the fit parameters and saves the output in `fitoutput.root`.
+
+The fitter is adapted from T2K xsllhFitter at https://gitlab.com/cuddandr/xsLLhFitter
