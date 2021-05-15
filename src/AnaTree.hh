@@ -32,9 +32,10 @@ private:
     double dist;
     double costh;
     double cosths;
+    double omega;
     double timetof;
     int PMT_id;
-    float weight;
+    double weight;
 
 
 public:

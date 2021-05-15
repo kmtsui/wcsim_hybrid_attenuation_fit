@@ -38,7 +38,8 @@ public:
     double operator()(double par, AnaEvent ev)
     {
         double R = ev.GetR();
-        double val = TMath::Exp(-R/par)/R/R*25.e6;;
+        double omega = ev.GetOmega();
+        double val = TMath::Exp(-R/par)*omega;
 
         return val;
     }

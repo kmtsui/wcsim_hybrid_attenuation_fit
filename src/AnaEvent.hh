@@ -15,6 +15,7 @@ class AnaEvent
             m_pmtid = -99;
             m_cosths = -999.0;
             m_costh = -999.0;
+            m_omega = -999.0;
             m_R   = -999.0;
             m_nPE   = -999.0;
             m_timetof   = -999.0;
@@ -39,6 +40,9 @@ class AnaEvent
 
         inline void SetCosth(double val){ m_costh = val; }
         inline double GetCosth() const { return m_costh; }
+
+        inline void SetOmega(double val){ m_omega = val; }
+        inline double GetOmega() const { return m_omega; }
 
         inline void SetR(double val){ m_R = val; }
         inline double GetR() const { return m_R; }
@@ -65,6 +69,7 @@ class AnaEvent
                       << "PMT id      " << GetPMTID() << std::endl
                       << "cosths      " << GetCosths() << std::endl
                       << "costh       " << GetCosth() << std::endl
+                      << "omega       " << GetOmega() << std::endl
                       << "R           " << GetR() << std::endl
                       << "nPE         " << GetPE() << std::endl
                       << "timetof     " << GetTimetof() << std::endl
@@ -86,8 +91,13 @@ class AnaEvent
                 return m_nPE;
             else if(var == "sample")
                 return m_sample;
+            else if(var == "omega")
+                return m_omega;
             else
+            {
+                std::cout<<" Error! Variable "<<var<<" not available in AnaEvent"<<std::endl;
                 return -1;
+            }
         }
 
 
@@ -105,6 +115,7 @@ class AnaEvent
         int m_pmtid;       //pmt unique id
         double m_cosths;   //PMT angle relative to source
         double m_costh;    //photon incident angle relative to PMT
+        double m_omega;    //solid angle subtended by PMT
         double m_R;        //distance to source
         double m_nPE;      //number of PE
         double m_timetof;  //hittime-tof

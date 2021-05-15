@@ -85,6 +85,7 @@ void AnaTree::SetBranches()
     fChain->SetBranchAddress("dist", &dist);
     fChain->SetBranchAddress("costh", &costh);
     fChain->SetBranchAddress("cosths", &cosths);
+    fChain->SetBranchAddress("omega", &omega);
     fChain->SetBranchAddress("timetof", &timetof);
     fChain->SetBranchAddress("PMT_id", &PMT_id);
 
@@ -97,6 +98,7 @@ void AnaTree::SetPMTBranches()
     t_pmt->SetBranchAddress("dist", &dist);
     t_pmt->SetBranchAddress("costh", &costh);
     t_pmt->SetBranchAddress("cosths", &cosths);
+    t_pmt->SetBranchAddress("omega", &omega);
     t_pmt->SetBranchAddress("PMT_id", &PMT_id);
     
 }
@@ -127,6 +129,7 @@ std::vector<std::vector<AnaEvent>> AnaTree::GetEvents()
         ev.SetR(dist);
         ev.SetCosth(costh);
         ev.SetCosths(cosths); 
+        ev.SetOmega(omega); 
         ev.SetTimetof(timetof); 
         ev.SetPMTID(PMT_id);
         
@@ -152,6 +155,7 @@ std::vector<std::vector<AnaEvent>> AnaTree::GetEvents()
         ev.SetR(dist);
         ev.SetCosth(costh);
         ev.SetCosths(cosths);
+        ev.SetOmega(omega); 
         ev.SetPMTID(PMT_id);
         
         std::vector<double> reco_var;
