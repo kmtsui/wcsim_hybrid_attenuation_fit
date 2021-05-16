@@ -65,6 +65,14 @@ function is_in_PATH () {
 
 fi
 
+if [ "@USE_WCSIM@" == "1" ]; then
+  if [ -z "${WCSIMDIR}" ]; then
+    echo "[ERROR]: WCSIMDIR is not set."
+    return 1
+  fi
+  add_to_LD_LIBRARY_PATH "${WCSIMDIR}/"
+fi
+
 if ! which root-config &> /dev/null; then
   echo "[ERROR]: Cannot find root-config in the PATH, is ROOT set up?"
   return 1

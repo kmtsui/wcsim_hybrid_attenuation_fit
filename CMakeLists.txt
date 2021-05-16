@@ -45,8 +45,15 @@ include(${CMAKE_SOURCE_DIR}/cmake/ROOTSetup.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/c++CompilerSetup.cmake)
 
 ##################################  WCSIM  ######################################
-include(${CMAKE_SOURCE_DIR}/cmake/WCSIMSetup.cmake)
+IF(NOT DEFINED USE_WCSIM OR NOT USE_WCSIM)
+	SET(USE_WCSIM 0)
+ELSE()
+	SET(USE_WCSIM 1)
+ENDIF()
 
+IF(USE_WCSIM)
+  include(${CMAKE_SOURCE_DIR}/cmake/WCSIMSetup.cmake)
+ENDIF()
 ##################################  ####  ######################################
 
 add_subdirectory(src)

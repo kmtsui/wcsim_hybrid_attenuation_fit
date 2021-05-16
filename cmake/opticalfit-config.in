@@ -6,6 +6,9 @@ SCRIPTNAME=$0
 
 if [ ${#} -eq 0 ]; then
   echo -n "${SCRIPTNAME} [--features] [--has-feature <feature name>] [--incdir] [--cflags] [--libdir] [--libs] [--rootflags]"
+  if [ "@USE_WCSIM@" == "1" ]; then
+    echo -n " [--wcsimflags]"
+  fi
   echo " [--version]"
   exit 0
 fi
@@ -43,6 +46,14 @@ while [[ ${#} -gt 0 ]]; do
       echo -n "@ROOT_FLAGS@ "
       ;;
 
+      --wcsimflags)
+      if [ "@USE_WCSIM@" != "1" ]; then
+        echo "[ERROR]: OPTICALFIT is not built with WCSIM support."
+        exit 1
+      fi
+      echo -n "@wCSIM_FLAGS@ "
+      ;;
+
       --features)
       echo -n "@OPTICALFIT_FEATURES@ "
       ;;
@@ -71,6 +82,9 @@ while [[ ${#} -gt 0 ]]; do
       echo -e "\t--libflags                 : Print linker flags to link against NIWG libraries."
       echo -e "\t--linkflags                : Print linker flags to link against NIWG libraries, including the libdir."
       echo -e "\t--rootflags                : Print compiler flags used when compiling against ROOT"
+      if [ "@USE_WCSIM@" == "1" ]; then
+      echo -e "\t--wcsimflags               : Print compiler flags used when compiling against WCSIM."
+      fi
       echo -e "\t--features                 : Print list of features."
       echo -e "\t--has-feature <feature>    : Returns 0 if has feature, 1 if not."
       echo -e "\t--version                  : Print OPTICALFIT version."
