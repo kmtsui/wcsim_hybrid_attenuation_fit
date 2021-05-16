@@ -152,7 +152,7 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
     for(int i = 0; i < m_npar; ++i)
     {
         m_fitter->SetVariable(i, par_names[i], par_prefit[i], par_step[i]);
-        //m_fitter->SetVariableLimits(i, par_low[i], par_high[i]);
+        m_fitter->SetVariableLimits(i, par_low[i], par_high[i]);
 
         if(par_fixed[i] == true)
             m_fitter->FixVariable(i);
