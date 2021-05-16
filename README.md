@@ -10,7 +10,7 @@ Requirements:
 - ROOT 5.34.34+ or 6+
 - (Optional) WCSIM hybridPMT branch
 
-Setup your ROOT before compilation. It is required to have Minuit2 and MathMore in ROOT for minimization. OpenMP installation is recommended to take advantage of parallelism when doing the fit.
+Setup your ROOT before compilation. It is required to have Minuit2 in ROOT for minimization. OpenMP installation is recommended to take advantage of parallelism when doing the fit.
 
 From within the cloned repository
 
