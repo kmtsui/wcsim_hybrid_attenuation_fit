@@ -8,15 +8,21 @@ Requirements:
 - c++11 compiler
 - cmake 2.8+
 - ROOT 5.34.34+ or 6+
-- WCSIM hybridPMT branch
+- (Optional) WCSIM hybridPMT branch
 
-Setup your ROOT and $WCSIMDIR before compilation. It is assumed that $WCSIMDIR contains the WCSIM src/ and include/ directory, and libWCSimRoot.so. It is required to have Minuit2 and MathMore in ROOT for minimization. OpenMP installation is recommended to take advantage of parallelism when doing the fit.
+Setup your ROOT before compilation. It is required to have Minuit2 and MathMore in ROOT for minimization. OpenMP installation is recommended to take advantage of parallelism when doing the fit.
 
 From within the cloned repository
 
 ```
 $ mkdir build; cd build; cmake ../
 $ make install
+```
+
+To build with WCSIM support, setup $WCSIMDIR which contains the WCSIM `src/` and `include/` directory, and `libWCSimRoot.so`.
+
+```
+$ cmake ../ -DUSE_WCSIM=1
 ```
 
 After the build you can setup your environment
@@ -27,7 +33,7 @@ $ source Linux/setup.sh
   
 ## analysis_absorption
 
-The analysis is done in two steps. First use `analysis_absorption` to perform data reduction.
+The analysis is done in two steps. First use `analysis_absorption` to perform data reduction on WCSIM output.
 
     $ analysis_absorption -f wcsim_output.root 
 
@@ -41,7 +47,7 @@ The fitter `optical_fit` imports the data samples produced by `analysis_absorpti
 
     $ optical_fit -o fitoutput.root -c config.toml
 
-The sample and fit configurations are defined in the toml file `config.toml`. See `app/config/config.toml` for detailed explanation.
+The sample and fit configurations are defined in the toml file. See `app/config/config.toml` for detailed explanation.
 
 `AnaSample` class handles the input of analysis samples to load the PMT hits and geometry. Modify `AnaEvent` and `AnaTree` classes to load extra information if necessary. `AnaSample` bins the PMT hits (p.e.) according to the binning defined in `config.toml`.
 
