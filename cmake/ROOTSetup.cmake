@@ -32,10 +32,7 @@ LIST(APPEND ROOT_LIBS
   Tree
   Matrix
   Physics
-  MathMore
-  MathCore
-  Minuit
-  Minuit2)
+  MathCore)
 
 #Check what ROOT thinks the standard is, set that project-wide
 # and then remove it from ROOT_CXX_FLAGS
