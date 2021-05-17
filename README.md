@@ -19,7 +19,7 @@ $ mkdir build; cd build; cmake ../
 $ make install
 ```
 
-To build with WCSIM support, setup $WCSIMDIR which contains the WCSIM `src/` and `include/` directory, and `libWCSimRoot.so`.
+To build with WCSIM support, setup `$WCSIMDIR` which contains the WCSIM `src/` and `include/` directory, and `libWCSimRoot.so`.
 
 ```
 $ cmake ../ -DUSE_WCSIM=1
@@ -31,11 +31,11 @@ After the build you can setup your environment
 $ source Linux/setup.sh
 ```
   
-## analysis_absorption
+## WCSIM_TreeConvert
 
-The analysis is done in two steps. First use `analysis_absorption` to perform data reduction on WCSIM output.
+The analysis is done in two steps. First use `WCSIM_TreeConvert` to perform data reduction on WCSIM output.
 
-    $ analysis_absorption -f wcsim_output.root 
+    $ WCSIM_TreeConvert -f wcsim_output.root 
 
 The program assumes a diffuser simulation and store the basic PMT hits and PMT geometry (relative to the source) information in `TTree` format. Modify the code if you want to store extra information.
 
@@ -43,7 +43,7 @@ In WCSIM hybridPMT branch, there are the mPMTs in addition to the ordinary PMTs.
 
 ## optical_fit
 
-The fitter `optical_fit` imports the data samples produced by `analysis_absorption` and fits for a set of detector parameters defined by users.
+The fitter `optical_fit` imports the data samples produced by `WCSIM_TreeConvert` and fits for a set of detector parameters defined by users.
 
     $ optical_fit -o fitoutput.root -c config.toml
 
