@@ -1,5 +1,5 @@
 IF(USE_WCSIM)
-	foreach(app analysis_absorption)
+	foreach(app WCSIM_TreeConvert)
 		add_executable(${app} ${app}.cc)
 		target_link_libraries(${app} OpticalFit)
 		LinkToWCSIM(${app})
