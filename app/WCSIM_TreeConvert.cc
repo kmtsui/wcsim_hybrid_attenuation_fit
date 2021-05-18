@@ -154,15 +154,15 @@ int main(int argc, char **argv){
   int startEvent=0;
   int endEvent=0;
   char c;
-  while( (c = getopt(argc,argv,"f:o:s:e:l:hdtv")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
+  while( (c = getopt(argc,argv,"f:o:b:s:e:l:hrtv")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
     switch(c){
       case 'f':
         filename = optarg;
         break;
-      case 'd':
+      case 'r':
         plotDigitized = false; //using raw hits
         break;
-      case 'h':
+      case 'b':
         hybrid = false; // no mPMT
         break;
       case 't':
@@ -181,12 +181,24 @@ int main(int argc, char **argv){
 	      endEvent = std::stoi(optarg);
 	      break;
       case 'l':
-	      wavelength = std::stod(optarg);
+        wavelength = std::stod(optarg);
         if (wavelength<0) {
           std::cout<<"Wavelength < 0, using default = 400 nm"<<std::endl;
           wavelength = 400;
         }
 	      break;
+      case 'h':
+        std::cout << "USAGE: "
+                  << argv[0] << "\nOPTIONS:\n"
+                  << "-f : Intput file\n"
+                  << "-o : Output file\n"
+                  << "-l : Laser wavelength\n"
+                  << "-b : Use only B&L PMTs\n"
+                  << "-r : Use raw hits\n"
+                  << "-t : Use separated triggers\n"
+                  << "-v : Verbose\n"
+                  << "-s : Start event\n"
+                  << "-e : End event\n";
       default:
         return 0;
     }
