@@ -1,6 +1,6 @@
 # wcsim_hybrid_attenuation_fit
 
-Simple analysis to extract detector parameters from wcsim_hybrid MC.
+Analysis framework to extract detector parameters from WCSIM hybridPMT MC.
 
 ## Installation
 
