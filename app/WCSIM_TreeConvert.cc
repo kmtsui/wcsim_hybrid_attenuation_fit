@@ -21,8 +21,6 @@
 #include "WCSimRootGeom.hh"
 #include "WCSimRootOptions.hh"
 
-#include "utils/heuman_lambda.hh"
-
 using namespace std;
 
 WCSimRootGeom *geo = 0; 
@@ -33,70 +31,11 @@ double PMTradius[nPMTtypes];
 
 double CalcSolidAngle(double r, double R, double costh)
 {
-  //double weight = 2*TMath::Pi()*(1-R/sqrt(R*R+r*r));
+  double weight = 2*TMath::Pi()*(1-R/sqrt(R*R+r*r));
   //weight *= 1.-0.5*sqrt(1-costh*costh);
-  //weight *= 0.5+0.5*costh;
+  weight *= 0.5+0.5*costh;
 
-  //return weight;
-
-  if (costh<0) return 0.;
-  // analytic way to calculate solid angle subtended by PMT
-  // r = radius of PMT, R = distance to source, costh = cos angle of source relative to PMT
-  // assume the PMT is a perfect hemisphere
-  // calculate the slope of line that connects the source and tangent to the PMT surface
-  // then calculate the angle subtended
-  double sinth = sqrt(1-costh*costh);
-  double cosc;
-  double costh1, costh2;
-  if (R*sinth-r>0) // one of the line limited by the edge of hemisphere
-  {
-    // tangent line to the hemisphere
-    double m1 = (R*R*sinth*costh-r*sqrt(R*R-r*r))/(R*R*sinth*sinth-r*r);
-    double c1 = -m1*R*sinth+R*costh;
-    double a1 = R;
-    double b1 = sqrt(R*sinth*R*sinth+(R*costh-c1)*(R*costh-c1));
-    costh1 = std::min((a1*a1+b1*b1-c1*c1)/2./a1/b1,1.);
-
-    // half of the solid angle 
-    double omega = TMath::Pi()*(1-costh1);
-
-    // another limited by the edge of hemisphere
-    double a2 = R;
-    double b2 = sqrt(R*costh*R*costh+(R*sinth-r)*(R*sinth-r));
-    double c2 = r;
-    costh2 = std::min((a2*a2+b2*b2-c2*c2)/2./a2/b2,1.);
-
-    // the source completely perpendicular to the PMT direction
-    // only get the half solid angle
-    if (costh2>=1)
-      return omega;
-
-    // solid angle subtended by an ellipse
-    // formula copied from this paper https://www.sciencedirect.com/science/article/abs/pii/S0168900209022918
-    double phi = asin(costh2);
-    double k2 = 1-costh1*costh1/costh2*costh2;
-
-    double heumanlambda = heuman_lambda(phi,k2);
-
-    omega += TMath::Pi()*(1-heumanlambda);
-
-    return omega;
-  }
-  else 
-  {
-    double m1 = (R*R*sinth*costh+r*sqrt(R*R-r*r))/(R*R*sinth*sinth-r*r);
-    double m2 = (R*R*sinth*costh-r*sqrt(R*R-r*r))/(R*R*sinth*sinth-r*r);
-    double c1 = -m1*R*sinth+R*costh;
-    double c2 = R*sinth-R*costh/m2;
-    double c = sqrt(c1*c1+c2*c2);
-    double a = sqrt(R*sinth*R*sinth+(R*costh-c1)*(R*costh-c1));
-    double b = sqrt(R*costh*R*costh+(R*sinth-c2)*(R*sinth-c2));
-    cosc = (a*a+b*b-c*c)/2/a/b;
-
-    double coshalfc = sqrt((cosc+1)/2);
-    return (1-coshalfc)*2*TMath::Pi();
-  }
-
+  return weight;
 }
 
 double CalcGroupVelocity(double wavelength) {
