@@ -27,3 +27,6 @@ install(TARGETS OpticalFit DESTINATION lib/
 
 install(DIRECTORY toml DESTINATION include/)
 execute_process(COMMAND ln -s ${CMAKE_SOURCE_DIR}/src/toml ${CMAKE_BINARY_DIR}/toml OUTPUT_QUIET ERROR_QUIET)
+
+install(DIRECTORY utils DESTINATION include/)
+execute_process(COMMAND ln -s ${CMAKE_SOURCE_DIR}/src/utils ${CMAKE_BINARY_DIR}/utils OUTPUT_QUIET ERROR_QUIET)

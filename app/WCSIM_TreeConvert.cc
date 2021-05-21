@@ -16,34 +16,71 @@
 #include <TH3.h>
 #include <TMath.h>
 #include <TGraph.h>
+
 #include "WCSimRootEvent.hh"
 #include "WCSimRootGeom.hh"
 #include "WCSimRootOptions.hh"
 
-WCSimRootGeom *geo = 0; 
+#include "utils/heuman_lambda.hh"
 
 using namespace std;
+
+WCSimRootGeom *geo = 0; 
+
 // Simple example of reading a generated Root file
 const int nPMTtypes = 2;
 double PMTradius[nPMTtypes];
 
 double CalcSolidAngle(double r, double R, double costh)
 {
+  //double weight = 2*TMath::Pi()*(1-R/sqrt(R*R+r*r));
+  //weight *= 1.-0.5*sqrt(1-costh*costh);
+  //weight *= 0.5+0.5*costh;
+
+  //return weight;
+
+  if (costh<0) return 0.;
   // analytic way to calculate solid angle subtended by PMT
   // r = radius of PMT, R = distance to source, costh = cos angle of source relative to PMT
   // assume the PMT is a perfect hemisphere
-  // calculate the slope of lines that connects the source and tangent to the PMT surface
-  // then calculate thne angle subtended by the two lines
+  // calculate the slope of line that connects the source and tangent to the PMT surface
+  // then calculate the angle subtended
   double sinth = sqrt(1-costh*costh);
   double cosc;
+  double costh1, costh2;
   if (R*sinth-r>0) // one of the line limited by the edge of hemisphere
   {
+    // tangent line to the hemisphere
     double m1 = (R*R*sinth*costh-r*sqrt(R*R-r*r))/(R*R*sinth*sinth-r*r);
     double c1 = -m1*R*sinth+R*costh;
-    double c = sqrt(c1*c1+r*r);
-    double a = sqrt(R*sinth*R*sinth+(R*costh-c1)*(R*costh-c1));
-    double b = sqrt(R*costh*R*costh+(R*sinth-r)*(R*sinth-r));
-    cosc = (a*a+b*b-c*c)/2/a/b;
+    double a1 = R;
+    double b1 = sqrt(R*sinth*R*sinth+(R*costh-c1)*(R*costh-c1));
+    costh1 = std::min((a1*a1+b1*b1-c1*c1)/2./a1/b1,1.);
+
+    // half of the solid angle 
+    double omega = TMath::Pi()*(1-costh1);
+
+    // another limited by the edge of hemisphere
+    double a2 = R;
+    double b2 = sqrt(R*costh*R*costh+(R*sinth-r)*(R*sinth-r));
+    double c2 = r;
+    costh2 = std::min((a2*a2+b2*b2-c2*c2)/2./a2/b2,1.);
+
+    // the source completely perpendicular to the PMT direction
+    // only get the half solid angle
+    if (costh2>=1)
+      return omega;
+
+    // solid angle subtended by an ellipse
+    // formula copied from this paper https://www.sciencedirect.com/science/article/abs/pii/S0168900209022918
+    double phi = asin(costh2);
+    double k2 = 1-costh1*costh1/costh2*costh2;
+
+    double heumanlambda = heuman_lambda(phi,k2);
+
+    omega += TMath::Pi()*(1-heumanlambda);
+
+    return omega;
   }
   else 
   {
@@ -55,10 +92,11 @@ double CalcSolidAngle(double r, double R, double costh)
     double a = sqrt(R*sinth*R*sinth+(R*costh-c1)*(R*costh-c1));
     double b = sqrt(R*costh*R*costh+(R*sinth-c2)*(R*sinth-c2));
     cosc = (a*a+b*b-c*c)/2/a/b;
+
+    double coshalfc = sqrt((cosc+1)/2);
+    return (1-coshalfc)*2*TMath::Pi();
   }
-  
-  double coshalfc = sqrt((cosc+1)/2);
-  return (1-coshalfc)*2*TMath::Pi();
+
 }
 
 double CalcGroupVelocity(double wavelength) {
@@ -212,11 +250,11 @@ int main(int argc, char **argv){
   TFile *file = TFile::Open(filename);
   // Open the file
   if (filename==NULL){
-    cout << "Error, no input file: " << endl;
+    std::cout << "Error, no input file: " << std::endl;
     return -1;
   }
   if (!file->IsOpen()){
-    cout << "Error, could not open input file: " << filename << endl;
+    std::cout << "Error, could not open input file: " << filename << std::endl;
     return -1;
   }
   
@@ -277,7 +315,7 @@ int main(int argc, char **argv){
   if(outfilename==NULL) outfilename = (char*)"out.root";
   
   TFile * outfile = new TFile(outfilename,"RECREATE");
-  cout<<"File "<<outfilename<<" is open for writing"<<endl;
+  std::cout<<"File "<<outfilename<<" is open for writing"<<std::endl;
 
   double nHits, nPE, dist, costh, timetof, cosths, omega;
   int PMT_id, mPMT_PMTNo; //mPMT_id
@@ -496,7 +534,7 @@ int main(int argc, char **argv){
         nHits = 1; nPE = peForTube; dist = Norm; costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
         cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
         double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
-        omega = CalcSolidAngle(pmtradius,dist,costh);
+        omega = 0; //CalcSolidAngle(pmtradius,dist,costh);
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
 
@@ -599,7 +637,7 @@ int main(int argc, char **argv){
         nHits = 1; nPE = peForTube; dist = Norm; costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
         cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
         double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
-        omega = CalcSolidAngle(pmtradius,dist,costh);
+        omega = 0; //CalcSolidAngle(pmtradius,dist,costh);
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
 
@@ -649,9 +687,11 @@ int main(int argc, char **argv){
 
   int nPMTs_type0=geo->GetWCNumPMT();
   int nPMTs_type1=0; if (hybrid) nPMTs_type1=geo->GetWCNumPMT(true);
-  for (int pmtType=0;pmtType<nPMTtypes;pmtType++) {
+  for (int pmtType=0;pmtType<nPMTtypes;pmtType++) 
+  {
     int nPMTs_type = pmtType==0 ? nPMTs_type0 : nPMTs_type1;
-    for (int i=0;i<nPMTs_type;i++) {
+    for (int i=0;i<nPMTs_type;i++) 
+    {
       WCSimRootPMT pmt;
       if (pmtType==0) pmt = geo->GetPMT(i,false);
       else pmt = geo->GetPMT(i,true);
