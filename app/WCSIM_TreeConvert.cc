@@ -33,7 +33,7 @@ double CalcSolidAngle(double r, double R, double costh)
 {
   double weight = 2*TMath::Pi()*(1-R/sqrt(R*R+r*r));
   //weight *= 1.-0.5*sqrt(1-costh*costh);
-  weight *= 0.5+0.5*costh;
+  //weight *= 0.5+0.5*costh;
 
   return weight;
 }
