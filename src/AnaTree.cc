@@ -94,6 +94,7 @@ void AnaTree::SetDataBranches(std::vector<std::string> binvar, std::vector<std::
     fChain->SetBranchAddress("omega", &omega);
     fChain->SetBranchAddress("timetof", &timetof);
     fChain->SetBranchAddress("PMT_id", &PMT_id);
+    fChain->SetBranchAddress("mPMT_id", &mPMT_id);
 
     m_bins = binvar;
     m_cuts = cutvar;
@@ -132,6 +133,7 @@ void AnaTree::SetPMTBranches()
     t_pmt->SetBranchAddress("cosths", &cosths);
     t_pmt->SetBranchAddress("omega", &omega);
     t_pmt->SetBranchAddress("PMT_id", &PMT_id);
+    t_pmt->SetBranchAddress("mPMT_id", &mPMT_id);
     
 }
 
@@ -159,6 +161,7 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
         ev.SetCosths(cosths);
         ev.SetOmega(omega); 
         ev.SetPMTID(PMT_id);
+        ev.SetmPMTID(mPMT_id);
         
         std::vector<double> reco_var;
         reco_var.emplace_back(costh); reco_var.emplace_back(R);

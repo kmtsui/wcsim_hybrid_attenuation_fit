@@ -13,6 +13,7 @@ class AnaEvent
             m_sample   = -99;
             m_bin      = -99;
             m_pmtid = -99;
+            m_mpmtid = -99;
             m_cosths = -999.0;
             m_costh = -999.0;
             m_omega = -999.0;
@@ -32,6 +33,9 @@ class AnaEvent
 
         inline void SetPMTID(const int val){ m_pmtid = val; }
         inline int GetPMTID() const { return m_pmtid; }
+
+        inline void SetmPMTID(const int val){ m_mpmtid = val; }
+        inline int GetmPMTID() const { return m_mpmtid; }
 
         inline long int GetEvId() const { return m_evid; }
 
@@ -95,6 +99,8 @@ class AnaEvent
                 return m_omega;
             else if(var == "PMT_id")
                 return m_pmtid;
+            else if(var == "mPMT_id")
+                return m_mpmtid;
             else
             {
                 std::cout<<" Error! Variable "<<var<<" not available in AnaEvent"<<std::endl;
@@ -115,6 +121,7 @@ class AnaEvent
         short m_sample;    //sample type (aka cutBranch)
         short m_bin;       //reco bin for the sample binning
         int m_pmtid;       //pmt unique id
+        int m_mpmtid;      //pmt unique id inside a mPMT
         double m_cosths;   //PMT angle relative to source
         double m_costh;    //photon incident angle relative to PMT
         double m_omega;    //solid angle subtended by PMT

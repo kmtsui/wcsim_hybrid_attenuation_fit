@@ -36,6 +36,7 @@ private:
     double omega;
     double timetof;
     int PMT_id;
+    int mPMT_id;
     double weight;
 
     void SetLeafs();
@@ -77,6 +78,8 @@ public:
             return omega;
         else if(var == "PMT_id")
             return PMT_id;
+        else if(var == "mPMT_id")
+            return mPMT_id;
         else
         {
             std::cout<<" Error! Variable "<<var<<" not available in AnaTree"<<std::endl;
