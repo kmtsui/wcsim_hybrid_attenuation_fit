@@ -258,6 +258,7 @@ int main(int argc, char **argv){
 
   double nHits, nPE, dist, costh, timetof, cosths, omega;
   int PMT_id, mPMT_PMTNo; //mPMT_id
+  double endx,endy,endz;
   // TTree for storing the hit information. One for B&L PMT<, one for mPMT
   TTree* hitRate_pmtType0 = new TTree("hitRate_pmtType0","hitRate_pmtType0");
   hitRate_pmtType0->Branch("nHits",&nHits); // dummy variable, always equal to 1
@@ -268,6 +269,9 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Branch("omega",&omega); // solid angle subtended by PMT
   hitRate_pmtType0->Branch("timetof",&timetof); // hittime-tof
   hitRate_pmtType0->Branch("PMT_id",&PMT_id);
+  hitRate_pmtType0->Branch("endx",&endx);
+  hitRate_pmtType0->Branch("endy",&endy);
+  hitRate_pmtType0->Branch("endz",&endz);
   TTree* hitRate_pmtType1 = new TTree("hitRate_pmtType1","hitRate_pmtType1");
   hitRate_pmtType1->Branch("nHits",&nHits);
   hitRate_pmtType1->Branch("nPE",&nPE);
@@ -278,6 +282,9 @@ int main(int argc, char **argv){
   hitRate_pmtType1->Branch("timetof",&timetof);
   hitRate_pmtType1->Branch("PMT_id",&PMT_id);
   hitRate_pmtType1->Branch("mPMT_PMTNo",&mPMT_PMTNo); //sub-ID of PMT inside a mPMT module
+  hitRate_pmtType1->Branch("endx",&endx);
+  hitRate_pmtType1->Branch("endy",&endy);
+  hitRate_pmtType1->Branch("endz",&endz);
 
   double vtxpos[3];
   // Now loop over events
@@ -465,6 +472,9 @@ int main(int argc, char **argv){
         WCSimRootCherenkovHitTime * HitTime = (WCSimRootCherenkovHitTime*) timeArray->At(i);//Takes the first hit of the array as the timing, It should be the earliest hit
         //WCSimRootCherenkovHitTime HitTime = (WCSimRootCherenkovHitTime) timeArray->At(j);		  
         double time = HitTime->GetTruetime();
+        endx = HitTime->GetPhotonEndPos(0);
+        endy = HitTime->GetPhotonEndPos(1);
+        endz = HitTime->GetPhotonEndPos(2);
         ////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////
