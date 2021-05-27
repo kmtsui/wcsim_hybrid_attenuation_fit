@@ -128,6 +128,8 @@ int main(int argc, char **argv){
 
   double wavelength = 400; //wavelength in nm
 
+  int nPMTpermPMT=19;
+
   int startEvent=0;
   int endEvent=0;
   char c;
@@ -257,7 +259,7 @@ int main(int argc, char **argv){
   std::cout<<"File "<<outfilename<<" is open for writing"<<std::endl;
 
   double nHits, nPE, dist, costh, timetof, cosths, omega;
-  int PMT_id, mPMT_PMTNo; //mPMT_id
+  int PMT_id, mPMT_id;
   // TTree for storing the hit information. One for B&L PMT<, one for mPMT
   TTree* hitRate_pmtType0 = new TTree("hitRate_pmtType0","hitRate_pmtType0");
   hitRate_pmtType0->Branch("nHits",&nHits); // dummy variable, always equal to 1
@@ -268,6 +270,7 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Branch("omega",&omega); // solid angle subtended by PMT
   hitRate_pmtType0->Branch("timetof",&timetof); // hittime-tof
   hitRate_pmtType0->Branch("PMT_id",&PMT_id);
+  hitRate_pmtType0->Branch("mPMT_id",&mPMT_id);
   TTree* hitRate_pmtType1 = new TTree("hitRate_pmtType1","hitRate_pmtType1");
   hitRate_pmtType1->Branch("nHits",&nHits);
   hitRate_pmtType1->Branch("nPE",&nPE);
@@ -277,7 +280,10 @@ int main(int argc, char **argv){
   hitRate_pmtType1->Branch("omega",&omega);
   hitRate_pmtType1->Branch("timetof",&timetof);
   hitRate_pmtType1->Branch("PMT_id",&PMT_id);
-  hitRate_pmtType1->Branch("mPMT_PMTNo",&mPMT_PMTNo); //sub-ID of PMT inside a mPMT module
+  hitRate_pmtType1->Branch("mPMT_id",&mPMT_id); //sub-ID of PMT inside a mPMT module
+                                                // 0 -11 : outermost ring
+                                                // 12 - 17: middle ring
+                                                // 18: innermost PMT
 
   double vtxpos[3];
   // Now loop over events
@@ -423,10 +429,9 @@ int main(int argc, char **argv){
         if(pmtType == 0) pmt = geo->GetPMT(tubeNumber-1,false);
         else pmt  = geo->GetPMT(tubeNumber-1,true);
 
-        //if (pmtType == 0) PMT_id = tubeNumber-1;
-        //else mPMT_id = (tubeNumber-1.);
         PMT_id = tubeNumber-1;
-        
+        if (pmtType == 0) mPMT_id = 0;
+        else mPMT_id = PMT_id%nPMTpermPMT;
 
         double PMTpos[3];
         double PMTdir[3];
@@ -459,8 +464,6 @@ int main(int argc, char **argv){
           vDir[j] /= Norm;
           vOrientation[j] /= NormOrientation;
         }
-
-        if(pmtType == 1) mPMT_PMTNo = pmt.GetmPMT_PMTNo();
         
         WCSimRootCherenkovHitTime * HitTime = (WCSimRootCherenkovHitTime*) timeArray->At(i);//Takes the first hit of the array as the timing, It should be the earliest hit
         //WCSimRootCherenkovHitTime HitTime = (WCSimRootCherenkovHitTime) timeArray->At(j);		  
@@ -527,9 +530,9 @@ int main(int argc, char **argv){
         if(pmtType == 0) pmt = geo->GetPMT(tubeNumber-1,false);
         else pmt  = geo->GetPMT(tubeNumber-1,true); 
 
-        //if(pmtType == 0) PMT_id = (tubeNumber-1.);
-        //else mPMT_id = (tubeNumber-1.);
         PMT_id = (tubeNumber-1.);
+        if (pmtType == 0) mPMT_id = 0;
+        else mPMT_id = PMT_id%nPMTpermPMT;
         
         double PMTpos[3];
         double PMTdir[3];                   
@@ -569,8 +572,6 @@ int main(int argc, char **argv){
         ////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////
 
-        if(pmtType == 1) mPMT_PMTNo = pmt.GetmPMT_PMTNo();
-
         timetof = time-tof+triggerTime[pmtType]-triggerShift[pmtType];
 
         nHits = 1; nPE = peForTube; dist = Norm; costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
@@ -601,13 +602,14 @@ int main(int argc, char **argv){
   pmt_type0->Branch("cosths",&cosths);
   pmt_type0->Branch("omega",&omega);
   pmt_type0->Branch("PMT_id",&PMT_id);
+  pmt_type0->Branch("mPMT_id",&mPMT_id);
   TTree* pmt_type1 = new TTree("pmt_type1","pmt_type1");
   pmt_type1->Branch("R",&dist);
   pmt_type1->Branch("costh",&costh);
   pmt_type1->Branch("cosths",&cosths);
   pmt_type1->Branch("omega",&omega);
   pmt_type1->Branch("PMT_id",&PMT_id);
-  pmt_type1->Branch("mPMT_PMTNo",&mPMT_PMTNo);
+  pmt_type1->Branch("mPMT_id",&mPMT_id);
   double vDirSource[3];
   double endcapZ=3000;
   if (abs(vtxpos[2])<endcapZ) {
@@ -634,11 +636,9 @@ int main(int argc, char **argv){
       WCSimRootPMT pmt;
       if (pmtType==0) pmt = geo->GetPMT(i,false);
       else pmt = geo->GetPMT(i,true);
-      if (pmtType == 0) PMT_id = i;
-      else {
-          PMT_id = i;
-          mPMT_PMTNo = pmt.GetmPMT_PMTNo();
-      }
+      PMT_id = i;
+      if (pmtType == 0) mPMT_id = 0;
+      else mPMT_id = PMT_id%nPMTpermPMT;
       double PMTpos[3];
       double PMTdir[3];                   
       for(int j=0;j<3;j++){
