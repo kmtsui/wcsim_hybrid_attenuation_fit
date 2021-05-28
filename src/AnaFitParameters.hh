@@ -76,8 +76,24 @@ public:
     void SetCovarianceMatrix(const TMatrixDSym& covmat, bool decompose = false);
     TMatrixDSym* GetCovMat() const { return covariance; }
     bool HasCovMat() const { return covariance != nullptr; }
-    bool IsDecomposed() const { return m_decompose; }
     double GetChi2(const std::vector<double>& params) const;
+
+    bool IsDecomposed() const { return m_decompose; }
+    TMatrixDSym* GetOriginalCovMat() const { return original_cov; }
+    TMatrixDSym GetOriginalCovMat(const TMatrixDSym& cov, unsigned int start_idx) const
+    {
+        return eigen_decomp->GetOriginalCovMat(cov, start_idx);
+    }
+    std::vector<double> GetOriginalParameters(const std::vector<double>& param) const
+    {
+        return eigen_decomp->GetOriginalParameters(param);
+    }
+    std::vector<double> GetOriginalParameters(const std::vector<double>& param,
+                                              unsigned int start_idx) const
+    {
+        return eigen_decomp->GetOriginalParameters(param, start_idx);
+    }
+
 
 protected:
     bool CheckDims(const std::vector<double>& params) const;

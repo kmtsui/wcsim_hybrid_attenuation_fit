@@ -9,6 +9,11 @@ AnaFitParameters::AnaFitParameters(const std::string& par_name, const int pmttyp
     , m_weight_cap(1000)
     , m_info_frac(1.00)
     , m_decompose(false)
+    , eigen_decomp(nullptr)
+    , covariance(nullptr)
+    , covarianceI(nullptr)
+    , original_cov(nullptr)
+
 {
     m_func = new Identity;
     std::cout<<"Setting up parameter "<<m_name<<std::endl;
@@ -16,6 +21,15 @@ AnaFitParameters::AnaFitParameters(const std::string& par_name, const int pmttyp
 
 AnaFitParameters::~AnaFitParameters()
 {
+    if(eigen_decomp != nullptr)
+        delete eigen_decomp;
+    if(covariance != nullptr)
+        delete covariance;
+    if(covarianceI != nullptr)
+        delete covarianceI;
+    if(original_cov != nullptr)
+        delete original_cov;
+
 }
 
 
@@ -75,6 +89,23 @@ void AnaFitParameters::InitParameters(std::vector<std::string> names, std::vecto
     pars_original = pars_prior;
 
     std::cout<<"Number of parameters = "<<Npar<<std::endl;
+
+    if(m_decompose)
+    {
+        pars_prior = eigen_decomp -> GetDecompParameters(pars_prior);
+        pars_limlow = std::vector<double>(Npar, -100);
+        pars_limhigh = std::vector<double>(Npar, 100);
+
+        const int idx = eigen_decomp -> GetInfoFraction(m_info_frac);
+        for(int i = idx; i < Npar; ++i)
+            pars_fixed[i] = true;
+
+        std::cout << "Decomposed parameters.\n"
+                  << "Keeping the " << idx << " largest eigen values.\n"
+                  << "Corresponds to " << m_info_frac * 100.0
+                  << "\% total variance.\n";
+    }
+
 }
 
 void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)

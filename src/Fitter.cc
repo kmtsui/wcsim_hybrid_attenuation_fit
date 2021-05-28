@@ -173,7 +173,13 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
         for(int j = 0; j < m_fitpara[i]->GetNpar(); ++j)
         {
             h_prefit.SetBinContent(num_par, m_fitpara[i]->GetParPrior(j));
-            h_prefit.SetBinError(num_par, 0);
+            if(m_fitpara[i]->HasCovMat())
+            {
+                TMatrixDSym* cov_mat = m_fitpara[i]->GetCovMat();
+                h_prefit.SetBinError(num_par, std::sqrt((*cov_mat)[j][j]));
+            }
+            else
+                h_prefit.SetBinError(num_par, 0);
 
             v_prefit_original[num_par-1] = m_fitpara[i]->GetParOriginal(j);
             num_par++;
@@ -253,6 +259,15 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples)
 
     unsigned int par_offset = 0;
     TMatrixDSym cov_matrix(ndim, cov_array);
+    for(const auto& fit_param : m_fitpara)
+    {
+        if(fit_param->IsDecomposed())
+        {
+            cov_matrix  = fit_param->GetOriginalCovMat(cov_matrix, par_offset);
+            par_val_vec = fit_param->GetOriginalParameters(par_val_vec, par_offset);
+        }
+        par_offset += fit_param->GetNpar();
+    }
 
     TMatrixDSym cor_matrix(ndim);
     for(int r = 0; r < ndim; ++r)
@@ -327,6 +342,16 @@ double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
        || (m_calls > 1001 && m_calls % 1000 == 0))
         output_chi2 = true;
 
+    unsigned int par_offset = 0;
+    for(int i = 0; i < m_fitpara.size(); ++i)
+    {
+        if(m_fitpara[i]->IsDecomposed())
+        {
+            new_pars[i] = m_fitpara[i]->GetOriginalParameters(new_pars[i]);
+        }
+        par_offset += m_fitpara[i]->GetNpar();
+    }
+
     for(int s = 0; s < m_samples.size(); ++s)
     {
         const unsigned int num_pmts = m_samples[s]->GetNPMTs();
@@ -378,7 +403,17 @@ double Fitter::CalcLikelihood(const double* par)
         {
             vec.push_back(par[k++]);
         }
+
+        chi2_sys += m_fitpara[i]->GetChi2(vec);
+
         new_pars.push_back(vec);
+
+        if(output_chi2)
+        {
+            std::cout << "Chi2 contribution from " << m_fitpara[i]->GetName() << " is "
+                      << m_fitpara[i]->GetChi2(vec) << std::endl;
+        }
+
     }
 
 
@@ -495,6 +530,8 @@ void Fitter::SaveResults(const std::vector<std::vector<double>>& par_results,
         std::vector<double> par_original;
         m_fitpara[i]->GetParOriginal(par_original);
 
+        TMatrixDSym* cov_mat = m_fitpara[i]->GetOriginalCovMat();
+
         std::stringstream ss;
 
         ss << "hist_" << name << "_result";
@@ -508,6 +545,10 @@ void Fitter::SaveResults(const std::vector<std::vector<double>>& par_results,
         ss << "hist_" << name << "_error_final";
         TH1D h_err_final(ss.str().c_str(), ss.str().c_str(), npar, 0, npar);
 
+        ss.str("");
+        ss << "hist_" << name << "_error_prior";
+        TH1D h_err_prior(ss.str().c_str(), ss.str().c_str(), npar, 0, npar);
+
         std::vector<std::string> vec_names;
         m_fitpara[i]->GetParNames(vec_names);
         for(int j = 0; j < npar; j++)
@@ -518,12 +559,20 @@ void Fitter::SaveResults(const std::vector<std::vector<double>>& par_results,
             h_par_prior.SetBinContent(j + 1, par_original[j]);
             h_err_final.GetXaxis()->SetBinLabel(j + 1, vec_names[j].c_str());
             h_err_final.SetBinContent(j + 1, par_errors[i][j]);
+
+            double err_prior = 0.0;
+            if(cov_mat != nullptr)
+                err_prior = std::sqrt((*cov_mat)(j,j));
+
+            h_err_prior.GetXaxis()->SetBinLabel(j + 1, vec_names[j].c_str());
+            h_err_prior.SetBinContent(j + 1, err_prior);
         }
 
         m_dir->cd();
         h_par_final.Write();
         h_par_prior.Write();
         h_err_final.Write();
+        h_err_prior.Write();
     }
 
 }
