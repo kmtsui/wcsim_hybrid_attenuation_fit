@@ -8,6 +8,7 @@ AnaFitParameters::AnaFitParameters(const std::string& par_name, const int pmttyp
     , m_do_cap_weights(false)
     , m_weight_cap(1000)
     , m_info_frac(1.00)
+    , m_decompose(false)
 {
     m_func = new Identity;
     std::cout<<"Setting up parameter "<<m_name<<std::endl;
@@ -141,3 +142,75 @@ void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int n
         event -> AddEvWght(wgt);
     }
 }
+
+void AnaFitParameters::SetCovarianceMatrix(const TMatrixDSym& covmat, bool decompose)
+{
+    if(covariance != nullptr)
+        delete covariance;
+    if(covarianceI != nullptr)
+        delete covarianceI;
+    if(original_cov != nullptr)
+        delete original_cov;
+    if(eigen_decomp != nullptr)
+        delete eigen_decomp;
+
+    if(decompose)
+    {
+        m_decompose  = true;
+        eigen_decomp = new EigenDecomp(covmat);
+        original_cov = new TMatrixDSym(covmat);
+        covariance   = new TMatrixDSym(eigen_decomp->GetEigenCovMat());
+        covarianceI  = new TMatrixDSym(eigen_decomp->GetEigenCovMat());
+    }
+    else
+    {
+        original_cov = new TMatrixDSym(covmat);
+        covariance  = new TMatrixDSym(covmat);
+        covarianceI = new TMatrixDSym(covmat);
+    }
+
+    double det = 0;
+    TDecompLU inv_test;
+    TMatrixD inv_matrix(*covariance);
+    if(inv_test.InvertLU(inv_matrix, 1E-48, &det))
+    {
+        covarianceI->SetMatrixArray(inv_matrix.GetMatrixArray());
+        std::cout << "Covariance matrix inverted successfully." << std::endl;
+    }
+    else
+    {
+        std::cerr << "In AnaFitParameters::SetCovarianceMatrix():\n"
+                  << "Covariance matrix is non invertable. Determinant is " << det
+                  << std::endl;
+        return;
+    }
+
+    std::cout << "Covariance matrix size: " << covariance->GetNrows()
+              << " x " << covariance->GetNrows() << " for " << this->m_name << std::endl;
+}
+
+double AnaFitParameters::GetChi2(const std::vector<double>& params) const
+{
+    if(covariance == nullptr)
+        return 0.0;
+
+    if(CheckDims(params) == false)
+    {
+        std::cout << "In AnaFitParameters::GetChi2()\n"
+                  << "Dimension check failed. Returning zero." << std::endl;
+        return 0.0;
+    }
+
+    double chi2 = 0;
+    for(int i = 0; i < covarianceI->GetNrows(); i++)
+    {
+        for(int j = 0; j < covarianceI->GetNrows(); j++)
+        {
+            chi2
+                += (params[i] - pars_prior[i]) * (params[j] - pars_prior[j]) * (*covarianceI)(i, j);
+        }
+    }
+
+    return chi2;
+}
+

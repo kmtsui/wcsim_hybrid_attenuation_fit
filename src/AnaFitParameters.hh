@@ -14,6 +14,7 @@ using TMatrixDSym = TMatrixTSym<double>;
 #include "AnaSample.hh"
 #include "BinManager.hh"
 #include "ParameterFunction.hh"
+#include "EigenDecomp.hh"
 
 // some error codes
 const int PASSEVENT = -1;
@@ -72,6 +73,12 @@ public:
     inline void SetPMTType(const int val) { m_pmttype = val; }
     inline int GetPMTType() const { return m_pmttype; }
 
+    void SetCovarianceMatrix(const TMatrixDSym& covmat, bool decompose = false);
+    TMatrixDSym* GetCovMat() const { return covariance; }
+    bool HasCovMat() const { return covariance != nullptr; }
+    bool IsDecomposed() const { return m_decompose; }
+    double GetChi2(const std::vector<double>& params) const;
+
 protected:
     bool CheckDims(const std::vector<double>& params) const;
 
@@ -96,6 +103,12 @@ protected:
     BinManager m_bm;
 
     ParameterFunction* m_func;
+
+    EigenDecomp* eigen_decomp;
+    TMatrixDSym* covariance;
+    TMatrixDSym* covarianceI;
+    TMatrixDSym* original_cov;
+    bool m_decompose;
 };
 
 #endif
