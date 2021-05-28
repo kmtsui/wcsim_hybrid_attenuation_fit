@@ -117,7 +117,9 @@ int main(int argc, char** argv)
         std::vector<double> lows;
         std::vector<double> highs;
         std::vector<bool> fixeds;
-        for (auto const &par : par_setup){
+        // Read parameter setup vector
+        for (auto const &par : par_setup)
+        {
             auto parname = toml_h::find<std::string>(par,0);
             auto prior = toml_h::find<double>(par,1);
             auto step = toml_h::find<double>(par,2);
@@ -131,8 +133,10 @@ int main(int argc, char** argv)
             highs.push_back(high);
             fixeds.push_back(fixed);
         }
+        // If length of parameter setup vector < npar, copy setup from last entry
         if (parnames.size()<npar)
-        {   int lastidx = parnames.size()-1;
+        {   
+            int lastidx = parnames.size()-1;
             for (int i=parnames.size();i<npar;i++)
             {
                 parnames.push_back(Form("%s_%i",parnames[lastidx].c_str(),i));
