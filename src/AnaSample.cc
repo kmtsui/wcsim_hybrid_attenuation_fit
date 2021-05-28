@@ -17,7 +17,7 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     std::cout  << "Sample: " << m_name << " (ID: " << m_sample_id << ")" << std::endl;
 
     m_bm.SetBinning(m_binning);
-    m_bm.Print();
+    //m_bm.Print();
     m_nbins = m_bm.GetNbins();
 
     m_llh = new PoissonLLH;
