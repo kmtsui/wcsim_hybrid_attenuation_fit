@@ -162,6 +162,20 @@ int main(int argc, char** argv)
         std::cout<<"]"<<std::endl;
 
         auto fitpara = new AnaFitParameters(name,pmttype);
+        if (ele.size()>5)
+        {
+            // Optionally load prior covariance matrix
+            auto covariance_config = toml_h::find<toml::array>(ele,5);
+            if (covariance_config.size()>0)
+            {
+                auto fname = toml_h::find<std::string>(covariance_config,0);
+                auto matname = toml_h::find<std::string>(covariance_config,1);
+                TFile f(fname.c_str());
+                std::cout<<"Using covariance matrix "<<matname<<" from "<<fname<<std::endl;
+                TMatrixDSym* cov_mat = (TMatrixDSym*)f.Get(matname.c_str());
+                fitpara->SetCovarianceMatrix(*cov_mat);
+            }
+        }
         fitpara->InitParameters(parnames,priors,steps,lows,highs,fixeds);
         fitpara->SetParameterFunction(functype);
         fitpara->SetBinVar(binning_var);
