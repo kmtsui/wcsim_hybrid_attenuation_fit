@@ -80,6 +80,8 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
 {
     m_evmap.clear();
 
+    std::vector<bool> params_used(Npar,false);
+
     for(std::size_t s=0; s < sample.size(); s++)
     {
         std::vector<int> sample_map;
@@ -94,12 +96,18 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
             const int bin = m_bm.GetBinIndex(binvar);
 
             if (m_pmttype == -1 || sample[s]->GetPMTType() == m_pmttype)
+            {
                 sample_map.push_back(bin);
+                params_used[bin]=true;
+            }
             else sample_map.push_back(PASSEVENT);
         }
         std::cout<<"In AnaFitParameters::InitEventMap, built event map for sample "<< sample[s]->GetName() << " of total "<< sample[s] -> GetNPMTs() << "PMTs"<<std::endl;
         m_evmap.push_back(sample_map);
     }
+
+    for (int i=0;i<Npar;i++)
+        if (!params_used[i]) pars_fixed[i]=true;
 }
 
 void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params)
