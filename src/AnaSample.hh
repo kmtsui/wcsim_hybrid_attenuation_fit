@@ -97,6 +97,7 @@ protected:
 
     TH1D* m_hpred;
     TH1D* m_hdata;
+    TH1D* m_hdata_unbinned;
 
 };
 

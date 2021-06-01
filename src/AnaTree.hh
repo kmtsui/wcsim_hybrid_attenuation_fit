@@ -21,8 +21,8 @@ class AnaTree
 {
 private:
     TChain* fChain; //! pointer to the analyzed TTree or TChain
-    TFile* f_pmt; // pointer to PMT tree
-    TTree* t_pmt;
+    TFile* f_pmt; 
+    TTree* t_pmt; // pointer to PMT tree
 
     std::vector<int> pmt_mask;
     bool m_maskpmt;
@@ -59,8 +59,9 @@ public:
     void SetPMTBranches();
     std::vector<AnaEvent> GetPMTs();
     void GetData(std::vector<std::vector<double>>& data_vec, std::vector<std::vector<double>>& cut_vec, std::vector<double>& weight_vec);
-    bool GetDataEntry(unsigned long entry, std::vector<double>& data_vec, std::vector<double>& cut_vec, double& weight);
+    bool GetDataEntry(unsigned long entry, std::vector<double>& cut_vec, double& weight, int& pmtID);
     unsigned long GetDataEntries() const { return fChain->GetEntries(); }
+    int GetPMTEntries() const { return t_pmt->GetEntries(); }
 
     double GetEventVar(const std::string& var) const
     {

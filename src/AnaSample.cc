@@ -62,34 +62,24 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         if (!skip) AddPMT(pmt_vec[i]);
     }
 
-    //std::vector<std::vector<double>> data_vec;
-    //std::vector<std::vector<double>> cut_vec;
-    //std::vector<double> weight_vec;
-    std::vector<double> data_vec;
+    //std::vector<double> data_vec;
     std::vector<double> cut_vec;
     double weight;
     selTree.SetDataBranches(m_binvar,m_cutvar);
-    //selTree.GetData(data_vec, cut_vec, weight_vec);
 
     unsigned long nDataEntries = selTree.GetDataEntries();
 
-#ifndef NDEBUG
-    if(m_hdata == nullptr)
-    {
-        std::cerr << "In AnaSample::LoadEventsFromFile() m_hdata is a nullptr!"
-                  << "Returning from function." << std::endl;
-        return;
-    }
-#endif
-    m_hdata->Reset();
+    int nPMTs = selTree.GetPMTEntries();
+    m_hdata_unbinned = new TH1D("","",nPMTs,0,nPMTs);
+    int pmtID;
 
     std::cout<<"Reading PMT hit data..."<<std::endl;
     for (unsigned long i=0;i<nDataEntries;i++)
     {
-        data_vec.clear();
+        //data_vec.clear();
         cut_vec.clear();
 
-        if (!selTree.GetDataEntry(i,data_vec,cut_vec,weight)) continue;
+        if (!selTree.GetDataEntry(i,cut_vec,weight,pmtID)) continue;
 
         bool skip = false;
 
@@ -101,48 +91,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         }
 
         if (skip) continue;
-        const int b = m_bm.GetBinIndex(data_vec);
-        m_hdata->Fill(b+0.5, weight);
-    }
-
-/*    for (unsigned long i=0;i<data_vec.size();i++)
-    {
-        bool skip=false;
-        for (int j=0;j<m_cutvar.size();j++) {
-            if (cut_vec[i][j]<m_cutlow[j] || cut_vec[i][j]>m_cuthigh[j]) {
-                skip = true;   
-                break;
-            }
-        }
-        if (skip) continue;
-        const int b = m_bm.GetBinIndex(data_vec[i]);
-        m_hdata->Fill(b+0.5, weight_vec[i]);
-    }
-*/
-
-    m_hdata->Scale(m_norm);
-
-    std::cout<<"Number of entries in data hist = "<<m_hdata->GetEntries()<<std::endl;
-
-    if(m_stat_fluc) 
-    {
-        std::cout << "Applying statistical fluctuations..." << std::endl;
-
-        for(int j = 1; j <= m_hdata->GetNbinsX(); ++j)
-        {
-            double val = m_hdata->GetBinContent(j);
-            val = gRandom->Poisson(val);
-#ifndef NDEBUG
-            if(val <= 0.0)
-            {
-                std::cout   << "In AnaSample::FillEventHist()\n"
-                            << "In Sample " <<  m_name << ", bin " << j
-                            << " has 0 (or negative) entries. This may cause a problem with chi2 computations."
-                            << std::endl;
-            }
-#endif
-            m_hdata->SetBinContent(j, val);
-        }
+        m_hdata_unbinned->Fill(pmtID+0.5, weight);
     }
 
     PrintStats();
@@ -286,9 +235,10 @@ void AnaSample::FillDataHist(bool stat_fluc)
 #endif
     m_hdata->Reset();
 
-    for(const auto& e : m_events)
+    for(const auto& e : m_pmts)
     {
-        const double weight = e.GetEvWght()*e.GetPE();
+        const int pmtID = e.GetPMTID();
+        const double weight = m_hdata_unbinned->GetBinContent(pmtID+1);
         const int reco_bin  = e.GetSampleBin();
         m_hdata->Fill(reco_bin + 0.5, weight);
     }
