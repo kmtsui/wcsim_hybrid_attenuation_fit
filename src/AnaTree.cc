@@ -251,23 +251,15 @@ void AnaTree::GetData(std::vector<std::vector<double>>& data_vec, std::vector<st
     }
 }
 
-bool AnaTree::GetDataEntry(unsigned long entry, std::vector<double>& cut_vec, double& weight, int& pmtID)
+bool AnaTree::GetDataEntry(unsigned long entry, double& time, double& charge, int& pmtID)
 {
     fChain->GetEntry(entry);
 
     if (m_maskpmt) if (pmt_mask.at(PMT_id)) return false;
 
-    //for (int i=0;i<m_bins.size();i++)
-    //{
-    //    data_vec.push_back(GetEventVar(m_bins[i]));
-    //}
+    time = timetof;
 
-    for (int i=0;i<m_cuts.size();i++)
-    {
-        cut_vec.push_back(GetEventVar(m_cuts[i]));
-    }
-
-    weight = nPE;
+    charge = nPE;
 
     pmtID = PMT_id;
 

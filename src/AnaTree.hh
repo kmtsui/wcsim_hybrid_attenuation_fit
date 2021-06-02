@@ -60,7 +60,7 @@ public:
     void SetPMTBranches();
     std::vector<AnaEvent> GetPMTs();
     void GetData(std::vector<std::vector<double>>& data_vec, std::vector<std::vector<double>>& cut_vec, std::vector<double>& weight_vec);
-    bool GetDataEntry(unsigned long entry, std::vector<double>& cut_vec, double& weight, int& pmtID);
+    bool GetDataEntry(unsigned long entry, double& time, double& charge, int& pmtID);
     unsigned long GetDataEntries() const { return fChain->GetEntries(); }
     int GetPMTEntries() const { return t_pmt->GetEntries(); }
 

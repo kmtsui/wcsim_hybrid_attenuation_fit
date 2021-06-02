@@ -34,6 +34,9 @@ AnaSample::~AnaSample()
 
     if(m_hdata != nullptr)
         delete m_hdata;
+
+    if(m_hdata_unbinned != nullptr)
+        delete m_hdata_unbinned;
 }
 
 void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name)
@@ -62,13 +65,14 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         if (!skip) AddPMT(pmt_vec[i]);
     }
 
-    //std::vector<double> data_vec;
-    std::vector<double> cut_vec;
-    double weight;
+    double timetof, nPE;
     selTree.SetDataBranches(m_binvar,m_cutvar);
 
     unsigned long nDataEntries = selTree.GetDataEntries();
 
+    if(m_hdata_unbinned != nullptr)
+        delete m_hdata_unbinned;
+        
     int nPMTs = selTree.GetPMTEntries();
     m_hdata_unbinned = new TH1D("","",nPMTs,0,nPMTs);
     int pmtID;
@@ -76,22 +80,29 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     std::cout<<"Reading PMT hit data..."<<std::endl;
     for (unsigned long i=0;i<nDataEntries;i++)
     {
-        //data_vec.clear();
-        cut_vec.clear();
-
-        if (!selTree.GetDataEntry(i,cut_vec,weight,pmtID)) continue;
+        if (!selTree.GetDataEntry(i,timetof,nPE,pmtID)) continue;
 
         bool skip = false;
 
         for (int j=0;j<m_cutvar.size();j++) {
-            if (cut_vec[j]<m_cutlow[j] || cut_vec[j]>m_cuthigh[j]) {
-                skip = true;   
-                break;
+            if (m_cutvar[j]=="timetof")
+            {
+                if (timetof<m_cutlow[j] || timetof>m_cuthigh[j]) {
+                    skip = true;   
+                    break;
+                }
+            }
+            else if (m_cutvar[j]=="nPE")
+            {
+                if (nPE<m_cutlow[j] || nPE>m_cuthigh[j]) {
+                    skip = true;   
+                    break;
+                }
             }
         }
 
         if (skip) continue;
-        m_hdata_unbinned->Fill(pmtID+0.5, weight);
+        m_hdata_unbinned->Fill(pmtID+0.5, nPE);
     }
 
     PrintStats();
