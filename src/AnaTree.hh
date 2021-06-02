@@ -33,6 +33,7 @@ private:
     double R;
     double costh;
     double cosths;
+    double phim;
     double omega;
     double timetof;
     int PMT_id;
@@ -71,6 +72,8 @@ public:
             return costh;
         else if(var == "cosths")
             return cosths;
+        else if(var == "phim")
+            return phim;
         else if(var == "timetof")
             return timetof;
         else if(var == "nPE")

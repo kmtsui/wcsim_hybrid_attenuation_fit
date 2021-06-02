@@ -16,6 +16,7 @@
 #include <TH3.h>
 #include <TMath.h>
 #include <TGraph.h>
+#include <TVector3.h>
 
 #include "WCSimRootEvent.hh"
 #include "WCSimRootGeom.hh"
@@ -596,10 +597,12 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Write();
   hitRate_pmtType1->Write();
   // Save also PMT geometry information
+  double phim;
   TTree* pmt_type0 = new TTree("pmt_type0","pmt_type0");
   pmt_type0->Branch("R",&dist);
   pmt_type0->Branch("costh",&costh);
   pmt_type0->Branch("cosths",&cosths);
+  pmt_type0->Branch("phim",&phim);
   pmt_type0->Branch("omega",&omega);
   pmt_type0->Branch("PMT_id",&PMT_id);
   pmt_type0->Branch("mPMT_id",&mPMT_id);
@@ -607,6 +610,7 @@ int main(int argc, char **argv){
   pmt_type1->Branch("R",&dist);
   pmt_type1->Branch("costh",&costh);
   pmt_type1->Branch("cosths",&cosths);
+  pmt_type1->Branch("phim",&phim); // photon incident phi angle relative to central PMT 
   pmt_type1->Branch("omega",&omega);
   pmt_type1->Branch("PMT_id",&PMT_id);
   pmt_type1->Branch("mPMT_id",&mPMT_id);
@@ -663,6 +667,26 @@ int main(int argc, char **argv){
       cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
       double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
       omega = CalcSolidAngle(pmtradius,dist,costh);
+      phim = 0;
+      if (pmtType==1 && mPMT_id!=nPMTpermPMT-1)
+      { 
+        // Calculate photon incident cos(phi) angle relative to central PMT 
+        int idx_centralpmt = int(PMT_id/nPMTpermPMT)*nPMTpermPMT + nPMTpermPMT-1; // locate the central PMT
+        double PMTpos_central[3];
+        WCSimRootPMT pmt_central = geo->GetPMT(idx_centralpmt,true);
+        // central PMT position relative to current PMT
+        for(int j=0;j<3;j++){
+          PMTpos_central[j] = pmt_central.GetPosition(j)-PMTpos[j];
+        }
+        TVector3 v_central(PMTpos_central);
+        TVector3 v_dir(vDir);
+        TVector3 v_orientation(vOrientation);
+        // Use cross product to extract the perpendicular component
+        TVector3 v_dir1 = v_orientation.Cross(v_central);
+        TVector3 v_dir2 = v_orientation.Cross(-v_dir);
+        // Use dot cross to calculate the phi angle
+        phim = v_dir1.Angle(v_dir2);
+      }
       if (pmtType==0) pmt_type0->Fill();
       if (pmtType==1) pmt_type1->Fill();
     }
