@@ -259,32 +259,19 @@ int main(int argc, char **argv){
   TFile * outfile = new TFile(outfilename,"RECREATE");
   std::cout<<"File "<<outfilename<<" is open for writing"<<std::endl;
 
-  double nHits, nPE, dist, costh, timetof, cosths, omega;
-  int PMT_id, mPMT_id;
-  // TTree for storing the hit information. One for B&L PMT<, one for mPMT
+  double nHits, nPE, timetof;
+  int PMT_id;
+  // TTree for storing the hit information. One for B&L PMT, one for mPMT
   TTree* hitRate_pmtType0 = new TTree("hitRate_pmtType0","hitRate_pmtType0");
   hitRate_pmtType0->Branch("nHits",&nHits); // dummy variable, always equal to 1
   hitRate_pmtType0->Branch("nPE",&nPE); // number of PE
-  hitRate_pmtType0->Branch("R",&dist); // distance to source
-  hitRate_pmtType0->Branch("costh",&costh); // photon incident angle relative to PMT
-  hitRate_pmtType0->Branch("cosths",&cosths); // PMT angle relative to source
-  hitRate_pmtType0->Branch("omega",&omega); // solid angle subtended by PMT
   hitRate_pmtType0->Branch("timetof",&timetof); // hittime-tof
   hitRate_pmtType0->Branch("PMT_id",&PMT_id);
-  hitRate_pmtType0->Branch("mPMT_id",&mPMT_id);
   TTree* hitRate_pmtType1 = new TTree("hitRate_pmtType1","hitRate_pmtType1");
   hitRate_pmtType1->Branch("nHits",&nHits);
   hitRate_pmtType1->Branch("nPE",&nPE);
-  hitRate_pmtType1->Branch("R",&dist);
-  hitRate_pmtType1->Branch("costh",&costh);
-  hitRate_pmtType1->Branch("cosths",&cosths);
-  hitRate_pmtType1->Branch("omega",&omega);
   hitRate_pmtType1->Branch("timetof",&timetof);
   hitRate_pmtType1->Branch("PMT_id",&PMT_id);
-  hitRate_pmtType1->Branch("mPMT_id",&mPMT_id); //sub-ID of PMT inside a mPMT module
-                                                // 0 -11 : outermost ring
-                                                // 12 - 17: middle ring
-                                                // 18: innermost PMT
 
   double vtxpos[3];
   // Now loop over events
@@ -431,8 +418,6 @@ int main(int argc, char **argv){
         else pmt  = geo->GetPMT(tubeNumber-1,true);
 
         PMT_id = tubeNumber-1;
-        if (pmtType == 0) mPMT_id = 0;
-        else mPMT_id = PMT_id%nPMTpermPMT;
 
         double PMTpos[3];
         double PMTdir[3];
@@ -474,10 +459,7 @@ int main(int argc, char **argv){
         ////////////////////////////////////////////////////////////////////////////
         
         timetof = time-tof;
-        nHits = 1; nPE = peForTube; dist = Norm; costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
-        cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
-        double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
-        omega = 0; //CalcSolidAngle(pmtradius,dist,costh);
+        nHits = 1; nPE = peForTube; 
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
 
@@ -532,8 +514,6 @@ int main(int argc, char **argv){
         else pmt  = geo->GetPMT(tubeNumber-1,true); 
 
         PMT_id = (tubeNumber-1.);
-        if (pmtType == 0) mPMT_id = 0;
-        else mPMT_id = PMT_id%nPMTpermPMT;
         
         double PMTpos[3];
         double PMTdir[3];                   
@@ -575,10 +555,7 @@ int main(int argc, char **argv){
 
         timetof = time-tof+triggerTime[pmtType]-triggerShift[pmtType];
 
-        nHits = 1; nPE = peForTube; dist = Norm; costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
-        cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
-        double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
-        omega = 0; //CalcSolidAngle(pmtradius,dist,costh);
+        nHits = 1; nPE = peForTube; 
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
 
@@ -596,24 +573,29 @@ int main(int argc, char **argv){
   outfile->cd();
   hitRate_pmtType0->Write();
   hitRate_pmtType1->Write();
-  // Save also PMT geometry information
-  double phim;
+
+  // Save the PMT geometry information relative to source
+  double dist, costh, cosths, omega, phim;
+  int mPMT_id;
   TTree* pmt_type0 = new TTree("pmt_type0","pmt_type0");
-  pmt_type0->Branch("R",&dist);
-  pmt_type0->Branch("costh",&costh);
-  pmt_type0->Branch("cosths",&cosths);
-  pmt_type0->Branch("phim",&phim);
-  pmt_type0->Branch("omega",&omega);
-  pmt_type0->Branch("PMT_id",&PMT_id);
-  pmt_type0->Branch("mPMT_id",&mPMT_id);
+  pmt_type0->Branch("R",&dist);          // distance to source
+  pmt_type0->Branch("costh",&costh);     // photon incident angle relative to PMT
+  pmt_type0->Branch("cosths",&cosths);   // PMT angle relative to source
+  pmt_type0->Branch("phim",&phim);       // dummy
+  pmt_type0->Branch("omega",&omega);     // solid angle subtended by PMT
+  pmt_type0->Branch("PMT_id",&PMT_id);   // unique PMT id
+  pmt_type0->Branch("mPMT_id",&mPMT_id); // dummy 
   TTree* pmt_type1 = new TTree("pmt_type1","pmt_type1");
   pmt_type1->Branch("R",&dist);
   pmt_type1->Branch("costh",&costh);
   pmt_type1->Branch("cosths",&cosths);
-  pmt_type1->Branch("phim",&phim); // photon incident phi angle relative to central PMT 
+  pmt_type1->Branch("phim",&phim);       // photon incident phi angle relative to central PMT 
   pmt_type1->Branch("omega",&omega);
   pmt_type1->Branch("PMT_id",&PMT_id);
-  pmt_type1->Branch("mPMT_id",&mPMT_id);
+  pmt_type1->Branch("mPMT_id",&mPMT_id); //sub-ID of PMT inside a mPMT module
+                                         // 0 -11 : outermost ring
+                                         // 12 - 17: middle ring
+                                         // 18: central PMT
   double vDirSource[3];
   double endcapZ=3000;
   if (abs(vtxpos[2])<endcapZ) {
