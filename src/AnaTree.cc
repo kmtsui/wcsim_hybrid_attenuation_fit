@@ -83,21 +83,14 @@ long int AnaTree::GetEntry(long int entry) const
         return fChain->GetEntry(entry);
 }
 
-void AnaTree::SetDataBranches(std::vector<std::string> binvar, std::vector<std::string> cutvar)
+void AnaTree::SetDataBranches()
 {    
     // Set branch addresses and branch pointers
 
     fChain->SetBranchAddress("nPE", &nPE);
-    fChain->SetBranchAddress("R", &R);
-    fChain->SetBranchAddress("costh", &costh);
-    fChain->SetBranchAddress("cosths", &cosths);
-    fChain->SetBranchAddress("omega", &omega);
     fChain->SetBranchAddress("timetof", &timetof);
     fChain->SetBranchAddress("PMT_id", &PMT_id);
-    fChain->SetBranchAddress("mPMT_id", &mPMT_id);
 
-    m_bins = binvar;
-    m_cuts = cutvar;
 }
 
 void AnaTree::SetLeafs()

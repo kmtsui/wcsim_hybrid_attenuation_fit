@@ -56,7 +56,7 @@ public:
     void MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT = 19);
 
     long int GetEntry(long int entry) const;
-    void SetDataBranches(std::vector<std::string> binvar, std::vector<std::string> cutvar);
+    void SetDataBranches();
     void SetPMTBranches();
     std::vector<AnaEvent> GetPMTs();
     void GetData(std::vector<std::vector<double>>& data_vec, std::vector<std::vector<double>>& cut_vec, std::vector<double>& weight_vec);

@@ -66,13 +66,13 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     }
 
     double timetof, nPE;
-    selTree.SetDataBranches(m_binvar,m_cutvar);
+    selTree.SetDataBranches();
 
     unsigned long nDataEntries = selTree.GetDataEntries();
 
     if(m_hdata_unbinned != nullptr)
         delete m_hdata_unbinned;
-        
+
     int nPMTs = selTree.GetPMTEntries();
     m_hdata_unbinned = new TH1D("","",nPMTs,0,nPMTs);
     int pmtID;
