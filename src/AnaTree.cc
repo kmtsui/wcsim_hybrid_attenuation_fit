@@ -33,6 +33,8 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
     if (nPMT<=0) {
         std::cout << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " <=0\n"
                   << "No PMT is masked"<<std::endl;
+
+        return;
     }
 
     int nPMT_total = t_pmt->GetEntries();
@@ -41,9 +43,11 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
     if (nPMT>=nPMT_total) {
         std::cout << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " >= total nPMT = " << nPMT_total <<"\n"
                   << "No PMT is masked"<<std::endl;
+
+        return;
     }
 
-    std::cout<< "Masking "<< nPMT << " out of "<< nPMT_total << "PMTs" << std::endl;
+    std::cout<< "In AnaTree::MaskPMT(), enabling "<< nPMT << " out of "<< nPMT_total << " PMTs" << std::endl;
     double PMT_frac = (nPMT+0.)/(nPMT_total);
     int PMT_count = 0;
     for (int i=0;i<nPMT_total;i++)
@@ -91,30 +95,6 @@ void AnaTree::SetDataBranches()
     fChain->SetBranchAddress("timetof", &timetof);
     fChain->SetBranchAddress("PMT_id", &PMT_id);
 
-}
-
-void AnaTree::SetLeafs()
-{
-    leafs_bins.clear();
-    leafs_cuts.clear();
-
-    for (int i=0;i<m_bins.size();i++) {
-        TLeaf *leaf = fChain->GetLeaf(m_bins[i].c_str());
-        if (leaf == nullptr) {
-            std::cout<<"[Error] AnaTree: Cannot find bin variable "<<m_bins[i]<<", skipping this variable"<<std::endl;
-            continue;
-        }
-        leafs_bins.push_back(leaf);
-    }
-
-    for (int i=0;i<m_cuts.size();i++) {
-        TLeaf *leaf = fChain->GetLeaf(m_cuts[i].c_str());
-        if (leaf == nullptr) {
-            std::cout<<"[Error] AnaTree: Cannot find cut variable "<<m_cuts[i]<<", skipping this variable"<<std::endl;
-            continue;
-        }
-        leafs_cuts.push_back(leaf);
-    }
 }
 
 void AnaTree::SetPMTBranches()
@@ -167,81 +147,6 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
     }
 
     return pmt_vec;
-}
-
-/*void AnaTree::GetData(std::vector<std::vector<double>>& data_vec, std::vector<std::vector<double>>& cut_vec, std::vector<double>& weight_vec)
-{
-    std::cout<<"Reading PMT hit data..."<<std::endl;
-    if(fChain == nullptr)
-    {
-        std::cout<<"[Error] Reading no evenets in AnaTree::GetData()"<<std::endl;
-        return;
-    }
-    unsigned long nentries = fChain->GetEntries();
-
-    int currentTreeNumber = -1;
-    for (unsigned long entry=0;entry<nentries;entry++) 
-    {
-        fChain->GetEntry(entry);
-
-        if (currentTreeNumber != fChain->GetTreeNumber()) 
-        {
-            SetLeafs();
-            currentTreeNumber = fChain->GetTreeNumber();
-        }
-
-        if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
-
-        std::vector<double> vec;
-        for (int i=0;i<leafs_bins.size();i++)
-        {
-            vec.push_back(leafs_bins[i]->GetValue(0));
-        }
-        data_vec.emplace_back(vec);
-
-        vec.clear();
-        for (int i=0;i<leafs_cuts.size();i++)
-        {
-            vec.push_back(leafs_cuts[i]->GetValue(0));
-        }
-        cut_vec.emplace_back(vec);
-
-        weight_vec.push_back(nPE);
-    }
-}*/
-
-void AnaTree::GetData(std::vector<std::vector<double>>& data_vec, std::vector<std::vector<double>>& cut_vec, std::vector<double>& weight_vec)
-{
-    std::cout<<"Reading PMT hit data..."<<std::endl;
-    if(fChain == nullptr)
-    {
-        std::cout<<"[Error] Reading no evenets in AnaTree::GetData()"<<std::endl;
-        return;
-    }
-    unsigned long nentries = fChain->GetEntries();
-
-    for (unsigned long entry=0;entry<nentries;entry++) 
-    {
-        fChain->GetEntry(entry);
-
-        if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
-
-        std::vector<double> vec;
-        for (int i=0;i<m_bins.size();i++)
-        {
-            vec.push_back(GetEventVar(m_bins[i]));
-        }
-        data_vec.emplace_back(vec);
-
-        vec.clear();
-        for (int i=0;i<m_cuts.size();i++)
-        {
-            vec.push_back(GetEventVar(m_cuts[i]));
-        }
-        cut_vec.emplace_back(vec);
-
-        weight_vec.push_back(nPE);
-    }
 }
 
 bool AnaTree::GetDataEntry(unsigned long entry, double& time, double& charge, int& pmtID)

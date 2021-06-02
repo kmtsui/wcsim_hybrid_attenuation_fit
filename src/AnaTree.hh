@@ -40,15 +40,6 @@ private:
     int mPMT_id;
     double weight;
 
-    void SetLeafs();
-
-    std::vector<std::string> m_bins;
-    std::vector<std::string> m_cuts;
-    std::vector<TLeaf*> leafs_bins;
-    std::vector<TLeaf*> leafs_cuts;
-    std::vector<double> vars_bin;
-    std::vector<double> vars_cut;
-
 public:
     AnaTree(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name);
     ~AnaTree();
@@ -59,7 +50,6 @@ public:
     void SetDataBranches();
     void SetPMTBranches();
     std::vector<AnaEvent> GetPMTs();
-    void GetData(std::vector<std::vector<double>>& data_vec, std::vector<std::vector<double>>& cut_vec, std::vector<double>& weight_vec);
     bool GetDataEntry(unsigned long entry, double& time, double& charge, int& pmtID);
     unsigned long GetDataEntries() const { return fChain->GetEntries(); }
     int GetPMTEntries() const { return t_pmt->GetEntries(); }
