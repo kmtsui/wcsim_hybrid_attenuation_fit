@@ -11,6 +11,7 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_binning(binning)
     , m_hpred(nullptr)
     , m_hdata(nullptr)
+    , m_hdata_unbinned(nullptr)
 {
     TH1::SetDefaultSumw2(true);
 
