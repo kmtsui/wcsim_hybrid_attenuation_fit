@@ -29,8 +29,8 @@ class AnaEvent
         inline void SetSampleType(const short val){ m_sample = val; }
         inline short GetSampleType() const { return m_sample; }
 
-        inline void SetSampleBin(const short val){ m_bin = val; }
-        inline short GetSampleBin() const { return m_bin; }
+        inline void SetSampleBin(const int val){ m_bin = val; }
+        inline int GetSampleBin() const { return m_bin; }
 
         inline void SetPMTID(const int val){ m_pmtid = val; }
         inline int GetPMTID() const { return m_pmtid; }
@@ -126,7 +126,7 @@ class AnaEvent
     private:
         long int m_evid;   //unique event id
         short m_sample;    //sample type (aka cutBranch)
-        short m_bin;       //reco bin for the sample binning
+        int m_bin;       //reco bin for the sample binning
         int m_pmtid;       //pmt unique id
         int m_mpmtid;      //pmt unique id inside a mPMT
         double m_cosths;   //PMT angle relative to source
