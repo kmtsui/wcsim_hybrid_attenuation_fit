@@ -575,12 +575,13 @@ int main(int argc, char **argv){
   hitRate_pmtType1->Write();
 
   // Save the PMT geometry information relative to source
-  double dist, costh, cosths, omega, phim;
+  double dist, costh, cosths, omega, phim, costhm;
   int mPMT_id;
   TTree* pmt_type0 = new TTree("pmt_type0","pmt_type0");
   pmt_type0->Branch("R",&dist);          // distance to source
   pmt_type0->Branch("costh",&costh);     // photon incident angle relative to PMT
   pmt_type0->Branch("cosths",&cosths);   // PMT angle relative to source
+  pmt_type0->Branch("costhm",&costhm);   // costhm = costh
   pmt_type0->Branch("phim",&phim);       // dummy
   pmt_type0->Branch("omega",&omega);     // solid angle subtended by PMT
   pmt_type0->Branch("PMT_id",&PMT_id);   // unique PMT id
@@ -589,6 +590,7 @@ int main(int argc, char **argv){
   pmt_type1->Branch("R",&dist);
   pmt_type1->Branch("costh",&costh);
   pmt_type1->Branch("cosths",&cosths);
+  pmt_type1->Branch("costhm",&costhm);   // photon incident theta angle relative to central PMT 
   pmt_type1->Branch("phim",&phim);       // photon incident phi angle relative to central PMT 
   pmt_type1->Branch("omega",&omega);
   pmt_type1->Branch("PMT_id",&PMT_id);
@@ -649,17 +651,20 @@ int main(int argc, char **argv){
       cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
       double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
       omega = CalcSolidAngle(pmtradius,dist,costh);
+      costhm = costh;
       phim = 0;
       if (pmtType==1 && mPMT_id!=nPMTpermPMT-1)
       { 
         // Calculate photon incident cos(phi) angle relative to central PMT 
         int idx_centralpmt = int(PMT_id/nPMTpermPMT)*nPMTpermPMT + nPMTpermPMT-1; // locate the central PMT
-        double PMTpos_central[3];
+        double PMTpos_central[3], PMTdir_central[3];
         WCSimRootPMT pmt_central = geo->GetPMT(idx_centralpmt,true);
         // central PMT position relative to current PMT
         for(int j=0;j<3;j++){
           PMTpos_central[j] = pmt_central.GetPosition(j)-PMTpos[j];
+          PMTdir_central[j] = pmt_central.GetOrientation(j);
         }
+        costhm = -(vDir[0]*PMTdir_central[0]+vDir[1]*PMTdir_central[1]+vDir[2]*PMTdir_central[2]);
         TVector3 v_central(PMTpos_central);
         TVector3 v_dir(vDir);
         TVector3 v_orientation(vOrientation);

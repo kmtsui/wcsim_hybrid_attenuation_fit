@@ -103,6 +103,7 @@ void AnaTree::SetPMTBranches()
 
     t_pmt->SetBranchAddress("R", &R);
     t_pmt->SetBranchAddress("costh", &costh);
+    t_pmt->SetBranchAddress("costhm", &costhm);
     t_pmt->SetBranchAddress("cosths", &cosths);
     t_pmt->SetBranchAddress("phim", &phim);
     t_pmt->SetBranchAddress("omega", &omega);
@@ -132,6 +133,7 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
         AnaEvent ev(jentry);
         ev.SetR(R);
         ev.SetCosth(costh);
+        ev.SetCosthm(costhm);
         ev.SetCosths(cosths);
         ev.SetPhim(phim);
         ev.SetOmega(omega); 

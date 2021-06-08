@@ -16,6 +16,7 @@ class AnaEvent
             m_mpmtid = -99;
             m_cosths = -999.0;
             m_costh = -999.0;
+            m_costhm = -999.0;
             m_phim = -999.0;
             m_omega = -999.0;
             m_R   = -999.0;
@@ -45,6 +46,9 @@ class AnaEvent
 
         inline void SetCosth(double val){ m_costh = val; }
         inline double GetCosth() const { return m_costh; }
+
+        inline void SetCosthm(double val){ m_costhm = val; }
+        inline double GetCosthm() const { return m_costhm; }
 
         inline void SetPhim(double val){ m_phim = val; }
         inline double GetPhim() const { return m_phim; }
@@ -77,6 +81,7 @@ class AnaEvent
                       << "PMT id      " << GetPMTID() << std::endl
                       << "cosths      " << GetCosths() << std::endl
                       << "costh       " << GetCosth() << std::endl
+                      << "costhm      " << GetCosthm() << std::endl
                       << "phim        " << GetPhim() << std::endl
                       << "omega       " << GetOmega() << std::endl
                       << "R           " << GetR() << std::endl
@@ -92,6 +97,8 @@ class AnaEvent
                 return m_R;
             else if(var == "costh")
                 return m_costh;
+            else if(var == "costhm")
+                return m_costhm;
             else if(var == "cosths")
                 return m_cosths;
             else if(var == "phim")
@@ -131,6 +138,7 @@ class AnaEvent
         int m_mpmtid;      //pmt unique id inside a mPMT
         double m_cosths;   //PMT angle relative to source
         double m_costh;    //photon incident angle relative to PMT
+        double m_costhm;   //photon incident theta angle relative to central PMT ( = costh for B&L PMT )
         double m_phim;     //photon incident phi angle relative to central PMT, only for mPMT
         double m_omega;    //solid angle subtended by PMT
         double m_R;        //distance to source

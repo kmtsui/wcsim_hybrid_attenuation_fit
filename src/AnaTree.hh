@@ -33,6 +33,7 @@ private:
     double R;
     double costh;
     double cosths;
+    double costhm;
     double phim;
     double omega;
     double timetof;
@@ -60,6 +61,8 @@ public:
             return R;
         else if(var == "costh")
             return costh;
+        else if(var == "costhm")
+            return costhm;
         else if(var == "cosths")
             return cosths;
         else if(var == "phim")
