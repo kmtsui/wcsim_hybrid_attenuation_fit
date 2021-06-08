@@ -193,7 +193,19 @@ void AnaSample::InitEventMap()
 
     std::sort(m_events.begin(), m_events.end(), [](const AnaEvent a, const AnaEvent b){ return a.GetSampleBin() < b.GetSampleBin(); });
 
-    for(auto& e : m_pmts)
+    if (m_binvar[0]=="unbinned")
+    {
+        m_nbins = m_hdata_unbinned->GetNbinsX();
+        MakeHistos();
+        std::cout<<"Using unbinned histogram for fit"<<std::endl;
+
+        for(auto& e : m_pmts)
+        {
+            const int b = e.GetPMTID();
+            e.SetSampleBin(b);
+        }
+    }
+    else for(auto& e : m_pmts)
     {
         std::vector<double> binvar;
         for (auto t : m_binvar)
