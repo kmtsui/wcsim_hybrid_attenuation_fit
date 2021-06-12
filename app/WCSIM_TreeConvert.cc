@@ -410,7 +410,7 @@ int main(int argc, char **argv){
         else wcsimrootcherenkovhit = (WCSimRootCherenkovHit*) (wcsimrootevent2->GetCherenkovHits())->At(i);
         
         int tubeNumber     = wcsimrootcherenkovhit->GetTubeID();
-        //int timeArrayIndex = wcsimrootcherenkovhit->GetTotalPe(0);
+        int timeArrayIndex = wcsimrootcherenkovhit->GetTotalPe(0);
         int peForTube      = wcsimrootcherenkovhit->GetTotalPe(1);
 
         WCSimRootPMT pmt;
@@ -451,7 +451,7 @@ int main(int argc, char **argv){
           vOrientation[j] /= NormOrientation;
         }
         
-        WCSimRootCherenkovHitTime * HitTime = (WCSimRootCherenkovHitTime*) timeArray->At(i);//Takes the first hit of the array as the timing, It should be the earliest hit
+        WCSimRootCherenkovHitTime * HitTime = (WCSimRootCherenkovHitTime*) timeArray->At(timeArrayIndex);//Takes the first hit of the array as the timing, It should be the earliest hit
         //WCSimRootCherenkovHitTime HitTime = (WCSimRootCherenkovHitTime) timeArray->At(j);		  
         double time = HitTime->GetTruetime();
         ////////////////////////////////////////////////////////////////////////////
