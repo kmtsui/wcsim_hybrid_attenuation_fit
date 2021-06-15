@@ -95,6 +95,27 @@ int main(int argc, char** argv)
             s->SetCut(cutvar,cutlow,cuthigh);
         }
 
+        if (ele.size()>6)
+        {
+            for (int i=6; i<ele.size();i++ )
+            {
+                auto opt = toml_h::find<toml::array>(ele,i);
+                auto optname = toml_h::find<std::string>(opt,0);
+                if (optname=="norm")
+                {
+                    auto norm = toml_h::find<double>(opt,1);
+                    std::cout<<"Setting norm = "<<norm<<std::endl;
+                    s->SetNorm(norm);
+                } 
+                else if (optname=="mask")
+                {
+                    auto mask = toml_h::find<int>(opt,1);
+                    std::cout<<"Masking to use only "<< mask << " PMTs" <<std::endl;
+                    s->MaskPMT(mask);
+                }
+            }
+        }
+
         s->LoadEventsFromFile(filename,ev_tree_name,pmt_treename);
         s->InitEventMap();
         samples.push_back(s);
