@@ -174,6 +174,38 @@ void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int n
     }
 }
 
+double AnaFitParameters::GetWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params)
+{
+#ifndef NDEBUG
+    if(m_evmap.empty()) //need to build an event map first
+    {
+        std::cerr  << "In AnaFitParameters::ReWeight()\n"
+                   << "Need to build event map index for " << m_name << std::endl;
+        return 1.;
+    }
+#endif
+
+    if (m_pmttype >=0 && pmttype != m_pmttype) return 1.;
+
+    const int bin = m_evmap[nsample][nevent];
+    if(bin == PASSEVENT || bin == BADBIN)
+        return 1.;
+    else
+    {
+#ifndef NDEBUG
+        if(bin > params.size())
+        {
+            std::cout  << "In AnaFitParameters::GetWeight()\n"
+                        << "Number of bins in " << m_name << " does not match num of parameters.\n"
+                        << "Setting event weight to zero." << std::endl;
+            return 1.;
+        }
+#endif
+        double wgt = (*m_func)(params[bin],*event);
+        return wgt;
+    }
+}
+
 void AnaFitParameters::SetCovarianceMatrix(const TMatrixDSym& covmat, bool decompose)
 {
     if(covariance != nullptr)

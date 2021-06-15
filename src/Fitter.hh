@@ -67,10 +67,39 @@ public:
     }
     void SetSaveEvents(bool flag = true) { m_save_events = flag; };
 
+    // Declaration of leaf types
+    int sampleId;
+    double nPE;
+    double R;
+    double costh;
+    double cosths;
+    double costhm;
+    double phim;
+    double omega;
+    int PMT_id;
+    int mPMT_id;
+    std::vector<double> weight;
+
+    void InitOutputTree()
+    {
+        m_outtree->Branch("sampleId", &sampleId, "sampleId/I");
+        m_outtree->Branch("nPE", &nPE, "nPE/D");
+        m_outtree->Branch("R", &R, "R/D");
+        m_outtree->Branch("costh", &costh, "costh/D");
+        m_outtree->Branch("cosths", &cosths, "cosths/D");
+        m_outtree->Branch("costhm", &costhm, "costhm/D");
+        m_outtree->Branch("phim", &phim, "phim/D");
+        m_outtree->Branch("omega", &omega, "omega/D");
+        m_outtree->Branch("PMT_id", &PMT_id, "PMT_id/I");
+        m_outtree->Branch("mPMT_id", &mPMT_id, "mPMT_id/I");
+        m_outtree->Branch("weight", &weight);
+    }
+
 private:
     double FillSamples(std::vector<std::vector<double>>& new_pars);
     void SaveParams(const std::vector<std::vector<double>>& new_pars);
     void SaveEventHist(bool is_final = false);
+    void SaveEventTree(std::vector<std::vector<double>>& par_results);
     void SaveChi2();
     void SaveResults(const std::vector<std::vector<double>>& parresults,
                      const std::vector<std::vector<double>>& parerrors);

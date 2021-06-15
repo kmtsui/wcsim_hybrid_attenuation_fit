@@ -259,10 +259,11 @@ void AnaSample::FillDataHist(bool stat_fluc)
 #endif
     m_hdata->Reset();
 
-    for(const auto& e : m_pmts)
+    for(auto& e : m_pmts)
     {
         const int pmtID = e.GetPMTID();
         const double weight = m_hdata_unbinned->GetBinContent(pmtID+1);
+        e.SetPE(weight);
         const int reco_bin  = e.GetSampleBin();
         m_hdata->Fill(reco_bin + 0.5, weight);
     }

@@ -326,6 +326,9 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
     SaveResults(res_pars, err_pars);
     SaveEventHist(true);
 
+    if(m_save_events)
+        SaveEventTree(res_pars);
+
     if(!did_converge)
         std::cout  << "Not valid fit result." << std::endl;
     std::cout << "Fit routine finished. Results saved." << std::endl;
@@ -604,4 +607,40 @@ void Fitter::ParameterScans(const std::vector<int>& param_list, unsigned int nst
 
     delete[] x;
     delete[] y;
+}
+
+void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
+{
+    m_outtree = new TTree("PMTTree", "PMTTree");
+    weight.resize(m_fitpara.size());
+    InitOutputTree();
+
+    for(size_t s = 0; s < m_samples.size(); s++)
+    {
+        sampleId = s;
+        const unsigned int num_pmts = m_samples[s]->GetNPMTs();
+        const int pmttype = m_samples[s]->GetPMTType();
+        for(int i = 0; i < num_pmts; i++)
+        {
+            AnaEvent* ev = m_samples[s]->GetPMT(i);
+            for(size_t j = 0; j < m_fitpara.size(); j++)
+            {
+                if (m_fitpara[j]->GetPMTType()>=0 && m_fitpara[j]->GetPMTType() != pmttype) weight[j] = 1.;
+                else weight[j] = m_fitpara[j]->GetWeight(ev, pmttype, s, i, res_params[j]);
+            }
+
+            nPE     = ev->GetPE();
+            R       = ev->GetR();
+            costh   = ev->GetCosth();
+            cosths  = ev->GetCosths();
+            costhm  = ev->GetCosthm();
+            phim    = ev->GetPhim();
+            omega   = ev->GetOmega();
+            PMT_id  = ev->GetPMTID();
+            mPMT_id = ev->GetmPMTID();
+            m_outtree->Fill();
+        }
+    }
+    m_dir->cd();
+    m_outtree->Write();
 }

@@ -30,6 +30,7 @@ public:
                         std::vector<double> lows, std::vector<double> highs, std::vector<bool> fixed);
     void InitEventMap(std::vector<AnaSample*>& sample);
     void ReWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
+    double GetWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
 
     std::string GetName() const { return m_name; }
 
