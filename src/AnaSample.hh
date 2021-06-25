@@ -72,6 +72,12 @@ public:
 
     inline void SetStatFluc(bool val) { m_stat_fluc = val; }
 
+    inline void SetScatter(double time1, double time2, double time3, double factor)
+    {
+        m_scatter = true; m_scatter_time1 = time1; m_scatter_time2 = time2; m_scatter_time3 = time3; m_scatter_factor = factor; 
+    }
+    inline void UnsetScatter() { m_scatter = false; }
+
 protected:
     int m_sample_id;
     int m_nbins;
@@ -80,6 +86,12 @@ protected:
     int m_pmtmask;
     int m_nPMTpermPMT;
     bool m_stat_fluc;
+
+    bool m_scatter;
+    double m_scatter_time1;
+    double m_scatter_time2;
+    double m_scatter_time3;
+    double m_scatter_factor;
 
     std::vector<std::string> m_binvar;
 
@@ -97,7 +109,9 @@ protected:
 
     TH1D* m_hpred;
     TH1D* m_hdata;
+    TH1D* m_hdata_tail;
     TH1D* m_hdata_unbinned;
+    TH1D* m_hdata_unbinned_tail;
 
 };
 

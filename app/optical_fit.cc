@@ -113,6 +113,15 @@ int main(int argc, char** argv)
                     std::cout<<"Masking to use only "<< mask << " PMTs" <<std::endl;
                     s->MaskPMT(mask);
                 }
+                else if (optname=="scatter_control")
+                {
+                    auto time1 = toml_h::find<double>(opt,1);
+                    auto time2 = toml_h::find<double>(opt,2);
+                    auto time3 = toml_h::find<double>(opt,3);
+                    auto factor = toml_h::find<double>(opt,4);
+                    std::cout<<"Applying scattering correction" <<std::endl;
+                    s->SetScatter(time1,time2,time3,factor);
+                }
             }
         }
 

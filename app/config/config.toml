@@ -22,13 +22,26 @@ names = [
 
 # Entry for each sample name
 # Each entry is specified as:
-# [pmt_type, input_file, pmt_hit_tree_name, pmt_geo_treename, [vectors of cut], [binning_config] ]
+# [pmt_type, input_file, pmt_hit_tree_name, pmt_geo_treename, [vectors of cut], [binning_config], optional_config ]
 # pmt_type: 0 = B&L PMT, 1 = mPMT
 # input_file, pmt_hit_tree_name, pmt_geo_treename: input file and tree names
 # [vectors of cut]: simple rectangular cuts to select events of interest, each cut is specified by [variable name, cut_low, cut_high]
 # [binning_config]: defines the sample binning, each bin sums over the number of PE observed in PMTs
 # [binning_config] = [binning_file,[bin_vars]]: binning_file is the binning file input to BinManager class, [bin_vars] is the vector of binning variables
 # binning_file: first line defines the number of dimensions, each subsequent line defines the bin edges 
+# If bin_vars="unbinned", each bin corresponds to a single PMT, regardless of what the binning_file is
+
+# optional_config: optional configurations, in the format of [key, value]
+# Available options are:
+# ["norm", double]: scale the number of hits in the whole sample
+# ["mask", int]: Enabling only the specified number of PMTs (for mPMT, the entire module of 19 PMTs is enabled/disabled as a whole) 
+
+# Special option for this branch
+# ["scatter_control", time1, time2, time3, correction_factor]: 
+# Scale the number of pe in time window {time1,time2} to subtract the contribution from scattered photon, based on the pe observed in timewindow {time2,time3}
+# In each bin, peakcount = number of pe in time window {time1,time2}, tailcount = number of pe in time window {time2,time3}
+# Corrected pe = peakcount*(1-correction_factor*tailcount/peakcount)
+# Better remove the cut in timetof to avoid conflict
 
 # The example here specifies two samples, from the input file, with different pmt tree names
 # Three sets of cut are applied to the variables timetof, cosths, costh

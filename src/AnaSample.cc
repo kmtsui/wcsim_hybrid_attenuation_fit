@@ -11,7 +11,10 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_binning(binning)
     , m_hpred(nullptr)
     , m_hdata(nullptr)
+    , m_hdata_tail(nullptr)
     , m_hdata_unbinned(nullptr)
+    , m_hdata_unbinned_tail(nullptr)
+    , m_scatter(false)
 {
     TH1::SetDefaultSumw2(true);
 
@@ -36,8 +39,14 @@ AnaSample::~AnaSample()
     if(m_hdata != nullptr)
         delete m_hdata;
 
+    if(m_hdata_tail != nullptr)
+        delete m_hdata_tail;
+
     if(m_hdata_unbinned != nullptr)
         delete m_hdata_unbinned;
+
+    if(m_hdata_unbinned_tail != nullptr)
+        delete m_hdata_unbinned_tail;
 }
 
 void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name)
@@ -76,6 +85,14 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
 
     int nPMTs = selTree.GetPMTEntries();
     m_hdata_unbinned = new TH1D("","",nPMTs,0,nPMTs);
+
+    if (m_scatter)
+    {
+        if(m_hdata_unbinned_tail != nullptr)
+            delete m_hdata_unbinned_tail;
+        m_hdata_unbinned_tail = new TH1D("","",nPMTs,0,nPMTs);
+    }
+
     int pmtID;
 
     std::cout<<"Reading PMT hit data..."<<std::endl;
@@ -103,7 +120,12 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         }
 
         if (skip) continue;
-        m_hdata_unbinned->Fill(pmtID+0.5, nPE);
+        if (!m_scatter) m_hdata_unbinned->Fill(pmtID+0.5, nPE);
+        else 
+        {
+            if (timetof>m_scatter_time1 && timetof<m_scatter_time2) m_hdata_unbinned->Fill(pmtID+0.5, nPE);
+            else if (timetof>m_scatter_time2 && timetof<m_scatter_time3) m_hdata_unbinned_tail->Fill(pmtID+0.5, nPE);
+        }
     }
 
     PrintStats();
@@ -168,6 +190,11 @@ void AnaSample::MakeHistos()
         delete m_hdata;
     m_hdata = new TH1D(Form("%s_data", m_name.c_str()), Form("%s_data", m_name.c_str()), m_nbins, 0, m_nbins);
     m_hdata->SetDirectory(0);
+
+    if(m_hdata_tail != nullptr)
+        delete m_hdata_tail;
+    m_hdata_tail = new TH1D(Form("%s_data_tail", m_name.c_str()), Form("%s_data_tail", m_name.c_str()), m_nbins, 0, m_nbins);
+    m_hdata_tail->SetDirectory(0);
 }
 
 void AnaSample::InitEventMap()
@@ -266,7 +293,21 @@ void AnaSample::FillDataHist(bool stat_fluc)
         e.SetPE(weight);
         const int reco_bin  = e.GetSampleBin();
         m_hdata->Fill(reco_bin + 0.5, weight);
+        if (m_scatter) m_hdata_tail->Fill(reco_bin + 0.5, m_hdata_unbinned_tail->GetBinContent(pmtID+1));
     }
+
+    if (m_scatter)
+    {
+        for (int j = 1; j <= m_hdata->GetNbinsX(); ++j)
+        {
+            double val = m_hdata->GetBinContent(j);
+            if (val<=0) continue;
+            double ratio = m_hdata_tail->GetBinContent(j)/val;
+            double correction = 1.-ratio*m_scatter_factor;
+            m_hdata->SetBinContent(j, val*correction);
+        }
+    }
+
 
     m_hdata->Scale(m_norm);
 
