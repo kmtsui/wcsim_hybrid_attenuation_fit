@@ -260,6 +260,8 @@ int main(int argc, char **argv){
   std::cout<<"File "<<outfilename<<" is open for writing"<<std::endl;
 
   double nHits, nPE, timetof;
+  double nPE_scatter;
+  double vtx_x, vtx_y, vtx_z;
   int PMT_id;
   // TTree for storing the hit information. One for B&L PMT, one for mPMT
   TTree* hitRate_pmtType0 = new TTree("hitRate_pmtType0","hitRate_pmtType0");
@@ -267,11 +269,16 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Branch("nPE",&nPE); // number of PE
   hitRate_pmtType0->Branch("timetof",&timetof); // hittime-tof
   hitRate_pmtType0->Branch("PMT_id",&PMT_id);
+  hitRate_pmtType0->Branch("nPE_scatter",&nPE_scatter);
   TTree* hitRate_pmtType1 = new TTree("hitRate_pmtType1","hitRate_pmtType1");
   hitRate_pmtType1->Branch("nHits",&nHits);
   hitRate_pmtType1->Branch("nPE",&nPE);
   hitRate_pmtType1->Branch("timetof",&timetof);
   hitRate_pmtType1->Branch("PMT_id",&PMT_id);
+  hitRate_pmtType1->Branch("nPE_scatter",&nPE_scatter);
+  hitRate_pmtType1->Branch("vtx_x",&vtx_x);
+  hitRate_pmtType1->Branch("vtx_y",&vtx_y);
+  hitRate_pmtType1->Branch("vtx_z",&vtx_z);
 
   double vtxpos[3];
   // Now loop over events
@@ -454,6 +461,21 @@ int main(int argc, char **argv){
         WCSimRootCherenkovHitTime * HitTime = (WCSimRootCherenkovHitTime*) timeArray->At(timeArrayIndex);//Takes the first hit of the array as the timing, It should be the earliest hit
         //WCSimRootCherenkovHitTime HitTime = (WCSimRootCherenkovHitTime) timeArray->At(j);		  
         double time = HitTime->GetTruetime();
+
+        vtx_x = HitTime->GetPhotonStartPos(0);
+        vtx_y = HitTime->GetPhotonStartPos(1);
+        vtx_z = HitTime->GetPhotonStartPos(2);
+        nPE_scatter = 0;
+        for (int idx = timeArrayIndex; idx<timeArrayIndex+peForTube; idx++) {
+          WCSimRootCherenkovHitTime * cht = (WCSimRootCherenkovHitTime*) timeArray->At(idx);
+          double photonStartpos[3];
+          bool scatter = false;
+          for(int j=0;j<3;j++) {
+            photonStartpos[j] = cht->GetPhotonStartPos(j)/10.;
+            if (fabs(photonStartpos[j]-vtxpos[j])>1) scatter = true;
+          }
+          if (scatter) nPE_scatter+=1;
+        }
         ////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////
