@@ -16,6 +16,7 @@ AnaFitParameters::AnaFitParameters(const std::string& par_name, const int pmttyp
 
 {
     m_func = new Identity;
+    m_func_type = kIdentity;
     std::cout<<"Setting up parameter "<<m_name<<std::endl;
 }
 
@@ -63,16 +64,31 @@ void AnaFitParameters::SetParameterFunction(const std::string& func_name)
     {
         std::cout << "Parameter function name empty. Setting to identity by default." << std::endl;
         m_func = new Identity;
+        m_func_type = kIdentity;
     }
     else if(func_name == "Identity")
     {
         std::cout << "Setting function to Identity." << std::endl;
         m_func = new Identity;
+        m_func_type = kIdentity;
     }
     else if(func_name == "Attenuation")
     {
         std::cout << "Setting function to Attenuation." << std::endl;
         m_func = new Attenuation;
+        m_func_type = kAttenuation;
+    }
+    else if(func_name == "Scatter")
+    {
+        std::cout << "Setting function to Scatter." << std::endl;
+        m_func = new Scatter;
+        m_func_type = kScatter;
+    }
+    else
+    {
+        std::cout << "Invalid function name. Setting to identity by default." << std::endl;
+        m_func = new Identity;
+        m_func_type = kIdentity;
     }
 }
 
@@ -170,7 +186,9 @@ void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int n
         }
 #endif
         double wgt = (*m_func)(params[bin],*event);
-        event -> AddEvWght(wgt);
+
+        if (m_func_type==kScatter) event -> SetTailPE(wgt);
+        else event -> AddEvWght(wgt);
     }
 }
 

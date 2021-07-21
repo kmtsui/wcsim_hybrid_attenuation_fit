@@ -120,6 +120,7 @@ protected:
     BinManager m_bm;
 
     ParameterFunction* m_func;
+    int m_func_type;
 
     EigenDecomp* eigen_decomp;
     TMatrixDSym* covariance;

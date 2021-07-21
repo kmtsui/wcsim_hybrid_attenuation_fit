@@ -108,6 +108,7 @@ protected:
     CalcLLHFunc* m_llh;
 
     TH1D* m_hpred;
+    TH1D* m_hpred_tail;
     TH1D* m_hdata;
     TH1D* m_hdata_tail;
     TH1D* m_hdata_unbinned;

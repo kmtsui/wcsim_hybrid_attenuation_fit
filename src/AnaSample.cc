@@ -10,6 +10,7 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_name(name)
     , m_binning(binning)
     , m_hpred(nullptr)
+    , m_hpred_tail(nullptr)
     , m_hdata(nullptr)
     , m_hdata_tail(nullptr)
     , m_hdata_unbinned(nullptr)
@@ -35,6 +36,9 @@ AnaSample::~AnaSample()
 {
     if(m_hpred != nullptr)
         delete m_hpred;
+
+    if(m_hpred_tail != nullptr)
+        delete m_hpred_tail;
 
     if(m_hdata != nullptr)
         delete m_hdata;
@@ -186,6 +190,11 @@ void AnaSample::MakeHistos()
     m_hpred = new TH1D(Form("%s_pred", m_name.c_str()), Form("%s_pred", m_name.c_str()), m_nbins, 0, m_nbins);
     m_hpred->SetDirectory(0);
 
+    if(m_hpred_tail != nullptr)
+        delete m_hpred_tail;
+    m_hpred_tail = new TH1D(Form("%s_pred_tail", m_name.c_str()), Form("%s_pred_tail", m_name.c_str()), m_nbins, 0, m_nbins);
+    m_hpred_tail->SetDirectory(0);
+
     if(m_hdata != nullptr)
         delete m_hdata;
     m_hdata = new TH1D(Form("%s_data", m_name.c_str()), Form("%s_data", m_name.c_str()), m_nbins, 0, m_nbins);
@@ -263,12 +272,21 @@ void AnaSample::FillEventHist(bool reset_weights)
     }
 #endif
     m_hpred->Reset();
+    if (m_scatter) m_hpred_tail->Reset();
 
     for(const auto& e : m_pmts)
     {
         const double weight = reset_weights ? e.GetEvWghtMC() : e.GetEvWght();
         const int reco_bin  = e.GetSampleBin();
         m_hpred->Fill(reco_bin + 0.5, weight);
+
+        if (m_scatter)
+        {
+            const double scatter_pe_at_peak = weight*e.GetTailPE()*m_scatter_factor;
+            m_hpred->Fill(reco_bin + 0.5, scatter_pe_at_peak);
+            const double tailpe = (weight+scatter_pe_at_peak)*e.GetTailPE();
+            m_hpred_tail->Fill(reco_bin + 0.5, tailpe);
+        }
     }
 
     return;
@@ -285,6 +303,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
     }
 #endif
     m_hdata->Reset();
+    if (m_scatter) m_hdata_tail->Reset();
 
     for(auto& e : m_pmts)
     {
@@ -296,20 +315,21 @@ void AnaSample::FillDataHist(bool stat_fluc)
         if (m_scatter) m_hdata_tail->Fill(reco_bin + 0.5, m_hdata_unbinned_tail->GetBinContent(pmtID+1));
     }
 
-    if (m_scatter)
-    {
-        for (int j = 1; j <= m_hdata->GetNbinsX(); ++j)
-        {
-            double val = m_hdata->GetBinContent(j);
-            if (val<=0) continue;
-            double ratio = m_hdata_tail->GetBinContent(j)/val;
-            double correction = 1.-ratio*m_scatter_factor;
-            m_hdata->SetBinContent(j, val*correction);
-        }
-    }
+    // if (m_scatter)
+    // {
+    //     for (int j = 1; j <= m_hdata->GetNbinsX(); ++j)
+    //     {
+    //         double val = m_hdata->GetBinContent(j);
+    //         if (val<=0) continue;
+    //         double ratio = m_hdata_tail->GetBinContent(j)/val;
+    //         double correction = 1.-ratio*m_scatter_factor;
+    //         m_hdata->SetBinContent(j, val*correction);
+    //     }
+    // }
 
 
     m_hdata->Scale(m_norm);
+    if (m_scatter) m_hdata_tail->Scale(m_norm);
 
     if(stat_fluc) 
     {
@@ -329,6 +349,22 @@ void AnaSample::FillDataHist(bool stat_fluc)
             }
 #endif
             m_hdata->SetBinContent(j, val);
+        }
+
+        if (m_scatter) for(int j = 1; j <= m_hdata_tail->GetNbinsX(); ++j)
+        {
+            double val = m_hdata_tail->GetBinContent(j);
+            val = gRandom->Poisson(val);
+#ifndef NDEBUG
+            if(val <= 0.0)
+            {
+                std::cout   << "In AnaSample::FillEventHist()\n"
+                            << "In Sample " <<  m_name << ", bin " << j
+                            << " has 0 (or negative) entries at tail. This may cause a problem with chi2 computations."
+                            << std::endl;
+            }
+#endif
+            m_hdata_tail->SetBinContent(j, val);
         }
     }
 
@@ -372,6 +408,15 @@ double AnaSample::CalcLLH() const
     double chi2 = 0.0;
     for(unsigned int i = 1; i <= nbins; ++i)
         chi2 += (*m_llh)(exp_w[i], exp_w2[i], data[i]);
+
+    if (m_scatter)
+    {
+        exp_w  = m_hpred_tail->GetArray();
+        exp_w2 = m_hpred_tail->GetSumw2()->GetArray();
+        data   = m_hdata_tail->GetArray();
+        for(unsigned int i = 1; i <= nbins; ++i)
+            chi2 += (*m_llh)(exp_w[i], exp_w2[i], data[i]);
+    }
 
     return chi2;
 }
@@ -438,6 +483,10 @@ void AnaSample::WriteEventHist(TDirectory* dirout, const std::string& bsname)
     dirout->cd();
     if(m_hpred != nullptr)
         m_hpred->Write(Form("evhist_sam%d_pred%s", m_sample_id, bsname.c_str()));
+
+    if (m_scatter)
+        if(m_hpred_tail != nullptr)
+            m_hpred_tail->Write(Form("evhist_tail_sam%d_pred%s", m_sample_id, bsname.c_str()));
 }
 
 void AnaSample::WriteDataHist(TDirectory* dirout, const std::string& bsname)
@@ -445,4 +494,8 @@ void AnaSample::WriteDataHist(TDirectory* dirout, const std::string& bsname)
     dirout->cd();
     if(m_hdata != nullptr)
         m_hdata->Write(Form("evhist_sam%d_data%s", m_sample_id, bsname.c_str()));
+
+    if (m_scatter)
+        if(m_hdata_tail != nullptr)
+            m_hdata_tail->Write(Form("evhist_tail_sam%d_data%s", m_sample_id, bsname.c_str()));         
 }

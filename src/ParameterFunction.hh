@@ -13,6 +13,14 @@
 
 #include "AnaEvent.hh"
 
+enum FunctionType
+{
+    kIdentity    = 0,
+    kAttenuation = 1,
+    kScatter = 2
+};
+
+
 class ParameterFunction
 {
 public:
@@ -42,6 +50,15 @@ public:
         double val = TMath::Exp(-R/par)*omega;
 
         return val;
+    }
+};
+
+class Scatter : public ParameterFunction
+{
+public:
+    double operator()(double par, AnaEvent ev)
+    {
+        return par;
     }
 };
 
