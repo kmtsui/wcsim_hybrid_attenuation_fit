@@ -38,10 +38,10 @@ names = [
 
 # Special option for this branch
 # ["scatter_control", time1, time2, time3, correction_factor]: 
-# Scale the number of pe in time window {time1,time2} to subtract the contribution from scattered photon, based on the pe observed in timewindow {time2,time3}
-# In each bin, peakcount = number of pe in time window {time1,time2}, tailcount = number of pe in time window {time2,time3}
-# Corrected pe = peakcount*(1-correction_factor*tailcount/peakcount)
-# Better remove the cut in timetof to avoid conflict
+# Divide each bin into two, {time1,time2} corresponds to the main peak, {time2,time3} corresponds to the tail due to scattering
+# Need to use with the "Scatter" fit parameters
+# In the calculation of expected PE, estimate the contribution of scattered PE in the main peak from the tail region, scaled by correction_factor
+# Remember to remove the cut in timetof to avoid conflict
 
 # The example here specifies two samples, from the input file, with different pmt tree names
 # Three sets of cut are applied to the variables timetof, cosths, costh
@@ -94,3 +94,11 @@ mPMT_angular = [  1, "Identity",   10, [["mPMT_angular1",1, 0.1, 0, 10, false],
                                         ["mPMT_angular8",1, 0.1, 0, 10, false],
                                         ["mPMT_angular9",1, 0.1, 0, 10, false],
                                         ["mPMT_angular10",1, 0.1, 0, 10, true]] , ["costh_binning.txt",["costh"]] ]
+
+# Special fit paramter in this branch
+# Predicts the number of PE in the tail region from the peak PE
+# The parameters here correspond to the fractional amount, i.e. tail PE = parameter * peak PE
+# Binning in {cosths,R} is used because
+# - scattering PE is strongly dependent on cosths, the large the cosths the more the scattering PE is
+# - R dependency helps to reduce the bias in attenuation length
+scatter = [  1, "Scatter",  60, [["scatter",0.03, 0.003, 0, 10, false]] , [ "cosths_R_binning.txt",["cosths","R"] ] ]
