@@ -261,6 +261,7 @@ int main(int argc, char **argv){
 
   double nHits, nPE, timetof;
   double nPE_scatter;
+  int nReflec, nRaySct, nMieSct;
   double vtx_x, vtx_y, vtx_z;
   int PMT_id;
   // TTree for storing the hit information. One for B&L PMT, one for mPMT
@@ -269,13 +270,17 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Branch("nPE",&nPE); // number of PE
   hitRate_pmtType0->Branch("timetof",&timetof); // hittime-tof
   hitRate_pmtType0->Branch("PMT_id",&PMT_id);
-  hitRate_pmtType0->Branch("nPE_scatter",&nPE_scatter);
+  hitRate_pmtType0->Branch("nReflec",&nReflec);
+  hitRate_pmtType0->Branch("nRaySct",&nRaySct);
+  hitRate_pmtType0->Branch("nMieSct",&nMieSct);
   TTree* hitRate_pmtType1 = new TTree("hitRate_pmtType1","hitRate_pmtType1");
   hitRate_pmtType1->Branch("nHits",&nHits);
   hitRate_pmtType1->Branch("nPE",&nPE);
   hitRate_pmtType1->Branch("timetof",&timetof);
   hitRate_pmtType1->Branch("PMT_id",&PMT_id);
-  hitRate_pmtType1->Branch("nPE_scatter",&nPE_scatter);
+  hitRate_pmtType1->Branch("nReflec",&nReflec);
+  hitRate_pmtType1->Branch("nRaySct",&nRaySct);
+  hitRate_pmtType1->Branch("nMieSct",&nMieSct);
   hitRate_pmtType1->Branch("vtx_x",&vtx_x);
   hitRate_pmtType1->Branch("vtx_y",&vtx_y);
   hitRate_pmtType1->Branch("vtx_z",&vtx_z);
@@ -465,16 +470,17 @@ int main(int argc, char **argv){
         vtx_x = HitTime->GetPhotonStartPos(0);
         vtx_y = HitTime->GetPhotonStartPos(1);
         vtx_z = HitTime->GetPhotonStartPos(2);
-        nPE_scatter = 0;
+        nReflec = 0;
+        nRaySct = 0;
+        nMieSct = 0;
         for (int idx = timeArrayIndex; idx<timeArrayIndex+peForTube; idx++) {
           WCSimRootCherenkovHitTime * cht = (WCSimRootCherenkovHitTime*) timeArray->At(idx);
-          double photonStartpos[3];
-          bool scatter = false;
-          for(int j=0;j<3;j++) {
-            photonStartpos[j] = cht->GetPhotonStartPos(j)/10.;
-            if (fabs(photonStartpos[j]-vtxpos[j])>1) scatter = true;
-          }
-          if (scatter) nPE_scatter+=1;
+
+          // only works well for peForTube = 1
+          // if peForTube > 1, you don't know whether reflection and scattering happens at the same time for a single photon
+          if (cht->GetReflection()>0) nReflec++;
+          if (cht->GetRayScattering()>0) nRaySct++;
+          if (cht->GetMieScattering()>0) nMieSct++;
         }
         ////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////
