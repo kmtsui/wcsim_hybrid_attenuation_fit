@@ -16,6 +16,7 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_hdata_unbinned(nullptr)
     , m_hdata_unbinned_tail(nullptr)
     , m_scatter(false)
+    , m_timetof_throw(false)
 {
     TH1::SetDefaultSumw2(true);
 
@@ -90,6 +91,13 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     int nPMTs = selTree.GetPMTEntries();
     m_hdata_unbinned = new TH1D("","",nPMTs,0,nPMTs);
 
+    std::vector<double> timetof_shift;
+    if (m_timetof_throw)
+    {
+        for (int i=0;i<nPMTs;i++)
+            timetof_shift.push_back( gRandom->Gaus(0,m_timetof_width) );
+    }
+
     if (m_scatter)
     {
         if(m_hdata_unbinned_tail != nullptr)
@@ -103,6 +111,8 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     for (unsigned long i=0;i<nDataEntries;i++)
     {
         if (!selTree.GetDataEntry(i,timetof,nPE,pmtID)) continue;
+
+        if (m_timetof_throw) timetof+=timetof_shift[pmtID];
 
         bool skip = false;
 

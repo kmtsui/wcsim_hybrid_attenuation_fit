@@ -78,6 +78,8 @@ public:
     }
     inline void UnsetScatter() { m_scatter = false; }
 
+    inline void SetTimetofThrow(bool tthrow, double width) { m_timetof_throw = tthrow; m_timetof_width = width; }
+
 protected:
     int m_sample_id;
     int m_nbins;
@@ -92,6 +94,9 @@ protected:
     double m_scatter_time2;
     double m_scatter_time3;
     double m_scatter_factor;
+
+    bool m_timetof_throw;
+    double m_timetof_width;
 
     std::vector<std::string> m_binvar;
 

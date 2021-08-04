@@ -39,6 +39,7 @@ int main(int argc, char** argv)
             case 's':
                 seed = std::stoi(optarg);
                 if (seed<0) seed = 0;
+                std::cout<<"Set seed = "<<seed<<std::endl;
                 break;
             case 'h':
                 std::cout << "USAGE: "
@@ -51,6 +52,9 @@ int main(int argc, char** argv)
                 return 0;
         }
     }
+
+    TFile* fout = TFile::Open(fname_output.c_str(), "RECREATE");
+    Fitter fitter(fout,seed,num_threads);
 
     auto const &card_toml = toml_h::parse_card(config_file);
     auto const &samples_config = toml_h::find(card_toml, "samples");
@@ -121,6 +125,12 @@ int main(int argc, char** argv)
                     auto factor = toml_h::find<double>(opt,4);
                     std::cout<<"Applying scattering correction" <<std::endl;
                     s->SetScatter(time1,time2,time3,factor);
+                }
+                else if (optname=="timetof_throw")
+                {
+                    auto width = toml_h::find<double>(opt,1);
+                    std::cout<<"Random shifting timetof with a Gaussian of width = "<< width <<std::endl;
+                    s->SetTimetofThrow(true, width);
                 }
             }
         }
@@ -219,8 +229,6 @@ int main(int argc, char** argv)
         fitparas.push_back(fitpara);
     }
 
-    TFile* fout = TFile::Open(fname_output.c_str(), "RECREATE");
-
     // Load minimizer config
     MinSettings min_settings;
     min_settings.minimizer = toml_h::find<std::string>(minimizer_config, "minimizer");
@@ -232,7 +240,6 @@ int main(int argc, char** argv)
     min_settings.max_iter = toml_h::find<double>(minimizer_config, "max_iter");
     min_settings.max_fcn = toml_h::find<double>(minimizer_config, "max_fcn");
 
-    Fitter fitter(fout,seed,num_threads);
     fitter.SetMinSettings(min_settings);
     fitter.InitFitter(fitparas);
 
