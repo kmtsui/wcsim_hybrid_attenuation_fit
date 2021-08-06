@@ -17,12 +17,17 @@
 #include <TMath.h>
 #include <TGraph.h>
 #include <TVector3.h>
+#include <TRandom3.h>
 
 #include "WCSimRootEvent.hh"
 #include "WCSimRootGeom.hh"
 #include "WCSimRootOptions.hh"
 
+#include "OPTICALFIT/utils/WCSIMDigitization.hh"
+
 using namespace std;
+
+TRandom3* rng;
 
 WCSimRootGeom *geo = 0; 
 
@@ -133,13 +138,14 @@ int main(int argc, char **argv){
 
   int startEvent=0;
   int endEvent=0;
+  int seed = 0;
   char c;
-  while( (c = getopt(argc,argv,"f:o:b:s:e:l:hrtv")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
+  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:hdtv")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
     switch(c){
       case 'f':
         filename = optarg;
         break;
-      case 'r':
+      case 'd':
         plotDigitized = false; //using raw hits
         break;
       case 'b':
@@ -160,6 +166,11 @@ int main(int argc, char **argv){
       case 'e':
 	      endEvent = std::stoi(optarg);
 	      break;
+      case 'r':
+	      seed = std::stoi(optarg);
+        if (seed<0) seed=0;
+        std::cout<<"Set RNG seed = "<<seed<<std::endl;
+	      break;
       case 'l':
         wavelength = std::stod(optarg);
         if (wavelength<0) {
@@ -174,11 +185,12 @@ int main(int argc, char **argv){
                   << "-o : Output file\n"
                   << "-l : Laser wavelength\n"
                   << "-b : Use only B&L PMTs\n"
-                  << "-r : Use raw hits\n"
+                  << "-d : Perform ad-hoc digitization with raw Cherenkov hits\n"
                   << "-t : Use separated triggers\n"
                   << "-v : Verbose\n"
                   << "-s : Start event\n"
-                  << "-e : End event\n";
+                  << "-e : End event\n"
+                  << "-r : RNG seed\n";
       default:
         return 0;
     }
@@ -188,6 +200,8 @@ int main(int argc, char **argv){
   std::cout<<"Using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
   vg /= 1.e9; // convert to m/ns
 
+  rng = new TRandom3(seed);
+  gRandom = rng;
   
   TFile *file = TFile::Open(filename);
   // Open the file
@@ -262,7 +276,8 @@ int main(int argc, char **argv){
   double nHits, nPE, timetof;
   double nPE_scatter;
   int nReflec, nRaySct, nMieSct;
-  double vtx_x, vtx_y, vtx_z;
+  double vtx_x, vtx_y, vtx_z, photonStartTime;
+  double nPE_digi, timetof_digi;
   int PMT_id;
   // TTree for storing the hit information. One for B&L PMT, one for mPMT
   TTree* hitRate_pmtType0 = new TTree("hitRate_pmtType0","hitRate_pmtType0");
@@ -273,6 +288,9 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Branch("nReflec",&nReflec);
   hitRate_pmtType0->Branch("nRaySct",&nRaySct);
   hitRate_pmtType0->Branch("nMieSct",&nMieSct);
+  hitRate_pmtType0->Branch("photonStartTime",&photonStartTime);
+  hitRate_pmtType0->Branch("nPE_digi",&nPE_digi); // nPE after ad-hoc digitization
+  hitRate_pmtType0->Branch("timetof_digi",&timetof_digi); // hittime-tof after ad-hoc digitization
   TTree* hitRate_pmtType1 = new TTree("hitRate_pmtType1","hitRate_pmtType1");
   hitRate_pmtType1->Branch("nHits",&nHits);
   hitRate_pmtType1->Branch("nPE",&nPE);
@@ -281,9 +299,13 @@ int main(int argc, char **argv){
   hitRate_pmtType1->Branch("nReflec",&nReflec);
   hitRate_pmtType1->Branch("nRaySct",&nRaySct);
   hitRate_pmtType1->Branch("nMieSct",&nMieSct);
-  hitRate_pmtType1->Branch("vtx_x",&vtx_x);
-  hitRate_pmtType1->Branch("vtx_y",&vtx_y);
-  hitRate_pmtType1->Branch("vtx_z",&vtx_z);
+  hitRate_pmtType1->Branch("photonStartTime",&photonStartTime);
+  hitRate_pmtType1->Branch("nPE_digi",&nPE_digi);
+  hitRate_pmtType1->Branch("timetof_digi",&timetof_digi);
+
+  // Ad-hoc digitizer, PMT specific 
+  BoxandLine20inchHQE_Digitizer* BnLDigitizer = new BoxandLine20inchHQE_Digitizer();
+  PMT3inchR14374_Digitizer* mPMTDigitizer = new PMT3inchR14374_Digitizer();
 
   double vtxpos[3];
   // Now loop over events
@@ -470,6 +492,7 @@ int main(int argc, char **argv){
         vtx_x = HitTime->GetPhotonStartPos(0);
         vtx_y = HitTime->GetPhotonStartPos(1);
         vtx_z = HitTime->GetPhotonStartPos(2);
+        photonStartTime = HitTime->GetPhotonStartTime();
         nReflec = 0;
         nRaySct = 0;
         nMieSct = 0;
@@ -488,6 +511,13 @@ int main(int argc, char **argv){
         
         timetof = time-tof;
         nHits = 1; nPE = peForTube; 
+
+        // A simple way to mimic the digitization procedure
+        nPE_digi = nPE;
+        timetof_digi = timetof;
+        if (pmtType==0) BnLDigitizer->Digitize(nPE_digi,timetof_digi);
+        if (pmtType==1) mPMTDigitizer->Digitize(nPE_digi,timetof_digi);
+
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
 
