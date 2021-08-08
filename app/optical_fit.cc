@@ -123,14 +123,21 @@ int main(int argc, char** argv)
                     auto time2 = toml_h::find<double>(opt,2);
                     auto time3 = toml_h::find<double>(opt,3);
                     auto factor = toml_h::find<double>(opt,4);
-                    std::cout<<"Applying scattering correction" <<std::endl;
+                    std::cout<<"Fitting with scattering control region. timetof region = ["<<time1<<","<<time2<<","<<time3<<"], scaling factor = "<< factor <<std::endl;
                     s->SetScatter(time1,time2,time3,factor);
                 }
-                else if (optname=="timetof_throw")
+                else if (optname=="time_offset")
                 {
                     auto width = toml_h::find<double>(opt,1);
-                    std::cout<<"Random shifting timetof with a Gaussian of width = "<< width <<std::endl;
-                    s->SetTimetofThrow(true, width);
+                    std::cout<<"Random timetof offset per PMT, sampled from a Gaussian of width = "<< width <<std::endl;
+                    s->SetTimeOffset(true, width);
+                }
+                else if (optname=="time_smear")
+                {
+                    auto mean = toml_h::find<double>(opt,1);
+                    auto width = toml_h::find<double>(opt,2);
+                    std::cout<<"Random timetof smearing per PMT, sampled from a Gaussian of mean = "<< mean << ", width = "<< width <<std::endl;
+                    s->SetTimeSmear(true, mean, width);
                 }
             }
         }

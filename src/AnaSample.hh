@@ -78,7 +78,9 @@ public:
     }
     inline void UnsetScatter() { m_scatter = false; }
 
-    inline void SetTimetofThrow(bool tthrow, double width) { m_timetof_throw = tthrow; m_timetof_width = width; }
+    inline void SetTimeOffset(bool offset, double width) { m_time_offset = offset; m_time_offset_width = width; }
+
+    inline void SetTimeSmear(bool smear, double mean, double width) { m_time_smear = smear; m_time_smear_mean = mean; m_time_smear_width = width; }
 
 protected:
     int m_sample_id;
@@ -95,8 +97,12 @@ protected:
     double m_scatter_time3;
     double m_scatter_factor;
 
-    bool m_timetof_throw;
-    double m_timetof_width;
+    bool m_time_offset;
+    double m_time_offset_width;
+
+    bool m_time_smear;
+    double m_time_smear_mean;
+    double m_time_smear_width;
 
     std::vector<std::string> m_binvar;
 

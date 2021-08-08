@@ -16,7 +16,8 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_hdata_unbinned(nullptr)
     , m_hdata_unbinned_tail(nullptr)
     , m_scatter(false)
-    , m_timetof_throw(false)
+    , m_time_offset(false)
+    , m_time_smear(false)
 {
     TH1::SetDefaultSumw2(true);
 
@@ -92,10 +93,17 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     m_hdata_unbinned = new TH1D("","",nPMTs,0,nPMTs);
 
     std::vector<double> timetof_shift;
-    if (m_timetof_throw)
+    if (m_time_offset)
     {
         for (int i=0;i<nPMTs;i++)
-            timetof_shift.push_back( gRandom->Gaus(0,m_timetof_width) );
+            timetof_shift.push_back( gRandom->Gaus(0,m_time_offset_width) );
+    }
+
+    std::vector<double> time_resolution;
+    if (m_time_smear)
+    {
+        for (int i=0;i<nPMTs;i++)
+            time_resolution.push_back( gRandom->Gaus(m_time_smear_mean,m_time_smear_width) );
     }
 
     if (m_scatter)
@@ -112,7 +120,8 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     {
         if (!selTree.GetDataEntry(i,timetof,nPE,pmtID)) continue;
 
-        if (m_timetof_throw) timetof+=timetof_shift[pmtID];
+        if (m_time_offset) timetof += timetof_shift[pmtID];
+        if (m_time_smear) timetof += gRandom->Gaus(0,time_resolution[pmtID]);
 
         bool skip = false;
 
@@ -137,8 +146,8 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         if (!m_scatter) m_hdata_unbinned->Fill(pmtID+0.5, nPE);
         else 
         {
-            if (timetof>m_scatter_time1 && timetof<m_scatter_time2) m_hdata_unbinned->Fill(pmtID+0.5, nPE);
-            else if (timetof>m_scatter_time2 && timetof<m_scatter_time3) m_hdata_unbinned_tail->Fill(pmtID+0.5, nPE);
+            if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_unbinned->Fill(pmtID+0.5, nPE);
+            else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_unbinned_tail->Fill(pmtID+0.5, nPE);
         }
     }
 
@@ -292,6 +301,8 @@ void AnaSample::FillEventHist(bool reset_weights)
 
         if (m_scatter)
         {
+            // e.GetTailPE() gives the (fractional) number of PE in the scatter control region
+            // m_scatter_factor is the scale factor from tail scatter pe to peak scatter pe
             const double scatter_pe_at_peak = weight*e.GetTailPE()*m_scatter_factor;
             m_hpred->Fill(reco_bin + 0.5, scatter_pe_at_peak);
             const double tailpe = (weight+scatter_pe_at_peak)*e.GetTailPE();
