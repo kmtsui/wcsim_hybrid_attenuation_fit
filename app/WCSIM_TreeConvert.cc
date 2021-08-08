@@ -23,6 +23,8 @@
 #include "WCSimRootGeom.hh"
 #include "WCSimRootOptions.hh"
 
+// Mock up digitization code copied from WCSIM
+// Currently contains BoxandLine20inchHQE and PMT3inchR14374 options
 #include "OPTICALFIT/utils/WCSIMDigitization.hh"
 
 using namespace std;
@@ -121,6 +123,22 @@ double CalcGroupVelocity(double wavelength) {
     return gr_groupvel->Eval(photoEnergy,0,"S");
 }
 
+void HelpMessage()
+{
+  std::cout << "USAGE: "
+            << "WCSIM_TreeConvert" << "\nOPTIONS:\n"
+            << "-f : Intput file\n"
+            << "-o : Output file\n"
+            << "-l : Laser wavelength\n"
+            << "-b : Use only B&L PMTs\n"
+            << "-d : Run with raw Cherenkov hits and perform ad-hoc digitization\n"
+            << "-t : Use separated triggers\n"
+            << "-v : Verbose\n"
+            << "-s : Start event\n"
+            << "-e : End event\n"
+            << "-r : RNG seed\n";
+}
+
 int main(int argc, char **argv){
   
   char * filename=NULL;
@@ -162,6 +180,7 @@ int main(int argc, char **argv){
 	      break;
       case 's':
 	      startEvent = std::stoi(optarg);
+        if (startEvent<0) startEvent = 0; 
 	      break;
       case 'e':
 	      endEvent = std::stoi(optarg);
@@ -179,18 +198,7 @@ int main(int argc, char **argv){
         }
 	      break;
       case 'h':
-        std::cout << "USAGE: "
-                  << argv[0] << "\nOPTIONS:\n"
-                  << "-f : Intput file\n"
-                  << "-o : Output file\n"
-                  << "-l : Laser wavelength\n"
-                  << "-b : Use only B&L PMTs\n"
-                  << "-d : Perform ad-hoc digitization with raw Cherenkov hits\n"
-                  << "-t : Use separated triggers\n"
-                  << "-v : Verbose\n"
-                  << "-s : Start event\n"
-                  << "-e : End event\n"
-                  << "-r : RNG seed\n";
+        HelpMessage();
       default:
         return 0;
     }
@@ -207,6 +215,7 @@ int main(int argc, char **argv){
   // Open the file
   if (filename==NULL){
     std::cout << "Error, no input file: " << std::endl;
+    HelpMessage();
     return -1;
   }
   if (!file->IsOpen()){
@@ -276,7 +285,7 @@ int main(int argc, char **argv){
   double nHits, nPE, timetof;
   double nPE_scatter;
   int nReflec, nRaySct, nMieSct;
-  double vtx_x, vtx_y, vtx_z, photonStartTime;
+  double photonStartTime;
   double nPE_digi, timetof_digi;
   int PMT_id;
   // TTree for storing the hit information. One for B&L PMT, one for mPMT
@@ -285,23 +294,31 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Branch("nPE",&nPE); // number of PE
   hitRate_pmtType0->Branch("timetof",&timetof); // hittime-tof
   hitRate_pmtType0->Branch("PMT_id",&PMT_id);
-  hitRate_pmtType0->Branch("nReflec",&nReflec);
-  hitRate_pmtType0->Branch("nRaySct",&nRaySct);
-  hitRate_pmtType0->Branch("nMieSct",&nMieSct);
-  hitRate_pmtType0->Branch("photonStartTime",&photonStartTime);
-  hitRate_pmtType0->Branch("nPE_digi",&nPE_digi); // nPE after ad-hoc digitization
-  hitRate_pmtType0->Branch("timetof_digi",&timetof_digi); // hittime-tof after ad-hoc digitization
+  // Branches below only filled for raw hits
+  if (!plotDigitized)
+  {
+    hitRate_pmtType0->Branch("nReflec",&nReflec); // Number of reflection experienced by a photon before reaching the sensitive detector
+    hitRate_pmtType0->Branch("nRaySct",&nRaySct); // Number of Rayleigh scattering
+    hitRate_pmtType0->Branch("nMieSct",&nMieSct); // Number of Mie scattering
+    hitRate_pmtType0->Branch("photonStartTime",&photonStartTime); // True photon start time
+    hitRate_pmtType0->Branch("nPE_digi",&nPE_digi); // nPE after ad-hoc digitization
+    hitRate_pmtType0->Branch("timetof_digi",&timetof_digi); // hittime-tof after ad-hoc digitization
+  }
   TTree* hitRate_pmtType1 = new TTree("hitRate_pmtType1","hitRate_pmtType1");
   hitRate_pmtType1->Branch("nHits",&nHits);
   hitRate_pmtType1->Branch("nPE",&nPE);
   hitRate_pmtType1->Branch("timetof",&timetof);
   hitRate_pmtType1->Branch("PMT_id",&PMT_id);
-  hitRate_pmtType1->Branch("nReflec",&nReflec);
-  hitRate_pmtType1->Branch("nRaySct",&nRaySct);
-  hitRate_pmtType1->Branch("nMieSct",&nMieSct);
-  hitRate_pmtType1->Branch("photonStartTime",&photonStartTime);
-  hitRate_pmtType1->Branch("nPE_digi",&nPE_digi);
-  hitRate_pmtType1->Branch("timetof_digi",&timetof_digi);
+  if (!plotDigitized)
+  {
+    hitRate_pmtType1->Branch("nReflec",&nReflec);
+    hitRate_pmtType1->Branch("nRaySct",&nRaySct);
+    hitRate_pmtType1->Branch("nMieSct",&nMieSct);
+    hitRate_pmtType1->Branch("photonStartTime",&photonStartTime);
+    hitRate_pmtType1->Branch("nPE_digi",&nPE_digi);
+    hitRate_pmtType1->Branch("timetof_digi",&timetof_digi);
+  }
+
 
   // Ad-hoc digitizer, PMT specific 
   BoxandLine20inchHQE_Digitizer* BnLDigitizer = new BoxandLine20inchHQE_Digitizer();
@@ -354,7 +371,6 @@ int main(int argc, char **argv){
       printf("Jmu %d\n", wcsimrootevent->GetJmu());
       printf("Npar %d\n", wcsimrootevent->GetNpar());
       printf("Ntrack %d\n", wcsimrootevent->GetNtrack());
-      
     }
 
     std::vector<double> triggerInfo;
@@ -489,9 +505,6 @@ int main(int argc, char **argv){
         //WCSimRootCherenkovHitTime HitTime = (WCSimRootCherenkovHitTime) timeArray->At(j);		  
         double time = HitTime->GetTruetime();
 
-        vtx_x = HitTime->GetPhotonStartPos(0);
-        vtx_y = HitTime->GetPhotonStartPos(1);
-        vtx_z = HitTime->GetPhotonStartPos(2);
         photonStartTime = HitTime->GetPhotonStartTime();
         nReflec = 0;
         nRaySct = 0;
@@ -499,7 +512,7 @@ int main(int argc, char **argv){
         for (int idx = timeArrayIndex; idx<timeArrayIndex+peForTube; idx++) {
           WCSimRootCherenkovHitTime * cht = (WCSimRootCherenkovHitTime*) timeArray->At(idx);
 
-          // only works well for peForTube = 1
+          // only works for peForTube = 1
           // if peForTube > 1, you don't know whether reflection and scattering happens at the same time for a single photon
           if (cht->GetReflection()>0) nReflec++;
           if (cht->GetRayScattering()>0) nRaySct++;
