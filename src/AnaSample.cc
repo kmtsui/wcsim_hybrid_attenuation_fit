@@ -103,7 +103,12 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     if (m_time_smear)
     {
         for (int i=0;i<nPMTs;i++)
-            time_resolution.push_back( gRandom->Gaus(m_time_smear_mean,m_time_smear_width) );
+        {
+            double resol = -1;
+            while (resol<0)
+                resol = gRandom->Gaus(m_time_smear_mean,m_time_smear_width);
+            time_resolution.push_back(resol);   
+        }
     }
 
     if (m_scatter)
