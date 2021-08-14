@@ -29,6 +29,7 @@
 
 #include "AnaSample.hh"
 #include "AnaFitParameters.hh"
+#include "ToyThrower.hh"
 
 struct MinSettings
 {
@@ -95,6 +96,8 @@ public:
         m_outtree->Branch("weight", &weight);
     }
 
+    void RunMCMCScan(int step, double stepsize, bool do_force_posdef = true, double force_padd = 1.0E-9, bool do_incompl_chol = false, double dropout_tol = 1.0E-3);
+
 private:
     double FillSamples(std::vector<std::vector<double>>& new_pars);
     void SaveParams(const std::vector<std::vector<double>>& new_pars);
@@ -123,6 +126,7 @@ private:
     std::vector<std::string> par_var;
     std::vector<double> par_var_low;
     std::vector<double> par_var_high;
+    std::vector<bool> par_var_fixed;
     std::vector<double> vec_chi2_stat;
     std::vector<double> vec_chi2_sys;
     std::vector<double> vec_chi2_reg;
@@ -130,5 +134,18 @@ private:
     std::vector<AnaSample*> m_samples;
 
     MinSettings min_settings;
+
+    std::vector<double> par_mcmc;
+    TTree* m_mcmctree;
+    double m_chi2;
+    int m_jump;
+    void InitMCMCOutputTree()
+    {
+        m_mcmctree = new TTree("MCMCTree", "MCMCTree");
+        m_mcmctree->Branch("chi2", &m_chi2, "chi2/D");
+        m_mcmctree->Branch("jump", &m_jump, "jump/I");
+        m_mcmctree->Branch("par_mcmc", &par_mcmc);
+    }
+    
 };
 #endif

@@ -157,6 +157,7 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
         if(par_fixed[i] == true)
             m_fitter->FixVariable(i);
     }
+    par_var_fixed = par_fixed;
 
     std::cout << "Number of defined parameters: " << m_fitter->NDim() << std::endl
               << "Number of free parameters   : " << m_fitter->NFree() << std::endl
@@ -268,6 +269,8 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
         }
         par_offset += fit_param->GetNpar();
     }
+
+    par_postfit = par_val_vec;
 
     TMatrixDSym cor_matrix(ndim);
     for(int r = 0; r < ndim; ++r)
@@ -643,4 +646,69 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
     }
     m_dir->cd();
     m_outtree->Write();
+}
+
+void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double force_padd, bool do_incompl_chol, double dropout_tol)
+{
+    const int ndim        = m_fitter->NDim();
+    double cov_array[ndim * ndim];
+    m_fitter->GetCovMatrix(cov_array);
+    TMatrixDSym cov_matrix(ndim, cov_array);
+
+    ToyThrower* toy_thrower = new ToyThrower(cov_matrix, false, 1E-48);
+    if(do_force_posdef)
+    {
+        if(!toy_thrower->ForcePosDef(force_padd, 1E-48))
+        {
+            std::cout << "Covariance matrix could not be made positive definite.\n"
+                      << "Exiting." << std::endl;
+            return;
+        }
+    }
+
+    // LU decomposition
+    // Use the lower-triangular L matrix to generate correlated variables
+    if(do_incompl_chol)
+    {
+        std::cout << "Performing incomplete Cholesky decomposition." << std::endl;
+        toy_thrower->IncompCholDecomp(dropout_tol, true);
+    }
+    else
+    {
+        std::cout << "Performing ROOT Cholesky decomposition." << std::endl;
+        toy_thrower->SetupDecomp(1E-48);
+    }
+
+    InitMCMCOutputTree();
+    // First MCMC step is the best-fit point
+    par_mcmc = par_postfit;
+    m_chi2 = CalcLikelihood(par_mcmc.data());
+    m_jump = 0;
+    m_mcmctree->Fill();
+
+    std::vector<double> toy(ndim, 0.0);
+    for (int i=0; i<step; i++)
+    {
+        m_jump = 0;
+
+        toy_thrower->Throw(toy);
+        for (int j=0;j<ndim;j++)
+        {
+            toy[j] = par_var_fixed[j] ? 0: stepsize*toy[j] ; // do not move the fixed variables
+            toy[j] += par_mcmc[j];
+        }
+
+        double chi2_next = CalcLikelihood(toy.data());
+        // Metropolis-Hastings Algorithm
+        if ( rng->Uniform() < exp(-chi2_next/2.+m_chi2/2.) )
+        {
+            m_chi2 = chi2_next;
+            par_mcmc = toy;
+            m_jump = 1;
+        }
+        m_mcmctree->Fill();
+    }
+
+    m_dir->cd();
+    m_mcmctree->Write();
 }

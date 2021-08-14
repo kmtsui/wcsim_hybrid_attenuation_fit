@@ -8,6 +8,7 @@ set(HEADERS
     AnaFitParameters.hh
     ParameterFunction.hh
     EigenDecomp.hh
+    ToyThrower.hh
 )
 
 add_library(OpticalFit SHARED 
@@ -17,6 +18,7 @@ add_library(OpticalFit SHARED
     Fitter.cc
     AnaFitParameters.cc
     EigenDecomp.cc
+    ToyThrower.cc
 )
 
 set_target_properties(OpticalFit PROPERTIES 

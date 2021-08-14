@@ -10,6 +10,9 @@ strategy = 1
 max_iter = 1E6
 max_fcn = 1E9
 
+MCMCSteps = 0
+MCMCStepSize = 0.3
+
 # List of PMT samples input to the fitter
 # Each sample contains the PMT hits and geometry information of a particular source-PMT setup
 [samples]

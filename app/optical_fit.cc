@@ -247,6 +247,9 @@ int main(int argc, char** argv)
     min_settings.max_iter = toml_h::find<double>(minimizer_config, "max_iter");
     min_settings.max_fcn = toml_h::find<double>(minimizer_config, "max_fcn");
 
+    int MCMCSteps = toml_h::find<double>(minimizer_config, "MCMCSteps");
+    double MCMCStepSize = toml_h::find<double>(minimizer_config, "MCMCStepSize");
+
     fitter.SetMinSettings(min_settings);
     fitter.InitFitter(fitparas);
 
@@ -256,6 +259,11 @@ int main(int argc, char** argv)
     if(!did_converge)
         std::cout << "Fit did not coverge." << std::endl;
 
+    if (MCMCSteps>0)
+    {
+        std::cout << "Running MCMC for " << MCMCSteps << " steps, with step size = " << MCMCStepSize << std::endl;
+        fitter.RunMCMCScan(MCMCSteps,MCMCStepSize);
+    }
 
     fout->Close();
 
