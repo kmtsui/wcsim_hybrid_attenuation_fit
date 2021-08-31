@@ -43,10 +43,8 @@ names = [
 
 # Special optional configuration for this branch
 # ["scatter_control", time1, time2, time3, correction_factor]: 
-# Divide each bin into two, {time1,time2} corresponds to the main peak, {time2,time3} corresponds to the tail due to scattering
-# Need to use with the "Scatter" fit parameters
-# In the calculation of expected PE, estimate the contribution of scattered PE in the main peak from the tail region, scaled by correction_factor
-# Remember to remove the cut in timetof to avoid conflict
+# Divide each bin into two, {time1,time2} corresponds to the main peak, {time2,time3} corresponds to the tail due to indirect photon
+# The PE count is corrected as: PE = PE{time1,time2} - PE{time2,time3}*correction_factor
 
 # The example here specifies two samples, from the input file, with different pmt tree names
 # Three sets of cut are applied to the variables timetof, cosths, costh
@@ -78,13 +76,15 @@ names = [
 
 # Entry for each parameter class
 # Each entry is specified as:
-# [pmt_type, function_name, npar, [par_setup], [binning_config], [covariance_matrix]]
+# [pmt_type, function_name, npar, [par_setup], [binning_config], optional_config]
 # pmt_type: 0 = apply to B&L PMT only, 1 = apply to mPMT only, -1 = apply to both PMTs
 # function_name: defines the functional form of the multiplicative factor derived from the fit parameter, modify AnaFitParameters class and ParameterFunction.hh to include new functions
 # npar: number of parameters in this class
 # [par_setup]: vector of fit parameter set, each parameter is specified as [parameter name, prior, step, limit_low, limit_high, fixed]
 # [binning_config]: defines the parameter mapping for each PMT, each PMT is affected by at most one parameter in each class
-# [covariance_matrix] = [fileName,matrixName] : optional config to load parameter prior covariance matrix
+# optional_config
+# ["covariance",fileName,matrixName] : optional config to load parameter prior covariance matrix
+# ["prior",fileName,histname] : optional config to load parameter prior central values, overriding values in [par_setup]
 
 # The example here specifies four classes of parameters
 # norm is the overall normalization for each sample, you may need to trial and error to get the prior right
@@ -115,11 +115,3 @@ mPMT_angular = [  1, "Identity",   10, [["mPMT_angular1",1, 0.1, 0, 10, false],
                                         ["mPMT_angular8",1, 0.1, 0, 10, false],
                                         ["mPMT_angular9",1, 0.1, 0, 10, false],
                                         ["mPMT_angular10",1, 0.1, 0, 10, true]] , ["costh_binning.txt",["costh"]] ]
-
-# Special fit paramter in this branch
-# Predicts the number of PE in the tail region from the peak PE
-# The parameters here correspond to the fractional amount, i.e. tail PE = parameter * peak PE
-# Binning in {cosths,R} is used because
-# 1. scattering PE is strongly dependent on cosths, the large the cosths the more the scattering PE is
-# 2. Larger R means fewer direct PE, so fraction of scatter PE increases
-scatter = [  1, "Scatter",  60, [["scatter",0.03, 0.003, 0, 10, false]] , [ "cosths_R_binning.txt",["cosths","R"] ] ]
