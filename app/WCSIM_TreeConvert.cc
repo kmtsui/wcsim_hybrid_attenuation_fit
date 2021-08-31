@@ -123,6 +123,49 @@ double CalcGroupVelocity(double wavelength) {
     return gr_groupvel->Eval(photoEnergy,0,"S");
 }
 
+TGraph *gr_power_cosths, *gr_variation_cosths;
+void SetLEDProfile()
+{
+  std::cout<<"Set up LED profile for event reweight"<<std::endl;
+  const int nCosths = 41;
+  double Cosths[nCosths] = 
+    {
+      0.76655, 0.77700, 0.78761, 0.79875, 0.80872, 0.81934, 0.82883, 0.83808,
+      0.84711, 0.85590, 0.86523, 0.87426, 0.88229, 0.89008, 0.89831, 0.90623,
+      0.91259, 0.92055, 0.92700, 0.93319, 0.93911, 0.94477, 0.95063, 0.95618,
+      0.96098, 0.96551, 0.96976, 0.97408, 0.97808, 0.98116, 0.98454, 0.98736,
+      0.98989, 0.99233, 0.99444, 0.99607, 0.99742, 0.99857, 0.99933, 0.99981,
+      1.00000
+    };
+  double Power_cosths[nCosths] =
+    {
+      0.50152, 0.54801, 0.59419, 0.63473, 0.67604, 0.71697, 0.75712, 0.80037,
+      0.83589, 0.86910, 0.90307, 0.93628, 0.95584, 0.97296, 0.98300, 0.98918,
+      0.99844, 1.00063, 1.00848, 1.01041, 1.01466, 1.01608, 1.01813, 1.02019,
+      1.02200, 1.02122, 1.02277, 1.02084, 1.02007, 1.01813, 1.01698, 1.01402,
+      1.01427, 1.01273, 1.01080, 1.00938, 1.00810, 1.00694, 1.00578, 1.00501,
+      1.00308
+    };
+  gr_power_cosths = new TGraph(nCosths,Cosths,Power_cosths);
+
+  double Variation_cosths[nCosths] =
+    {
+      1.52148, 1.32716, 1.60492, 1.51191, 1.32437, 1.07736, 0.80404, 0.84281,
+      0.89956, 0.97436, 0.87347, 0.95811, 1.03983, 1.16010, 1.18226, 1.17236,
+      1.14083, 1.09142, 1.10767, 1.02450, 0.96195, 0.91277, 0.88456, 0.85350,
+      0.82181, 0.78467, 0.74606, 0.67583, 0.60713, 0.54087, 0.50040, 0.42365,
+      0.37995, 0.32521, 0.27719, 0.23896, 0.19595, 0.17128, 0.13077, 0.08523,
+      0.06337
+    };
+  gr_variation_cosths = new TGraph(nCosths,Cosths,Variation_cosths);
+}
+
+double GetLEDWeight(double cosths, double phis)
+{
+  if (cosths<0.76655) return 0.;
+  return gr_power_cosths->Eval(cosths)*(1.+gr_variation_cosths->Eval(cosths)/100.*cos(phis));
+}
+
 void HelpMessage()
 {
   std::cout << "USAGE: "
@@ -130,6 +173,7 @@ void HelpMessage()
             << "-f : Intput file\n"
             << "-o : Output file\n"
             << "-l : Laser wavelength\n"
+            << "-w : Apply diffuser profile reweight\n"
             << "-b : Use only B&L PMTs\n"
             << "-d : Run with raw Cherenkov hits and perform ad-hoc digitization\n"
             << "-t : Use separated triggers\n"
@@ -148,7 +192,8 @@ int main(int argc, char **argv){
   double cvacuum = 3e8 / 1e9;//speed of light, in meter per ns.
   double nindex = 1.373;//refraction index of water
   bool plotDigitized = true; //using digitized hits
-  bool separatedTriggers=false;//Assume two independent triggers, one for mPMT, one for B&L
+  bool separatedTriggers=false; //Assume two independent triggers, one for mPMT, one for B&L
+  bool diffuserProfile = false; //Reweigh PMT hits by source angle
 
   double wavelength = 400; //wavelength in nm
 
@@ -158,7 +203,7 @@ int main(int argc, char **argv){
   int endEvent=0;
   int seed = 0;
   char c;
-  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:hdtv")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
+  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:hdtvw")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
     switch(c){
       case 'f':
         filename = optarg;
@@ -197,6 +242,9 @@ int main(int argc, char **argv){
           wavelength = 400;
         }
 	      break;
+      case 'w':
+        diffuserProfile = true;
+        break;
       case 'h':
         HelpMessage();
       default:
@@ -223,6 +271,8 @@ int main(int argc, char **argv){
     return -1;
   }
   
+  SetLEDProfile();
+
   // Get the a pointer to the tree from the file
   TTree *tree = (TTree*)file->Get("wcsimT");
 
@@ -283,7 +333,7 @@ int main(int argc, char **argv){
   std::cout<<"File "<<outfilename<<" is open for writing"<<std::endl;
 
   double nHits, nPE, timetof;
-  double nPE_scatter;
+  double weight;
   int nReflec, nRaySct, nMieSct;
   double photonStartTime;
   double nPE_digi, timetof_digi;
@@ -294,6 +344,7 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Branch("nPE",&nPE); // number of PE
   hitRate_pmtType0->Branch("timetof",&timetof); // hittime-tof
   hitRate_pmtType0->Branch("PMT_id",&PMT_id);
+  hitRate_pmtType0->Branch("weight",&weight);
   // Branches below only filled for raw hits
   if (!plotDigitized)
   {
@@ -309,6 +360,7 @@ int main(int argc, char **argv){
   hitRate_pmtType1->Branch("nPE",&nPE);
   hitRate_pmtType1->Branch("timetof",&timetof);
   hitRate_pmtType1->Branch("PMT_id",&PMT_id);
+  hitRate_pmtType1->Branch("weight",&weight);
   if (!plotDigitized)
   {
     hitRate_pmtType1->Branch("nReflec",&nReflec);
@@ -319,12 +371,153 @@ int main(int argc, char **argv){
     hitRate_pmtType1->Branch("timetof_digi",&timetof_digi);
   }
 
+  double vtxpos[3];
+  tree->GetEntry(0);
+  wcsimrootevent = wcsimrootsuperevent->GetTrigger(0);
+  for (int i=0;i<3;i++) vtxpos[i]=wcsimrootevent->GetVtx(i);
+
+  // Save the PMT geometry information relative to source
+  double dist, costh, cosths, phis, omega, phim, costhm;
+  int mPMT_id;
+  TTree* pmt_type0 = new TTree("pmt_type0","pmt_type0");
+  pmt_type0->Branch("R",&dist);          // distance to source
+  pmt_type0->Branch("costh",&costh);     // photon incident angle relative to PMT
+  pmt_type0->Branch("cosths",&cosths);   // PMT costheta angle relative to source
+  pmt_type0->Branch("phis",&phis);       // PMT phi angle relative to source
+  pmt_type0->Branch("costhm",&costhm);   // costhm = costh
+  pmt_type0->Branch("phim",&phim);       // dummy
+  pmt_type0->Branch("omega",&omega);     // solid angle subtended by PMT
+  pmt_type0->Branch("PMT_id",&PMT_id);   // unique PMT id
+  pmt_type0->Branch("mPMT_id",&mPMT_id); // dummy 
+  pmt_type0->Branch("weight",&weight); 
+  TTree* pmt_type1 = new TTree("pmt_type1","pmt_type1");
+  pmt_type1->Branch("R",&dist);
+  pmt_type1->Branch("costh",&costh);
+  pmt_type1->Branch("cosths",&cosths);
+  pmt_type1->Branch("phis",&phis);
+  pmt_type1->Branch("costhm",&costhm);   // photon incident theta angle relative to central PMT 
+  pmt_type1->Branch("phim",&phim);       // photon incident phi angle relative to central PMT 
+  pmt_type1->Branch("omega",&omega);
+  pmt_type1->Branch("PMT_id",&PMT_id);
+  pmt_type1->Branch("mPMT_id",&mPMT_id); //sub-ID of PMT inside a mPMT module
+                                         // 0 -11 : outermost ring
+                                         // 12 - 17: middle ring
+                                         // 18: central PMT
+  pmt_type1->Branch("weight",&weight); 
+
+  // LI source direction is always perpendicular to the wall
+  // Separate treatment for barrel and endcap 
+  double vDirSource[3];
+  double vSource_localXaxis[3];
+  double vSource_localYaxis[3];
+  double endcapZ=3000;
+  // Barrel injector
+  if (abs(vtxpos[2])<endcapZ) {
+    vDirSource[0]=vtxpos[0];
+    vDirSource[1]=vtxpos[1];
+    double norm = sqrt(vtxpos[0]*vtxpos[0]+vtxpos[1]*vtxpos[1]);
+    vDirSource[0]/=-norm;
+    vDirSource[1]/=-norm;
+    vDirSource[2]=0;
+    vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
+    vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
+  } else {
+    vDirSource[0]=0;
+    vDirSource[1]=0;
+    if (vtxpos[2]>endcapZ) 
+    {
+      vDirSource[2]=-1;
+      vSource_localXaxis[0]=1;vSource_localXaxis[1]=0;vSource_localXaxis[2]=0;
+      vSource_localYaxis[0]=0;vSource_localYaxis[1]=-1;vSource_localYaxis[2]=0;
+    }
+    else 
+    {
+      vDirSource[2]=1;
+      vSource_localXaxis[0]=1;vSource_localXaxis[1]=0;vSource_localXaxis[2]=0;
+      vSource_localYaxis[0]=0;vSource_localYaxis[1]=1;vSource_localYaxis[2]=0;
+    }
+  }
+
+  int nPMTs_type0=geo->GetWCNumPMT();
+  int nPMTs_type1=0; if (hybrid) nPMTs_type1=geo->GetWCNumPMT(true);
+  std::vector<double> ledweight_type0(nPMTs_type0,-1);
+  std::vector<double> ledweight_type1(nPMTs_type1,-1);
+  for (int pmtType=0;pmtType<nPMTtypes;pmtType++) 
+  {
+    int nPMTs_type = pmtType==0 ? nPMTs_type0 : nPMTs_type1;
+    for (int i=0;i<nPMTs_type;i++) 
+    {
+      WCSimRootPMT pmt;
+      if (pmtType==0) pmt = geo->GetPMT(i,false);
+      else pmt = geo->GetPMT(i,true);
+      PMT_id = i;
+      if (pmtType == 0) mPMT_id = 0;
+      else mPMT_id = PMT_id%nPMTpermPMT;
+      double PMTpos[3];
+      double PMTdir[3];                   
+      for(int j=0;j<3;j++){
+        PMTpos[j] = pmt.GetPosition(j);
+        PMTdir[j] = pmt.GetOrientation(j);
+      }
+      double particleRelativePMTpos[3];
+      for(int j=0;j<3;j++) particleRelativePMTpos[j] = PMTpos[j] - vtxpos[j];
+      double vDir[3];double vOrientation[3];
+      for(int j=0;j<3;j++){
+        vDir[j] = particleRelativePMTpos[j];
+        vOrientation[j] = PMTdir[j];
+      }
+      double Norm = TMath::Sqrt(vDir[0]*vDir[0]+vDir[1]*vDir[1]+vDir[2]*vDir[2]);
+      double NormOrientation = TMath::Sqrt(vOrientation[0]*vOrientation[0]+vOrientation[1]*vOrientation[1]+vOrientation[2]*vOrientation[2]);
+      for(int j=0;j<3;j++){
+        vDir[j] /= Norm;
+        vOrientation[j] /= NormOrientation;
+      }
+      dist = Norm;
+      costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
+      cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
+      double localx = vDir[0]*vSource_localXaxis[0]+vDir[1]*vSource_localXaxis[1]+vDir[2]*vSource_localXaxis[2];
+      double localy = vDir[0]*vSource_localYaxis[0]+vDir[1]*vSource_localYaxis[1]+vDir[2]*vSource_localYaxis[2];
+      phis = atan2(localy,localx);
+      weight = GetLEDWeight(cosths,phis);
+      if (pmtType==0) ledweight_type0[i]=weight;
+      if (pmtType==1) ledweight_type1[i]=weight;
+      double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
+      omega = CalcSolidAngle(pmtradius,dist,costh);
+      costhm = costh;
+      phim = 0;
+      if (pmtType==1 && mPMT_id!=nPMTpermPMT-1)
+      { 
+        // Calculate photon incident cos(phi) angle relative to central PMT 
+        int idx_centralpmt = int(PMT_id/nPMTpermPMT)*nPMTpermPMT + nPMTpermPMT-1; // locate the central PMT
+        double PMTpos_central[3], PMTdir_central[3];
+        WCSimRootPMT pmt_central = geo->GetPMT(idx_centralpmt,true);
+        // central PMT position relative to current PMT
+        for(int j=0;j<3;j++){
+          PMTpos_central[j] = pmt_central.GetPosition(j)-PMTpos[j];
+          PMTdir_central[j] = pmt_central.GetOrientation(j);
+        }
+        costhm = -(vDir[0]*PMTdir_central[0]+vDir[1]*PMTdir_central[1]+vDir[2]*PMTdir_central[2]);
+        TVector3 v_central(PMTpos_central);
+        TVector3 v_dir(vDir);
+        TVector3 v_orientation(vOrientation);
+        // Use cross product to extract the perpendicular component
+        TVector3 v_dir1 = v_orientation.Cross(v_central);
+        TVector3 v_dir2 = v_orientation.Cross(-v_dir);
+        // Use dot cross to calculate the phi angle
+        phim = v_dir1.Angle(v_dir2);
+      }
+      if (pmtType==0) pmt_type0->Fill();
+      if (pmtType==1) pmt_type1->Fill();
+    }
+  }
+  outfile->cd();
+  pmt_type0->Write();
+  pmt_type1->Write();
 
   // Ad-hoc digitizer, PMT specific 
   BoxandLine20inchHQE_Digitizer* BnLDigitizer = new BoxandLine20inchHQE_Digitizer();
   PMT3inchR14374_Digitizer* mPMTDigitizer = new PMT3inchR14374_Digitizer();
 
-  double vtxpos[3];
   // Now loop over events
   for (int ev=startEvent; ev<nevent; ev++)
   {
@@ -345,26 +538,6 @@ int main(int argc, char **argv){
       printf("Vtxvol %d\n", wcsimrootevent->GetVtxvol());
       printf("Vtx %f %f %f\n", wcsimrootevent->GetVtx(0),
 	     wcsimrootevent->GetVtx(1),wcsimrootevent->GetVtx(2));
-    }
-
-    for (int i=0;i<3;i++) vtxpos[i]=wcsimrootevent->GetVtx(i);
-
-    // LI source direction is always perpendicular to the wall
-    // Separate treatment for barrel and endcap 
-    double vDirSource[3];
-    double endcapZ=3000;
-    if (abs(vtxpos[2])<endcapZ) {
-      vDirSource[0]=vtxpos[0];
-      vDirSource[1]=vtxpos[1];
-      double norm = sqrt(vtxpos[0]*vtxpos[0]+vtxpos[1]*vtxpos[1]);
-      vDirSource[0]/=-norm;
-      vDirSource[1]/=-norm;
-      vDirSource[2]=0;
-    } else {
-      vDirSource[0]=0;
-      vDirSource[1]=0;
-      if (vtxpos[2]>endcapZ) vDirSource[2]=-1;
-      else vDirSource[2]=1;
     }
 
     if(verbose){
@@ -627,6 +800,12 @@ int main(int argc, char **argv){
         timetof = time-tof+triggerTime[pmtType]-triggerShift[pmtType];
 
         nHits = 1; nPE = peForTube; 
+        weight = 0;
+        if (diffuserProfile) 
+        {
+          weight = pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
+          nPE *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];  
+        }
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
 
@@ -645,112 +824,6 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Write();
   hitRate_pmtType1->Write();
 
-  // Save the PMT geometry information relative to source
-  double dist, costh, cosths, omega, phim, costhm;
-  int mPMT_id;
-  TTree* pmt_type0 = new TTree("pmt_type0","pmt_type0");
-  pmt_type0->Branch("R",&dist);          // distance to source
-  pmt_type0->Branch("costh",&costh);     // photon incident angle relative to PMT
-  pmt_type0->Branch("cosths",&cosths);   // PMT angle relative to source
-  pmt_type0->Branch("costhm",&costhm);   // costhm = costh
-  pmt_type0->Branch("phim",&phim);       // dummy
-  pmt_type0->Branch("omega",&omega);     // solid angle subtended by PMT
-  pmt_type0->Branch("PMT_id",&PMT_id);   // unique PMT id
-  pmt_type0->Branch("mPMT_id",&mPMT_id); // dummy 
-  TTree* pmt_type1 = new TTree("pmt_type1","pmt_type1");
-  pmt_type1->Branch("R",&dist);
-  pmt_type1->Branch("costh",&costh);
-  pmt_type1->Branch("cosths",&cosths);
-  pmt_type1->Branch("costhm",&costhm);   // photon incident theta angle relative to central PMT 
-  pmt_type1->Branch("phim",&phim);       // photon incident phi angle relative to central PMT 
-  pmt_type1->Branch("omega",&omega);
-  pmt_type1->Branch("PMT_id",&PMT_id);
-  pmt_type1->Branch("mPMT_id",&mPMT_id); //sub-ID of PMT inside a mPMT module
-                                         // 0 -11 : outermost ring
-                                         // 12 - 17: middle ring
-                                         // 18: central PMT
-  double vDirSource[3];
-  double endcapZ=3000;
-  if (abs(vtxpos[2])<endcapZ) {
-    vDirSource[0]=vtxpos[0];
-    vDirSource[1]=vtxpos[1];
-    double norm = sqrt(vtxpos[0]*vtxpos[0]+vtxpos[1]*vtxpos[1]);
-    vDirSource[0]/=-norm;
-    vDirSource[1]/=-norm;
-    vDirSource[2]=0;
-  } else {
-    vDirSource[0]=0;
-    vDirSource[1]=0;
-    if (vtxpos[2]>endcapZ) vDirSource[2]=-1;
-    else vDirSource[2]=1;
-  }
-
-  int nPMTs_type0=geo->GetWCNumPMT();
-  int nPMTs_type1=0; if (hybrid) nPMTs_type1=geo->GetWCNumPMT(true);
-  for (int pmtType=0;pmtType<nPMTtypes;pmtType++) 
-  {
-    int nPMTs_type = pmtType==0 ? nPMTs_type0 : nPMTs_type1;
-    for (int i=0;i<nPMTs_type;i++) 
-    {
-      WCSimRootPMT pmt;
-      if (pmtType==0) pmt = geo->GetPMT(i,false);
-      else pmt = geo->GetPMT(i,true);
-      PMT_id = i;
-      if (pmtType == 0) mPMT_id = 0;
-      else mPMT_id = PMT_id%nPMTpermPMT;
-      double PMTpos[3];
-      double PMTdir[3];                   
-      for(int j=0;j<3;j++){
-        PMTpos[j] = pmt.GetPosition(j);
-        PMTdir[j] = pmt.GetOrientation(j);
-      }
-      double particleRelativePMTpos[3];
-      for(int j=0;j<3;j++) particleRelativePMTpos[j] = PMTpos[j] - vtxpos[j];
-      double vDir[3];double vOrientation[3];
-      for(int j=0;j<3;j++){
-        vDir[j] = particleRelativePMTpos[j];
-        vOrientation[j] = PMTdir[j];
-      }
-      double Norm = TMath::Sqrt(vDir[0]*vDir[0]+vDir[1]*vDir[1]+vDir[2]*vDir[2]);
-      double NormOrientation = TMath::Sqrt(vOrientation[0]*vOrientation[0]+vOrientation[1]*vOrientation[1]+vOrientation[2]*vOrientation[2]);
-      for(int j=0;j<3;j++){
-        vDir[j] /= Norm;
-        vOrientation[j] /= NormOrientation;
-      }
-      dist = Norm;
-      costh = -(vDir[0]*vOrientation[0]+vDir[1]*vOrientation[1]+vDir[2]*vOrientation[2]);
-      cosths = vDir[0]*vDirSource[0]+vDir[1]*vDirSource[1]+vDir[2]*vDirSource[2];
-      double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
-      omega = CalcSolidAngle(pmtradius,dist,costh);
-      costhm = costh;
-      phim = 0;
-      if (pmtType==1 && mPMT_id!=nPMTpermPMT-1)
-      { 
-        // Calculate photon incident cos(phi) angle relative to central PMT 
-        int idx_centralpmt = int(PMT_id/nPMTpermPMT)*nPMTpermPMT + nPMTpermPMT-1; // locate the central PMT
-        double PMTpos_central[3], PMTdir_central[3];
-        WCSimRootPMT pmt_central = geo->GetPMT(idx_centralpmt,true);
-        // central PMT position relative to current PMT
-        for(int j=0;j<3;j++){
-          PMTpos_central[j] = pmt_central.GetPosition(j)-PMTpos[j];
-          PMTdir_central[j] = pmt_central.GetOrientation(j);
-        }
-        costhm = -(vDir[0]*PMTdir_central[0]+vDir[1]*PMTdir_central[1]+vDir[2]*PMTdir_central[2]);
-        TVector3 v_central(PMTpos_central);
-        TVector3 v_dir(vDir);
-        TVector3 v_orientation(vOrientation);
-        // Use cross product to extract the perpendicular component
-        TVector3 v_dir1 = v_orientation.Cross(v_central);
-        TVector3 v_dir2 = v_orientation.Cross(-v_dir);
-        // Use dot cross to calculate the phi angle
-        phim = v_dir1.Angle(v_dir2);
-      }
-      if (pmtType==0) pmt_type0->Fill();
-      if (pmtType==1) pmt_type1->Fill();
-    }
-  }
-  pmt_type0->Write();
-  pmt_type1->Write();
   outfile->Close();
   
   return 0;
