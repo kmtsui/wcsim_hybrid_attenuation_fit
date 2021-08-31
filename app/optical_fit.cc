@@ -213,18 +213,32 @@ int main(int argc, char** argv)
         std::cout<<"]"<<std::endl;
 
         auto fitpara = new AnaFitParameters(name,pmttype);
+        // Optional config
         if (ele.size()>5)
         {
-            // Optionally load prior covariance matrix
-            auto covariance_config = toml_h::find<toml::array>(ele,5);
-            if (covariance_config.size()>0)
+            for (int i=5; i<ele.size();i++ )
             {
-                auto fname = toml_h::find<std::string>(covariance_config,0);
-                auto matname = toml_h::find<std::string>(covariance_config,1);
-                TFile f(fname.c_str());
-                std::cout<<"Using covariance matrix "<<matname<<" from "<<fname<<std::endl;
-                TMatrixDSym* cov_mat = (TMatrixDSym*)f.Get(matname.c_str());
-                fitpara->SetCovarianceMatrix(*cov_mat);
+                auto opt = toml_h::find<toml::array>(ele,i);
+                auto optname = toml_h::find<std::string>(opt,0);
+                if (optname=="covariance") // load prior covariance matrix
+                {
+                    auto fname = toml_h::find<std::string>(opt,1);
+                    auto matname = toml_h::find<std::string>(opt,2);
+                    TFile f(fname.c_str());
+                    std::cout<<"Using covariance matrix "<<matname<<" from "<<fname<<std::endl;
+                    TMatrixDSym* cov_mat = (TMatrixDSym*)f.Get(matname.c_str());
+                    fitpara->SetCovarianceMatrix(*cov_mat);
+                } 
+                else if (optname=="prior") // set prior central values
+                {
+                    auto fname = toml_h::find<std::string>(opt,1);
+                    auto hname = toml_h::find<std::string>(opt,2);
+                    TFile f(fname.c_str());
+                    std::cout<<"Set prior central values to  "<<hname<<" from "<<fname<<std::endl;
+                    TH1D* hist = (TH1D*)f.Get(hname.c_str());
+                    for (int j=0;j<npar;j++)
+                        priors[j] = hist->GetBinContent(j+1);
+                } 
             }
         }
         fitpara->InitParameters(parnames,priors,steps,lows,highs,fixeds);
