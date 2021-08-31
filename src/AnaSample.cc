@@ -304,15 +304,15 @@ void AnaSample::FillEventHist(bool reset_weights)
         const int reco_bin  = e.GetSampleBin();
         m_hpred->Fill(reco_bin + 0.5, weight);
 
-        if (m_scatter)
-        {
-            // e.GetTailPE() gives the (fractional) number of PE in the scatter control region
-            // m_scatter_factor is the scale factor from tail scatter pe to peak scatter pe
-            const double scatter_pe_at_peak = weight*e.GetTailPE()*m_scatter_factor;
-            m_hpred->Fill(reco_bin + 0.5, scatter_pe_at_peak);
-            const double tailpe = (weight+scatter_pe_at_peak)*e.GetTailPE();
-            m_hpred_tail->Fill(reco_bin + 0.5, tailpe);
-        }
+        // if (m_scatter)
+        // {
+        //     // e.GetTailPE() gives the (fractional) number of PE in the scatter control region
+        //     // m_scatter_factor is the scale factor from tail scatter pe to peak scatter pe
+        //     const double scatter_pe_at_peak = weight*e.GetTailPE()*m_scatter_factor;
+        //     m_hpred->Fill(reco_bin + 0.5, scatter_pe_at_peak);
+        //     const double tailpe = (weight+scatter_pe_at_peak)*e.GetTailPE();
+        //     m_hpred_tail->Fill(reco_bin + 0.5, tailpe);
+        // }
     }
 
     return;
@@ -334,7 +334,12 @@ void AnaSample::FillDataHist(bool stat_fluc)
     for(auto& e : m_pmts)
     {
         const int pmtID = e.GetPMTID();
-        const double weight = m_hdata_unbinned->GetBinContent(pmtID+1);
+        double weight = m_hdata_unbinned->GetBinContent(pmtID+1);
+        if (m_scatter) 
+        {
+            weight -= m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_scatter_factor;
+            if (weight<0) weight=0;
+        }
         e.SetPE(weight);
         const int reco_bin  = e.GetSampleBin();
         m_hdata->Fill(reco_bin + 0.5, weight);
@@ -435,14 +440,14 @@ double AnaSample::CalcLLH() const
     for(unsigned int i = 1; i <= nbins; ++i)
         chi2 += (*m_llh)(exp_w[i], exp_w2[i], data[i]);
 
-    if (m_scatter)
-    {
-        exp_w  = m_hpred_tail->GetArray();
-        exp_w2 = m_hpred_tail->GetSumw2()->GetArray();
-        data   = m_hdata_tail->GetArray();
-        for(unsigned int i = 1; i <= nbins; ++i)
-            chi2 += (*m_llh)(exp_w[i], exp_w2[i], data[i]);
-    }
+    // if (m_scatter)
+    // {
+    //     exp_w  = m_hpred_tail->GetArray();
+    //     exp_w2 = m_hpred_tail->GetSumw2()->GetArray();
+    //     data   = m_hdata_tail->GetArray();
+    //     for(unsigned int i = 1; i <= nbins; ++i)
+    //         chi2 += (*m_llh)(exp_w[i], exp_w2[i], data[i]);
+    // }
 
     return chi2;
 }
