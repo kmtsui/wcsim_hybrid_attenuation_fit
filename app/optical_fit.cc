@@ -241,8 +241,8 @@ int main(int argc, char** argv)
                 } 
             }
         }
-        fitpara->InitParameters(parnames,priors,steps,lows,highs,fixeds);
         fitpara->SetParameterFunction(functype);
+        fitpara->InitParameters(parnames,priors,steps,lows,highs,fixeds);
         fitpara->SetBinVar(binning_var);
         fitpara->SetBinning(binning_file);
         fitpara->InitEventMap(samples);

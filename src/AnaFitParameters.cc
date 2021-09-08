@@ -84,6 +84,12 @@ void AnaFitParameters::SetParameterFunction(const std::string& func_name)
     //     m_func = new Scatter;
     //     m_func_type = kScatter;
     // }
+    else if(func_name == "PolynomialCosth")
+    {
+        std::cout << "Setting function to PolynomialCosth." << std::endl;
+        m_func = new PolynomialCosth;
+        m_func_type = kPolynomialCosth;
+    }
     else
     {
         std::cout << "Invalid function name. Setting to identity by default." << std::endl;
@@ -100,6 +106,65 @@ void AnaFitParameters::InitParameters(std::vector<std::string> names, std::vecto
     SetParSteps(steps);
     SetParLimits(lows,highs);
     SetParFixed(fixed);
+
+    if (m_func_type == kPolynomialCosth)
+    {
+        std::vector<std::string> pol_names; 
+        std::vector<double> pol_priors; 
+        std::vector<double> pol_steps; 
+        std::vector<double> pol_lows; 
+        std::vector<double> pol_highs; 
+        std::vector<bool> pol_fixed;
+        pol_orders.clear();
+        pol_range.clear();
+        pol_range.push_back(lows[0]);
+        for (int i=0;i<names.size();i++)
+        {
+            int order = 0;
+            for (int j=1;j<10;j++)
+            {
+                std::string polyname = Form("pol%i",j);
+                if (polyname==names[i] || j==9)
+                {
+                    std::cout<<"Using pol"<<j<<" for "<<lows[i]<<"<=costh<"<<highs[i]<<std::endl;
+                    order = j;
+                    pol_orders.push_back(j);
+                    pol_range.push_back(highs[i]);
+                    break;
+                }
+            }
+            int startingCoeff = 2;
+            if (i==0)
+            {
+                startingCoeff = 1;
+                pol_names.push_back(Form("%s_segment0_pol%i_p0",m_name.c_str(),order));
+                pol_priors.push_back(priors[0]);
+                pol_steps.push_back(0.1);
+                pol_lows.push_back(0);
+                pol_highs.push_back(10);
+                pol_fixed.push_back(false);
+            }
+            for (int j=startingCoeff;j<=order;j++)
+            {
+                pol_names.push_back(Form("%s_segment%i_pol%i_p%i",m_name.c_str(),i,order,j));
+                pol_priors.push_back(0);
+                pol_steps.push_back(0.1);
+                pol_lows.push_back(-100);
+                pol_highs.push_back(100);
+                pol_fixed.push_back(false);
+            }
+        }
+
+        SetParNames(pol_names);
+        SetParPriors(pol_priors);
+        SetParSteps(pol_steps);
+        SetParLimits(pol_lows,pol_highs);
+        SetParFixed(pol_fixed);
+
+        ((PolynomialCosth*)m_func)->pol_orders = pol_orders;
+        ((PolynomialCosth*)m_func)->pol_range = pol_range;
+        ((PolynomialCosth*)m_func)->Print();
+    }
 
     Npar = pars_name.size();
     pars_original = pars_prior;
@@ -154,8 +219,15 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
         m_evmap.push_back(sample_map);
     }
 
-    for (int i=0;i<Npar;i++)
-        if (!params_used[i]) pars_fixed[i]=true;
+    if (m_func_type != kPolynomialCosth)
+        for (int i=0;i<Npar;i++)
+            if (!params_used[i]) pars_fixed[i]=true;
+}
+
+void AnaFitParameters::ApplyParameters(std::vector<double>& params)
+{
+    if (m_func_type == kPolynomialCosth)
+        ((PolynomialCosth*)m_func)->SetPolynomial(params);
 }
 
 void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params)

@@ -29,6 +29,7 @@ public:
     void InitParameters(std::vector<std::string> names, std::vector<double> priors, std::vector<double> steps, 
                         std::vector<double> lows, std::vector<double> highs, std::vector<bool> fixed);
     void InitEventMap(std::vector<AnaSample*>& sample);
+    void ApplyParameters(std::vector<double>& params);
     void ReWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
     double GetWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
 
@@ -127,6 +128,9 @@ protected:
     TMatrixDSym* covarianceI;
     TMatrixDSym* original_cov;
     bool m_decompose;
+
+    std::vector<int> pol_orders; // order of polynomial in each piece 
+    std::vector<double> pol_range; // applicable range for each polynomial
 };
 
 #endif
