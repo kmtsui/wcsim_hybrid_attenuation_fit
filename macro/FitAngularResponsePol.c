@@ -88,12 +88,29 @@ double CalcLikelihood(const double* par)
 
 void FitAngularResponsePol()
 {
-    TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_400nm_nominal_BnLPMT.root");
+    TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_350nm_nominal_BnLPMT.root");
+    //TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_400nm_nominal_mPMT.root");
     TVectorD* res_vector = (TVectorD*)f.Get("res_vector");
     TMatrixDSym* res_cov_matrix = (TMatrixDSym*)f.Get("res_cov_matrix");
     int startingIndex = 2;
     int nParameters = 20;
-    TH1D* hist_postfit = new TH1D("","",nParameters,0.5,1);
+    double costh_min = 0.5;
+    double costh_max = 1.0;
+    TH1D* hist_postfit = new TH1D("","",nParameters,costh_min,costh_max);
+
+    // Setup the polynomials to fit
+    // BnL example here consists of a 2nd order polynomial in [0.5,0.6], and a 3rd order polynomial in [0.6,1.0]
+    int orders[] = {2,3};
+    double ranges[] = {0.5,0.6,1.0};
+    // mPMT requires one more polynomial 
+    // int orders[] = {2,3,3};
+    // double ranges[] = {0.5,0.6,0.75,1.0};
+    bool plot_extra_pol = true; // use this with par_pol to plot an extra polynomials for comparison
+    //double par_pol[] = {0.200778,0.248166,-0.298219,0.288687,-0.15455};
+    //double par_pol[] = {0.20845,0.252388,-0.288586,0.315924,-0.183385};
+    //double par_pol[] = {0.213834,0.218174,0.121592,-0.0341528,0.358366};
+    double par_pol[] = {0.187242,0.171461,0.24356,-0.0771831,0.372188};
+    // double par_pol[] = {0.169528,0.346621,0.653342,-0.90903,7.74369,-4.63063,10.9356};
 
     int ndof = 0;
     std::vector<int> index_array;
@@ -104,6 +121,7 @@ void FitAngularResponsePol()
         double err = sqrt((*res_cov_matrix)[idx][idx]);
         if (err>0) // remove the fixed variable
         {
+            if (ndof==0) hist_postfit->SetMinimum(val*0.9);
             hist_postfit->SetBinContent(i+1,val);
             hist_postfit->SetBinError(i+1,err);
             ndof++;
@@ -150,10 +168,10 @@ void FitAngularResponsePol()
     std::cout << "Added " << total_add << " to force positive-definite."
               << std::endl;
 
-    // Setup the polynomials to fit
-    // example here consists of a 2nd order polynomial in [0.5,0.6], and a 3rd order polynomial in [0.6,1.0]
-    pol_orders.push_back(2); pol_orders.push_back(3);
-    pol_range.push_back(0.5); pol_range.push_back(0.6); pol_range.push_back(1.0);
+    pol_orders.assign(orders, orders+sizeof(orders)/sizeof(int));
+    pol_range.assign(ranges, ranges+sizeof(ranges)/sizeof(double));
+    //pol_orders.push_back(2); pol_orders.push_back(3);
+    //pol_range.push_back(0.5); pol_range.push_back(0.6); pol_range.push_back(1.0);
     int m_npar = pol_orders[0]+1;
     for (int i=1;i<pol_orders.size();i++)
         m_npar += pol_orders[i]+1-2;
@@ -230,15 +248,18 @@ void FitAngularResponsePol()
     const double* par_val = m_fitter->X();
     const double* par_err = m_fitter->Errors();
 
-    for (int i=0;i<m_npar;i++) {
-        std::cout<<m_fitter->VariableName(i)<<": "<<par_val[i]<<" +/- "<<par_err[i]<<std::endl;
-    }
+    // for (int i=0;i<m_npar;i++) {
+    //     std::cout<<m_fitter->VariableName(i)<<": "<<par_val[i]<<" +/- "<<par_err[i]<<std::endl;
+    // }
 
     gStyle->SetOptStat(0);
     TCanvas* c1 = new TCanvas();
+    hist_postfit->GetXaxis()->SetTitle("cos#theta");
+    hist_postfit->GetYaxis()->SetTitle("A(cos#theta)");
+    hist_postfit->SetLineWidth(2);
     hist_postfit->Draw("E0");
     // Also draw the fitted polynomials as histogram
-    TH1D* h_fit_pol = new TH1D("","",1000,0.5,1.0);
+    TH1D* h_fit_pol = new TH1D("","",1000,costh_min,costh_max);
     std::vector<double> pltpts;
     for (int i=1;i<=h_fit_pol->GetNbinsX();i++)
     {
@@ -250,6 +271,23 @@ void FitAngularResponsePol()
         h_fit_pol->SetBinContent(i,valpts[i-1]);
     }
     h_fit_pol->SetLineColor(kRed);
+    h_fit_pol->SetLineWidth(2);
     h_fit_pol->Draw("same");
+    if (plot_extra_pol)
+    {
+        TH1D* h_fit_pol_fit = new TH1D("","",1000,costh_min,costh_max);
+        valpts = CalcPol(par_pol,pltpts);
+        for (int i=1;i<=h_fit_pol_fit->GetNbinsX();i++)
+        {
+            h_fit_pol_fit->SetBinContent(i,valpts[i-1]);
+        }
+        h_fit_pol_fit->SetLineColor(kGreen);
+        h_fit_pol_fit->SetLineStyle(2);
+        h_fit_pol_fit->SetLineWidth(2);
+        h_fit_pol_fit->Draw("same");
+
+        // h_fit_pol_fit->Divide(h_fit_pol);
+        // h_fit_pol_fit->Draw();
+    }
     c1->SaveAs("test.pdf");
 }
