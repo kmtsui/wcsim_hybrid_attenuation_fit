@@ -85,7 +85,7 @@ public:
             if(data > 0.0)
                 chi2 += 2 * data * std::log(data / mc_hat);
 
-            chi2 += (beta - 1) * (beta - 1) / rel_var;
+            if (rel_var > 0.0) chi2 += (beta - 1) * (beta - 1) / rel_var;
         }
 
         return (chi2 >= 0.0) ? chi2 : 0.0;

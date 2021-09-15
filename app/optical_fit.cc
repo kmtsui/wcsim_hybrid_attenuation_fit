@@ -126,6 +126,18 @@ int main(int argc, char** argv)
                     std::cout<<"Fitting with scattering control region. timetof region = ["<<time1<<","<<time2<<","<<time3<<"], scaling factor = "<< factor <<std::endl;
                     s->SetScatter(time1,time2,time3,factor);
                 }
+                else if (optname=="scatter_map")
+                {
+                    auto fname = toml_h::find<std::string>(opt,1);
+                    auto hname = toml_h::find<std::string>(opt,2);
+                    auto time1 = toml_h::find<double>(opt,3);
+                    auto time2 = toml_h::find<double>(opt,4);
+                    auto time3 = toml_h::find<double>(opt,5);
+                    std::cout<<"Applying scattering map "<<hname<<" from "<<fname<<", for timetof region = ["<<time1<<","<<time2<<","<<time3<<"]"<<std::endl;
+                    TFile fs(fname.c_str());
+                    TH1D* hs = (TH1D*)fs.Get(hname.c_str());
+                    s->SetScatterMap(time1,time2,time3,*hs);
+                }
                 else if (optname=="time_offset")
                 {
                     auto width = toml_h::find<double>(opt,1);

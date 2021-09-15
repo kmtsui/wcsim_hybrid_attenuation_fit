@@ -210,6 +210,7 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
     {
         s->FillEventHist();
         s->FillDataHist(stat_fluc);
+        s->SetLLHFunction(min_settings.likelihood);
     }
 
     SaveEventHist();

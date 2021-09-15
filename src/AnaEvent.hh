@@ -23,6 +23,8 @@ class AnaEvent
             m_R   = -999.0;
             m_nPE   = -999.0;
             m_nPE_tail = 0.0;
+            m_nPE_indirect = -999.0;
+            m_nPE_indirect_err = -999.0;
             m_timetof   = -999.0;
             m_wght     = 1.0;
             m_wghtMC   = 1.0;
@@ -69,6 +71,12 @@ class AnaEvent
 
         inline void SetTailPE(double val){ m_nPE_tail = val; }
         inline double GetTailPE() const { return m_nPE_tail; }
+
+        inline void SetPEIndirect(double val){ m_nPE_indirect = val; }
+        inline double GetPEIndirect() const { return m_nPE_indirect; }
+
+        inline void SetPEIndirectErr(double val){ m_nPE_indirect_err = val; }
+        inline double GetPEIndirectErr() const { return m_nPE_indirect_err; }
 
         inline void SetTimetof(double val){ m_timetof = val; }
         inline double GetTimetof() const { return m_timetof; }
@@ -120,6 +128,10 @@ class AnaEvent
                 return m_nPE;
             else if(var == "nPE_tail")
                 return m_nPE_tail;
+            else if(var == "m_nPE_indirect")
+                return m_nPE_indirect;
+            else if(var == "m_nPE_indirect_err")
+                return m_nPE_indirect_err;
             else if(var == "sample")
                 return m_sample;
             else if(var == "omega")
@@ -158,6 +170,8 @@ class AnaEvent
         double m_R;        //distance to source
         double m_nPE;      //number of PE
         double m_nPE_tail; //number of PE at the tail
+        double m_nPE_indirect;
+        double m_nPE_indirect_err;
         double m_timetof;  //hittime-tof
         double m_wght;     //event weight
         double m_wghtMC;   //event weight from original MC

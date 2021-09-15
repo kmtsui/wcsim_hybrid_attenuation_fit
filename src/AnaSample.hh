@@ -76,6 +76,9 @@ public:
     {
         m_scatter = true; m_scatter_time1 = time1; m_scatter_time2 = time2; m_scatter_time3 = time3; m_scatter_factor = factor; 
     }
+
+    void SetScatterMap(double time1, double time2, double time3, const TH1D& hist);
+
     inline void UnsetScatter() { m_scatter = false; }
 
     inline void SetTimeOffset(bool offset, double width) { m_time_offset = offset; m_time_offset_width = width; }
@@ -96,6 +99,9 @@ protected:
     double m_scatter_time2;
     double m_scatter_time3;
     double m_scatter_factor;
+
+    bool m_scatter_map;
+    TH1D* m_h_scatter_map;
 
     bool m_time_offset;
     double m_time_offset_width;
@@ -119,6 +125,7 @@ protected:
     CalcLLHFunc* m_llh;
 
     TH1D* m_hpred;
+    TH1D* m_hpred_err2;
     TH1D* m_hpred_tail;
     TH1D* m_hdata;
     TH1D* m_hdata_tail;

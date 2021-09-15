@@ -10,12 +10,15 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_name(name)
     , m_binning(binning)
     , m_hpred(nullptr)
+    , m_hpred_err2(nullptr)
     , m_hpred_tail(nullptr)
     , m_hdata(nullptr)
     , m_hdata_tail(nullptr)
     , m_hdata_unbinned(nullptr)
     , m_hdata_unbinned_tail(nullptr)
     , m_scatter(false)
+    , m_scatter_map(false)
+    , m_h_scatter_map(nullptr)
     , m_time_offset(false)
     , m_time_smear(false)
 {
@@ -38,6 +41,9 @@ AnaSample::~AnaSample()
 {
     if(m_hpred != nullptr)
         delete m_hpred;
+    
+    if(m_hpred_err2 != nullptr)
+        delete m_hpred_err2;
 
     if(m_hpred_tail != nullptr)
         delete m_hpred_tail;
@@ -53,6 +59,10 @@ AnaSample::~AnaSample()
 
     if(m_hdata_unbinned_tail != nullptr)
         delete m_hdata_unbinned_tail;
+
+    if(m_h_scatter_map != nullptr)
+        delete m_h_scatter_map;
+
 }
 
 void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name)
@@ -111,7 +121,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         }
     }
 
-    if (m_scatter)
+    if (m_scatter || m_scatter_map)
     {
         if(m_hdata_unbinned_tail != nullptr)
             delete m_hdata_unbinned_tail;
@@ -148,12 +158,12 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         }
 
         if (skip) continue;
-        if (!m_scatter) m_hdata_unbinned->Fill(pmtID+0.5, nPE);
-        else 
+        if (m_scatter || m_scatter_map)
         {
             if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_unbinned->Fill(pmtID+0.5, nPE);
             else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_unbinned_tail->Fill(pmtID+0.5, nPE);
         }
+        else m_hdata_unbinned->Fill(pmtID+0.5, nPE);
     }
 
     PrintStats();
@@ -214,6 +224,11 @@ void AnaSample::MakeHistos()
     m_hpred = new TH1D(Form("%s_pred", m_name.c_str()), Form("%s_pred", m_name.c_str()), m_nbins, 0, m_nbins);
     m_hpred->SetDirectory(0);
 
+    if(m_hpred_err2 != nullptr)
+        delete m_hpred_err2;
+    m_hpred_err2 = new TH1D(Form("%s_pred_err2", m_name.c_str()), Form("%s_pred_err2", m_name.c_str()), m_nbins, 0, m_nbins);
+    m_hpred_err2->SetDirectory(0);
+
     if(m_hpred_tail != nullptr)
         delete m_hpred_tail;
     m_hpred_tail = new TH1D(Form("%s_pred_tail", m_name.c_str()), Form("%s_pred_tail", m_name.c_str()), m_nbins, 0, m_nbins);
@@ -228,6 +243,11 @@ void AnaSample::MakeHistos()
         delete m_hdata_tail;
     m_hdata_tail = new TH1D(Form("%s_data_tail", m_name.c_str()), Form("%s_data_tail", m_name.c_str()), m_nbins, 0, m_nbins);
     m_hdata_tail->SetDirectory(0);
+
+    // if(m_h_scatter_map != nullptr)
+    //     delete m_h_scatter_map;
+    // m_h_scatter_map = new TH1D(Form("%s_scatter_map", m_name.c_str()), Form("%s_scatter_map", m_name.c_str()), m_nbins, 0, m_nbins);
+    // m_h_scatter_map->SetDirectory(0);
 }
 
 void AnaSample::InitEventMap()
@@ -297,12 +317,19 @@ void AnaSample::FillEventHist(bool reset_weights)
 #endif
     m_hpred->Reset();
     if (m_scatter) m_hpred_tail->Reset();
+    if (m_scatter_map) m_hpred_err2->Reset();
 
     for(const auto& e : m_pmts)
     {
         const double weight = reset_weights ? e.GetEvWghtMC() : e.GetEvWght();
         const int reco_bin  = e.GetSampleBin();
         m_hpred->Fill(reco_bin + 0.5, weight);
+
+        if (m_scatter_map)
+        {
+            m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect());
+            m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr());
+        }
 
         // if (m_scatter)
         // {
@@ -329,7 +356,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
     }
 #endif
     m_hdata->Reset();
-    if (m_scatter) m_hdata_tail->Reset();
+    if (m_scatter || m_scatter_map) m_hdata_tail->Reset();
 
     for(auto& e : m_pmts)
     {
@@ -340,10 +367,24 @@ void AnaSample::FillDataHist(bool stat_fluc)
             weight -= m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_scatter_factor;
             if (weight<0) weight=0;
         }
+        else if (m_scatter_map)
+        {
+            //weight -= m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1);
+            //std::cout<<pmtID<<" "<<m_hdata_unbinned->GetBinContent(pmtID+1)<<" "<<m_hdata_unbinned_tail->GetBinContent(pmtID+1)<<" "<<m_h_scatter_map->GetBinContent(pmtID+1)<<std::endl;
+            //if (weight<0) weight=0;
+            double val = m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1);
+            double err = m_h_scatter_map->GetBinError(pmtID+1);
+            err = (err*err + 1./m_hdata_unbinned_tail->GetBinContent(pmtID+1))*val*val;
+            // double val = m_h_scatter_map->GetBinContent(pmtID+1);
+            // double err = m_h_scatter_map->GetBinError(pmtID+1);
+            // err = err*err*val*val;
+            e.SetPEIndirect(val);
+            e.SetPEIndirectErr(err);
+        }
         e.SetPE(weight);
         const int reco_bin  = e.GetSampleBin();
         m_hdata->Fill(reco_bin + 0.5, weight);
-        if (m_scatter) m_hdata_tail->Fill(reco_bin + 0.5, m_hdata_unbinned_tail->GetBinContent(pmtID+1));
+        if (m_scatter || m_scatter_map) m_hdata_tail->Fill(reco_bin + 0.5, m_hdata_unbinned_tail->GetBinContent(pmtID+1));
     }
 
     // if (m_scatter)
@@ -360,7 +401,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
 
 
     m_hdata->Scale(m_norm);
-    if (m_scatter) m_hdata_tail->Scale(m_norm);
+    if (m_scatter || m_scatter_map) m_hdata_tail->Scale(m_norm);
 
     if(stat_fluc) 
     {
@@ -382,7 +423,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
             m_hdata->SetBinContent(j, val);
         }
 
-        if (m_scatter) for(int j = 1; j <= m_hdata_tail->GetNbinsX(); ++j)
+        if (m_scatter || m_scatter_map) for(int j = 1; j <= m_hdata_tail->GetNbinsX(); ++j)
         {
             double val = m_hdata_tail->GetBinContent(j);
             val = gRandom->Poisson(val);
@@ -427,13 +468,19 @@ void AnaSample::SetLLHFunction(const std::string& func_name)
         std::cout << "Setting likelihood function to Barlow-Beeston." << std::endl;
         m_llh = new BarlowLLH;
     }
+    else
+    {
+        std::cout << "Likelihood function not defined. Setting to Poisson by default." << std::endl;
+        m_llh = new PoissonLLH;
+    }
 }
 
 double AnaSample::CalcLLH() const
 {
     const unsigned int nbins = m_hpred->GetNbinsX();
     double* exp_w  = m_hpred->GetArray();
-    double* exp_w2 = m_hpred->GetSumw2()->GetArray();
+    //double* exp_w2 = m_hpred->GetSumw2()->GetArray();
+    double* exp_w2 = m_hpred_err2->GetArray();
     double* data   = m_hdata->GetArray();
 
     double chi2 = 0.0;
@@ -515,9 +562,15 @@ void AnaSample::WriteEventHist(TDirectory* dirout, const std::string& bsname)
     if(m_hpred != nullptr)
         m_hpred->Write(Form("evhist_sam%d_pred%s", m_sample_id, bsname.c_str()));
 
-    if (m_scatter)
+    if (m_scatter || m_scatter_map)
+    {
         if(m_hpred_tail != nullptr)
             m_hpred_tail->Write(Form("evhist_tail_sam%d_pred%s", m_sample_id, bsname.c_str()));
+
+        if (m_scatter_map)
+            if (m_hpred_err2 != nullptr)
+                m_hpred_err2->Write(Form("evhist_err2_sam%d_pred%s", m_sample_id, bsname.c_str()));
+    }
 }
 
 void AnaSample::WriteDataHist(TDirectory* dirout, const std::string& bsname)
@@ -526,7 +579,16 @@ void AnaSample::WriteDataHist(TDirectory* dirout, const std::string& bsname)
     if(m_hdata != nullptr)
         m_hdata->Write(Form("evhist_sam%d_data%s", m_sample_id, bsname.c_str()));
 
-    if (m_scatter)
+    if (m_scatter || m_scatter_map)
         if(m_hdata_tail != nullptr)
             m_hdata_tail->Write(Form("evhist_tail_sam%d_data%s", m_sample_id, bsname.c_str()));         
+}
+
+void AnaSample::SetScatterMap(double time1, double time2, double time3, const TH1D& hist)
+{
+    m_scatter_map = true; m_scatter_time1 = time1; m_scatter_time2 = time2; m_scatter_time3 = time3;
+    if(m_h_scatter_map != nullptr)
+        delete m_h_scatter_map;
+    m_h_scatter_map = new TH1D(hist);
+    m_h_scatter_map->SetDirectory(0);
 }
