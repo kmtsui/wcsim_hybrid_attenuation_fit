@@ -9,7 +9,7 @@ tolerance = 1E-6
 strategy = 1
 max_iter = 1E6
 max_fcn = 1E9
-
+# Optional MCMC method to estimate the fit uncertainty
 MCMCSteps = 0
 MCMCStepSize = 0.3
 
@@ -42,9 +42,11 @@ names = [
 # ["time_smear", mean, width]: Random time smearing per PMT, sampled from a Gaussian(mean, width)
 
 # Special optional configuration for this branch
-# ["scatter_control", time1, time2, time3, correction_factor]: 
-# Divide each bin into two, {time1,time2} corresponds to the main peak, {time2,time3} corresponds to the tail due to indirect photon
-# The PE count is corrected as: PE = PE{time1,time2} - PE{time2,time3}*correction_factor
+# ["scatter_map", root_file_name, hist_name, time1, time2, time3]:
+# Divide each bin into two region, {time1,time2} corresponds to the signal region, {time2,time3} corresponds to the control region
+# Use control region to estimate the indirect photon background in signal region
+# Use macro/make_scatter_map.c to generate the input histogram
+# Need to set likelihood to "Barlow" in order to correctly include MC statistical uncertainty in likelihood calculation
 
 # The example here specifies two samples, from the input file, with different pmt tree names
 # Three sets of cut are applied to the variables timetof, cosths, costh
@@ -71,6 +73,7 @@ names = [
     "norm",
     "alpha",
     "BnL_angular",
+    # "BnLPMT_angular_pol",
     "mPMT_angular"
 ]
 
@@ -115,3 +118,10 @@ mPMT_angular = [  1, "Identity",   10, [["mPMT_angular1",1, 0.1, 0, 10, false],
                                         ["mPMT_angular8",1, 0.1, 0, 10, false],
                                         ["mPMT_angular9",1, 0.1, 0, 10, false],
                                         ["mPMT_angular10",1, 0.1, 0, 10, true]] , ["costh_binning.txt",["costh"]] ]
+
+# Special option to fit angular response as piecewise continuous polynomial function of costh, similar to what fiTQun did
+# npar is the number of segment
+# each parameter now corresponds to the n-th order polynomial in the region {limit_low < costh < limit_high}
+# example below consists of a 2nd order polynomial in [0.5,0.6], and a 3rd order polynomial in [0.6,1.0]
+BnLPMT_angular_pol = [  0, "PolynomialCosth", 2, [["pol2",0.25, 0.1, 0.5, 0.6, false],
+                                                  ["pol3",0.25, 0.1, 0.6, 1.0, false],] , ["R_binning.txt",    ["R"]] ]
