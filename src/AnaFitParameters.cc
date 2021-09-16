@@ -17,7 +17,7 @@ AnaFitParameters::AnaFitParameters(const std::string& par_name, const int pmttyp
 {
     m_func = new Identity;
     m_func_type = kIdentity;
-    std::cout<<"Setting up parameter "<<m_name<<std::endl;
+    std::cout << TAG<<"Setting up parameter "<<m_name<<std::endl;
 }
 
 AnaFitParameters::~AnaFitParameters()
@@ -62,37 +62,37 @@ void AnaFitParameters::SetParameterFunction(const std::string& func_name)
 
     if(func_name.empty())
     {
-        std::cout << "Parameter function name empty. Setting to identity by default." << std::endl;
+        std::cout << TAG << "Parameter function name empty. Setting to identity by default." << std::endl;
         m_func = new Identity;
         m_func_type = kIdentity;
     }
     else if(func_name == "Identity")
     {
-        std::cout << "Setting function to Identity." << std::endl;
+        std::cout << TAG << "Setting function to Identity." << std::endl;
         m_func = new Identity;
         m_func_type = kIdentity;
     }
     else if(func_name == "Attenuation")
     {
-        std::cout << "Setting function to Attenuation." << std::endl;
+        std::cout << TAG << "Setting function to Attenuation." << std::endl;
         m_func = new Attenuation;
         m_func_type = kAttenuation;
     }
     // else if(func_name == "Scatter")
     // {
-    //     std::cout << "Setting function to Scatter." << std::endl;
+    //     std::cout << TAG << "Setting function to Scatter." << std::endl;
     //     m_func = new Scatter;
     //     m_func_type = kScatter;
     // }
     else if(func_name == "PolynomialCosth")
     {
-        std::cout << "Setting function to PolynomialCosth." << std::endl;
+        std::cout << TAG << "Setting function to PolynomialCosth." << std::endl;
         m_func = new PolynomialCosth;
         m_func_type = kPolynomialCosth;
     }
     else
     {
-        std::cout << "Invalid function name. Setting to identity by default." << std::endl;
+        std::cout << TAG << "Invalid function name. Setting to identity by default." << std::endl;
         m_func = new Identity;
         m_func_type = kIdentity;
     }
@@ -126,7 +126,7 @@ void AnaFitParameters::InitParameters(std::vector<std::string> names, std::vecto
                 std::string polyname = Form("pol%i",j);
                 if (polyname==names[i] || j==9)
                 {
-                    std::cout<<"Using pol"<<j<<" for "<<lows[i]<<"<=costh<"<<highs[i]<<std::endl;
+                    std::cout << TAG<<"Using pol"<<j<<" for "<<lows[i]<<"<=costh<"<<highs[i]<<std::endl;
                     order = j;
                     pol_orders.push_back(j);
                     pol_range.push_back(highs[i]);
@@ -163,13 +163,13 @@ void AnaFitParameters::InitParameters(std::vector<std::string> names, std::vecto
 
         ((PolynomialCosth*)m_func)->pol_orders = pol_orders;
         ((PolynomialCosth*)m_func)->pol_range = pol_range;
-        ((PolynomialCosth*)m_func)->Print();
+        //((PolynomialCosth*)m_func)->Print();
     }
 
     Npar = pars_name.size();
     pars_original = pars_prior;
 
-    std::cout<<"Number of parameters = "<<Npar<<std::endl;
+    std::cout << TAG<<"Number of parameters = "<<Npar<<std::endl;
 
     if(m_decompose)
     {
@@ -181,7 +181,7 @@ void AnaFitParameters::InitParameters(std::vector<std::string> names, std::vecto
         for(int i = idx; i < Npar; ++i)
             pars_fixed[i] = true;
 
-        std::cout << "Decomposed parameters.\n"
+        std::cout << TAG << "Decomposed parameters.\n"
                   << "Keeping the " << idx << " largest eigen values.\n"
                   << "Corresponds to " << m_info_frac * 100.0
                   << "\% total variance.\n";
@@ -215,7 +215,7 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
             }
             else sample_map.push_back(PASSEVENT);
         }
-        std::cout<<"In AnaFitParameters::InitEventMap, built event map for sample "<< sample[s]->GetName() << " of total "<< sample[s] -> GetNPMTs() << "PMTs"<<std::endl;
+        std::cout << TAG<<"In AnaFitParameters::InitEventMap, built event map for sample "<< sample[s]->GetName() << " of total "<< sample[s] -> GetNPMTs() << "PMTs"<<std::endl;
         m_evmap.push_back(sample_map);
     }
 
@@ -251,7 +251,7 @@ void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int n
 #ifndef NDEBUG
         if(bin > params.size())
         {
-            std::cout  << "In AnaFitParameters::ReWeight()\n"
+            std::cout << TAG  << "In AnaFitParameters::ReWeight()\n"
                         << "Number of bins in " << m_name << " does not match num of parameters.\n"
                         << "Setting event weight to zero." << std::endl;
             event -> AddEvWght(0.0);
@@ -286,7 +286,7 @@ double AnaFitParameters::GetWeight(AnaEvent* event, int pmttype, int nsample, in
 #ifndef NDEBUG
         if(bin > params.size())
         {
-            std::cout  << "In AnaFitParameters::GetWeight()\n"
+            std::cout << TAG  << "In AnaFitParameters::GetWeight()\n"
                         << "Number of bins in " << m_name << " does not match num of parameters.\n"
                         << "Setting event weight to zero." << std::endl;
             return 1.;
@@ -329,7 +329,7 @@ void AnaFitParameters::SetCovarianceMatrix(const TMatrixDSym& covmat, bool decom
     if(inv_test.InvertLU(inv_matrix, 1E-48, &det))
     {
         covarianceI->SetMatrixArray(inv_matrix.GetMatrixArray());
-        std::cout << "Covariance matrix inverted successfully." << std::endl;
+        std::cout << TAG << "Covariance matrix inverted successfully." << std::endl;
     }
     else
     {
@@ -339,7 +339,7 @@ void AnaFitParameters::SetCovarianceMatrix(const TMatrixDSym& covmat, bool decom
         return;
     }
 
-    std::cout << "Covariance matrix size: " << covariance->GetNrows()
+    std::cout << TAG << "Covariance matrix size: " << covariance->GetNrows()
               << " x " << covariance->GetNrows() << " for " << this->m_name << std::endl;
 }
 
@@ -350,7 +350,7 @@ double AnaFitParameters::GetChi2(const std::vector<double>& params) const
 
     if(CheckDims(params) == false)
     {
-        std::cout << "In AnaFitParameters::GetChi2()\n"
+        std::cout << TAG << "In AnaFitParameters::GetChi2()\n"
                   << "Dimension check failed. Returning zero." << std::endl;
         return 0.0;
     }

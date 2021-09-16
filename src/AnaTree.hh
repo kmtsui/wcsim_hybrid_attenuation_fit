@@ -16,6 +16,7 @@
 #include <TLeaf.h>
 
 #include "AnaEvent.hh"
+#include "ColorOutput.hh"
 
 class AnaTree
 {
@@ -41,6 +42,10 @@ private:
     int PMT_id;
     int mPMT_id;
     double weight;
+
+    const std::string TAG = color::GREEN_STR + "[AnaTree]: " + color::RESET_STR;
+    const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
+    const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
 
 public:
     AnaTree(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name);
@@ -82,7 +87,7 @@ public:
             return mPMT_id;
         else
         {
-            std::cout<<" Error! Variable "<<var<<" not available in AnaTree"<<std::endl;
+            std::cout << ERR <<" Error! Variable "<<var<<" not available in AnaTree"<<std::endl;
             return -1;
         }
     }

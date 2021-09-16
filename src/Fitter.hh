@@ -30,6 +30,7 @@
 #include "AnaSample.hh"
 #include "AnaFitParameters.hh"
 #include "ToyThrower.hh"
+#include "ColorOutput.hh"
 
 struct MinSettings
 {
@@ -147,5 +148,8 @@ private:
         m_mcmctree->Branch("par_mcmc", &par_mcmc);
     }
     
+    const std::string TAG = color::GREEN_STR + "[Fitter]: " + color::RESET_STR;
+    const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
+    const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
 };
 #endif

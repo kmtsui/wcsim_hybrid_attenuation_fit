@@ -9,6 +9,7 @@ set(HEADERS
     ParameterFunction.hh
     EigenDecomp.hh
     ToyThrower.hh
+    ColorOutput.hh
 )
 
 add_library(OpticalFit SHARED 

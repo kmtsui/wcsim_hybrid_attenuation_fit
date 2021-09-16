@@ -20,6 +20,7 @@
 #include "AnaTree.hh"
 #include "BinManager.hh"
 #include "Likelihoods.hh"
+#include "ColorOutput.hh"
 
 class AnaSample
 {
@@ -131,6 +132,10 @@ protected:
     TH1D* m_hdata_tail;
     TH1D* m_hdata_unbinned;
     TH1D* m_hdata_unbinned_tail;
+
+    const std::string TAG = color::GREEN_STR + "[AnaSample]: " + color::RESET_STR;
+    const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
+    const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
 
 };
 

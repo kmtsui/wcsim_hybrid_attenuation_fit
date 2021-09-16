@@ -5,14 +5,14 @@ AnaTree::AnaTree(const std::string& file_name, const std::string& tree_name, con
     fChain = new TChain(tree_name.c_str());
     fChain->Add(file_name.c_str());
 
-    std::cout<<"Loading data files: "<<file_name.c_str()<<std::endl;
+    std::cout << TAG<<"Loading data files: "<<file_name.c_str()<<std::endl;
 
     std::string single_file_name = fChain->GetFile()->GetName();
 
     f_pmt = new TFile(single_file_name.c_str());
     t_pmt = (TTree*)f_pmt->Get(pmt_tree_name.c_str());
 
-    std::cout<<"Loading PMT tree from : "<<f_pmt->GetName()<<std::endl;
+    std::cout << TAG<<"Loading PMT tree from : "<<f_pmt->GetName()<<std::endl;
 
     m_maskpmt = false;
 
@@ -31,7 +31,7 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
     m_maskpmt = false;
 
     if (nPMT<=0) {
-        std::cout << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " <=0\n"
+        std::cout << TAG << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " <=0\n"
                   << "No PMT is masked"<<std::endl;
 
         return;
@@ -41,13 +41,13 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
     if (mPMT) nPMT_total = nPMT_total/nPMTpermPMT;
 
     if (nPMT>=nPMT_total) {
-        std::cout << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " >= total nPMT = " << nPMT_total <<"\n"
+        std::cout << TAG << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " >= total nPMT = " << nPMT_total <<"\n"
                   << "No PMT is masked"<<std::endl;
 
         return;
     }
 
-    std::cout<< "In AnaTree::MaskPMT(), enabling "<< nPMT << " out of "<< nPMT_total << " PMTs" << std::endl;
+    std::cout << TAG<< "In AnaTree::MaskPMT(), enabling "<< nPMT << " out of "<< nPMT_total << " PMTs" << std::endl;
     double PMT_frac = (nPMT+0.)/(nPMT_total);
     int PMT_count = 0;
     for (int i=0;i<nPMT_total;i++)
@@ -119,7 +119,7 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
 
     if(t_pmt == nullptr)
     {
-        std::cout<<"[Error] Reading no PMTs in AnaTree::GetPMTs()"<<std::endl;
+        std::cout << TAG<<"[Error] Reading no PMTs in AnaTree::GetPMTs()"<<std::endl;
         return pmt_vec;
     }
     unsigned long nentries = fChain->GetEntries();

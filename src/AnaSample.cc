@@ -24,7 +24,7 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
 {
     TH1::SetDefaultSumw2(true);
 
-    std::cout  << "Sample: " << m_name << " (ID: " << m_sample_id << ")" << std::endl;
+    std::cout << TAG  << "Sample: " << m_name << " (ID: " << m_sample_id << ")" << std::endl;
 
     m_bm.SetBinning(m_binning);
     //m_bm.Print();
@@ -34,7 +34,7 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
 
     MakeHistos(); // with default binning
 
-    std::cout << "MakeHistos called." << std::endl;
+    std::cout << TAG << "MakeHistos called." << std::endl;
 }
 
 AnaSample::~AnaSample()
@@ -70,9 +70,9 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     AnaTree selTree(file_name, tree_name, pmt_tree_name);
     if (m_pmtmask>0) selTree.MaskPMT(m_pmtmask, m_pmttype, m_nPMTpermPMT);
 
-    std::cout  << "Reading events for from "<<file_name<<"...\n";
+    std::cout << TAG  << "Reading events for from "<<file_name<<"...\n";
 
-    std::cout  << "Reading PMT geometry...\n";
+    std::cout << TAG  << "Reading PMT geometry...\n";
     std::vector<AnaEvent> pmt_vec = selTree.GetPMTs();
 
     m_pmts.clear();
@@ -130,7 +130,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
 
     int pmtID;
 
-    std::cout<<"Reading PMT hit data..."<<std::endl;
+    std::cout << TAG<<"Reading PMT hit data..."<<std::endl;
     for (unsigned long i=0;i<nDataEntries;i++)
     {
         if (!selTree.GetDataEntry(i,timetof,nPE,pmtID)) continue;
@@ -212,9 +212,9 @@ AnaEvent* AnaSample::GetPMT(const unsigned int evnum)
 void AnaSample::PrintStats() const
 {
     const double mem_kb = sizeof(m_pmts) * m_pmts.size() / 1000.0;
-    std::cout << "Sample " << m_name << " ID = " << m_sample_id << std::endl;
-    std::cout << "Num of PMTs   = " << m_pmts.size() << std::endl;
-    std::cout << "Memory used   = " << mem_kb << " kB." << std::endl;
+    std::cout << TAG << "Sample " << m_name << " ID = " << m_sample_id << std::endl;
+    std::cout << TAG << "Num of PMTs   = " << m_pmts.size() << std::endl;
+    std::cout << TAG << "Memory used   = " << mem_kb << " kB." << std::endl;
 }
 
 void AnaSample::MakeHistos()
@@ -261,11 +261,11 @@ void AnaSample::InitEventMap()
 #ifndef NDEBUG
         if(b < 0)
         {
-            std::cout << "In AnaSample::InitEventMap()\n"
+            std::cout << TAG << "In AnaSample::InitEventMap()\n"
                       << "No bin for current event." << std::endl;
-            std::cout << "Event kinematics: " << std::endl;
+            std::cout << TAG << "Event kinematics: " << std::endl;
             for(const auto val : e.GetRecoVar())
-                std::cout << "\t" << val << std::endl;
+                std::cout << TAG << "\t" << val << std::endl;
         }
 #endif
         e.SetSampleBin(b);
@@ -277,7 +277,7 @@ void AnaSample::InitEventMap()
     {
         m_nbins = m_hdata_unbinned->GetNbinsX();
         MakeHistos();
-        std::cout<<"Using unbinned histogram for fit"<<std::endl;
+        std::cout << TAG<<"Using unbinned histogram for fit"<<std::endl;
 
         for(auto& e : m_pmts)
         {
@@ -294,11 +294,11 @@ void AnaSample::InitEventMap()
 #ifndef NDEBUG
         if(b < 0)
         {
-            std::cout << "In AnaSample::InitEventMap()\n"
+            std::cout << TAG << "In AnaSample::InitEventMap()\n"
                       << "No bin for current PMT." << std::endl;
-            std::cout << "PMT Var: " << std::endl;
+            std::cout << TAG << "PMT Var: " << std::endl;
             for(const auto val : e.GetRecoVar())
-                std::cout << "\t" << val << std::endl;
+                std::cout << TAG << "\t" << val << std::endl;
         }
 #endif
         e.SetSampleBin(b);
@@ -370,7 +370,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
         else if (m_scatter_map)
         {
             //weight -= m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1);
-            //std::cout<<pmtID<<" "<<m_hdata_unbinned->GetBinContent(pmtID+1)<<" "<<m_hdata_unbinned_tail->GetBinContent(pmtID+1)<<" "<<m_h_scatter_map->GetBinContent(pmtID+1)<<std::endl;
+            //std::cout << TAG<<pmtID<<" "<<m_hdata_unbinned->GetBinContent(pmtID+1)<<" "<<m_hdata_unbinned_tail->GetBinContent(pmtID+1)<<" "<<m_h_scatter_map->GetBinContent(pmtID+1)<<std::endl;
             //if (weight<0) weight=0;
             double val = m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1);
             double err = m_h_scatter_map->GetBinError(pmtID+1);
@@ -405,7 +405,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
 
     if(stat_fluc) 
     {
-        std::cout << "Applying statistical fluctuations..." << std::endl;
+        std::cout << TAG << "Applying statistical fluctuations..." << std::endl;
 
         for(int j = 1; j <= m_hdata->GetNbinsX(); ++j)
         {
@@ -414,7 +414,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
 #ifndef NDEBUG
             if(val <= 0.0)
             {
-                std::cout   << "In AnaSample::FillEventHist()\n"
+                std::cout << TAG   << "In AnaSample::FillEventHist()\n"
                             << "In Sample " <<  m_name << ", bin " << j
                             << " has 0 (or negative) entries. This may cause a problem with chi2 computations."
                             << std::endl;
@@ -430,7 +430,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
 #ifndef NDEBUG
             if(val <= 0.0)
             {
-                std::cout   << "In AnaSample::FillEventHist()\n"
+                std::cout << TAG   << "In AnaSample::FillEventHist()\n"
                             << "In Sample " <<  m_name << ", bin " << j
                             << " has 0 (or negative) entries at tail. This may cause a problem with chi2 computations."
                             << std::endl;
@@ -450,27 +450,27 @@ void AnaSample::SetLLHFunction(const std::string& func_name)
 
     if(func_name.empty())
     {
-        std::cout << "Likelihood function name empty. Setting to Poisson by default." << std::endl;
+        std::cout << TAG << "Likelihood function name empty. Setting to Poisson by default." << std::endl;
         m_llh = new PoissonLLH;
     }
     else if(func_name == "Poisson")
     {
-        std::cout << "Setting likelihood function to Poisson." << std::endl;
+        std::cout << TAG << "Setting likelihood function to Poisson." << std::endl;
         m_llh = new PoissonLLH;
     }
     else if(func_name == "Effective")
     {
-        std::cout << "Setting likelihood function to Tianlu's effective likelihood." << std::endl;
+        std::cout << TAG << "Setting likelihood function to Tianlu's effective likelihood." << std::endl;
         m_llh = new EffLLH;
     }
     else if(func_name == "Barlow")
     {
-        std::cout << "Setting likelihood function to Barlow-Beeston." << std::endl;
+        std::cout << TAG << "Setting likelihood function to Barlow-Beeston." << std::endl;
         m_llh = new BarlowLLH;
     }
     else
     {
-        std::cout << "Likelihood function not defined. Setting to Poisson by default." << std::endl;
+        std::cout << TAG << "Likelihood function not defined. Setting to Poisson by default." << std::endl;
         m_llh = new PoissonLLH;
     }
 }

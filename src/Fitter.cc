@@ -59,7 +59,7 @@ void Fitter::FixParameter(const std::string& par_name, const double& value)
         const int i = std::distance(par_names.begin(), iter);
         m_fitter->SetVariable(i, par_names.at(i).c_str(), value, 0);
         m_fitter->FixVariable(i);
-        std::cout << "Fixing parameter " << par_names.at(i) << " to value " << value
+        std::cout << TAG << "Fixing parameter " << par_names.at(i) << " to value " << value
                   << std::endl;
     }
     else
@@ -101,7 +101,7 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
         m_fitpara[i]->GetParPriors(vec1);
         if(m_fitpara[i]->DoRNGstart())
         {
-            std::cout << "Randomizing start point for " << m_fitpara[i]->GetName() << std::endl;
+            std::cout << TAG << "Randomizing start point for " << m_fitpara[i]->GetName() << std::endl;
             for(auto& p : vec1)
                 p += (p * rng->Gaus(0.0, 0.1));
         }
@@ -125,19 +125,19 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
         return;
     }
 
-    std::cout << "===========================================" << std::endl;
-    std::cout << "           Initilizing fitter              " << std::endl;
-    std::cout << "===========================================" << std::endl;
+    std::cout << TAG << "===========================================" << std::endl;
+    std::cout << TAG << "           Initilizing fitter              " << std::endl;
+    std::cout << TAG << "===========================================" << std::endl;
 
-    std::cout << "Minimizer settings..." << std::endl
-              << "Minimizer: " << min_settings.minimizer << std::endl
-              << "Algorithm: " << min_settings.algorithm << std::endl
-              << "Likelihood: " << min_settings.likelihood << std::endl
-              << "Strategy : " << min_settings.strategy << std::endl
-              << "Print Lvl: " << min_settings.print_level << std::endl
-              << "Tolerance: " << min_settings.tolerance << std::endl
-              << "Max Iterations: " << min_settings.max_iter << std::endl
-              << "Max Fcn Calls : " << min_settings.max_fcn << std::endl;
+    std::cout << TAG << "Minimizer settings..." << std::endl
+              << TAG << "Minimizer: " << min_settings.minimizer << std::endl
+              << TAG << "Algorithm: " << min_settings.algorithm << std::endl
+              << TAG << "Likelihood: " << min_settings.likelihood << std::endl
+              << TAG << "Strategy : " << min_settings.strategy << std::endl
+              << TAG << "Print Lvl: " << min_settings.print_level << std::endl
+              << TAG << "Tolerance: " << min_settings.tolerance << std::endl
+              << TAG << "Max Iterations: " << min_settings.max_iter << std::endl
+              << TAG << "Max Fcn Calls : " << min_settings.max_fcn << std::endl;
 
     m_fitter = ROOT::Math::Factory::CreateMinimizer(min_settings.minimizer.c_str(), min_settings.algorithm.c_str());
     m_fcn    = new ROOT::Math::Functor(this, &Fitter::CalcLikelihood, m_npar);
@@ -148,7 +148,7 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
     m_fitter->SetTolerance(min_settings.tolerance);
     m_fitter->SetMaxIterations(min_settings.max_iter);
     m_fitter->SetMaxFunctionCalls(min_settings.max_fcn);
-    std::cout<<"m_npar = "<<m_npar<<std::endl;
+    std::cout << TAG<<"m_npar = "<<m_npar<<std::endl;
     for(int i = 0; i < m_npar; ++i)
     {
         m_fitter->SetVariable(i, par_names[i], par_prefit[i], par_step[i]);
@@ -159,9 +159,9 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
     }
     par_var_fixed = par_fixed;
 
-    std::cout << "Number of defined parameters: " << m_fitter->NDim() << std::endl
-              << "Number of free parameters   : " << m_fitter->NFree() << std::endl
-              << "Number of fixed parameters  : " << m_fitter->NDim() - m_fitter->NFree()
+    std::cout << TAG << "Number of defined parameters: " << m_fitter->NDim() << std::endl
+              << TAG << "Number of free parameters   : " << m_fitter->NFree() << std::endl
+              << TAG << "Number of fixed parameters  : " << m_fitter->NDim() - m_fitter->NFree()
               << std::endl;
 
     TH1D h_prefit("hist_prefit_par_all", "hist_prefit_par_all", m_npar, 0, m_npar);
@@ -196,7 +196,7 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
 
 bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 {
-    std::cout << "Starting to fit." << std::endl;
+    std::cout << TAG << "Starting to fit." << std::endl;
     m_samples = samples;
 
     if(m_fitter == nullptr)
@@ -216,33 +216,33 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
     SaveEventHist();
 
     bool did_converge = false;
-    std::cout << "Fit prepared." << std::endl;
-    std::cout << "Calling Minimize, running " << min_settings.algorithm << std::endl;
+    std::cout << TAG << "Fit prepared." << std::endl;
+    std::cout << TAG << "Calling Minimize, running " << min_settings.algorithm << std::endl;
     did_converge = m_fitter->Minimize();
 
     if(!did_converge)
     {
-        std::cout  << "Fit did not converge while running " << min_settings.algorithm
+        std::cout << TAG  << "Fit did not converge while running " << min_settings.algorithm
                    << std::endl;
-        std::cout  << "Failed with status code: " << m_fitter->Status() << std::endl;
+        std::cout << TAG  << "Failed with status code: " << m_fitter->Status() << std::endl;
     }
     else
     {
-        std::cout << "Fit converged." << std::endl
+        std::cout << TAG << "Fit converged." << std::endl
                   << "Status code: " << m_fitter->Status() << std::endl;
 
-        std::cout << "Calling HESSE." << std::endl;
+        std::cout << TAG << "Calling HESSE." << std::endl;
         did_converge = m_fitter->Hesse();
     }
 
     if(!did_converge)
     {
-        std::cout  << "Hesse did not converge." << std::endl;
-        std::cout  << "Failed with status code: " << m_fitter->Status() << std::endl;
+        std::cout << TAG  << "Hesse did not converge." << std::endl;
+        std::cout << TAG  << "Failed with status code: " << m_fitter->Status() << std::endl;
     }
     else
     {
-        std::cout << "Hesse converged." << std::endl
+        std::cout << TAG << "Hesse converged." << std::endl
                   << "Status code: " << m_fitter->Status() << std::endl;
     }
 
@@ -317,7 +317,7 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 
     if(k != ndim)
     {
-        std::cout << "Number of parameters does not match." << std::endl;
+        std::cout << TAG << "Number of parameters does not match." << std::endl;
         return false;
     }
 
@@ -334,8 +334,8 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
         SaveEventTree(res_pars);
 
     if(!did_converge)
-        std::cout  << "Not valid fit result." << std::endl;
-    std::cout << "Fit routine finished. Results saved." << std::endl;
+        std::cout << TAG  << "Not valid fit result." << std::endl;
+    std::cout << TAG << "Fit routine finished. Results saved." << std::endl;
 
     return did_converge;
 }
@@ -383,7 +383,7 @@ double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
 
         if(output_chi2)
         {
-            std::cout << "Chi2 for sample " << m_samples[s]->GetName() << " is "
+            std::cout << TAG << "Chi2 for sample " << m_samples[s]->GetName() << " is "
                       << sample_chi2 << std::endl;
         }
     }
@@ -419,7 +419,7 @@ double Fitter::CalcLikelihood(const double* par)
 
         if(output_chi2)
         {
-            std::cout << "Chi2 contribution from " << m_fitpara[i]->GetName() << " is "
+            std::cout << TAG << "Chi2 contribution from " << m_fitpara[i]->GetName() << " is "
                       << m_fitpara[i]->GetChi2(vec) << std::endl;
         }
 
@@ -439,11 +439,11 @@ double Fitter::CalcLikelihood(const double* par)
 
     if(output_chi2)
     {
-        std::cout << "Func Calls: " << m_calls << std::endl;
-        std::cout << "Chi2 total: " << chi2_stat + chi2_sys + chi2_reg << std::endl;
-        std::cout << "Chi2 stat : " << chi2_stat << std::endl
-                  << "Chi2 syst : " << chi2_sys  << std::endl
-                  << "Chi2 reg  : " << chi2_reg  << std::endl;
+        std::cout << TAG << "Func Calls: " << m_calls << std::endl;
+        std::cout << TAG << "Chi2 total: " << chi2_stat + chi2_sys + chi2_reg << std::endl;
+        std::cout << TAG << "Chi2 stat : " << chi2_stat << std::endl
+                  << TAG << "Chi2 syst : " << chi2_sys  << std::endl
+                  << TAG << "Chi2 reg  : " << chi2_reg  << std::endl;
     }
 
     return chi2_stat + chi2_sys + chi2_reg;
@@ -588,7 +588,7 @@ void Fitter::SaveResults(const std::vector<std::vector<double>>& par_results,
 
 void Fitter::ParameterScans(const std::vector<int>& param_list, unsigned int nsteps)
 {
-    std::cout << "Performing parameter scans..." << std::endl;
+    std::cout << TAG << "Performing parameter scans..." << std::endl;
 
     //Internally Scan performs steps-1, so add one to actually get the number of steps
     //we ask for.
@@ -598,7 +598,7 @@ void Fitter::ParameterScans(const std::vector<int>& param_list, unsigned int nst
 
     for(const auto& p : param_list)
     {
-        std::cout << "Scanning parameter " << p
+        std::cout << TAG << "Scanning parameter " << p
                   << " (" << m_fitter->VariableName(p) << ")." << std::endl;
 
         bool success = m_fitter->Scan(p, adj_steps, x, y);
@@ -663,7 +663,7 @@ void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double
     {
         if(!toy_thrower->ForcePosDef(force_padd, 1E-48))
         {
-            std::cout << "Covariance matrix could not be made positive definite.\n"
+            std::cout << TAG << "Covariance matrix could not be made positive definite.\n"
                       << "Exiting." << std::endl;
             return;
         }
@@ -673,12 +673,12 @@ void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double
     // Use the lower-triangular L matrix to generate correlated variables
     if(do_incompl_chol)
     {
-        std::cout << "Performing incomplete Cholesky decomposition." << std::endl;
+        std::cout << TAG << "Performing incomplete Cholesky decomposition." << std::endl;
         toy_thrower->IncompCholDecomp(dropout_tol, true);
     }
     else
     {
-        std::cout << "Performing ROOT Cholesky decomposition." << std::endl;
+        std::cout << TAG << "Performing ROOT Cholesky decomposition." << std::endl;
         toy_thrower->SetupDecomp(1E-48);
     }
 

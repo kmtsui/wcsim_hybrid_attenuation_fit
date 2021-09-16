@@ -15,6 +15,7 @@ using TMatrixDSym = TMatrixTSym<double>;
 #include "BinManager.hh"
 #include "ParameterFunction.hh"
 #include "EigenDecomp.hh"
+#include "ColorOutput.hh"
 
 // some error codes
 const int PASSEVENT = -1;
@@ -131,6 +132,10 @@ protected:
 
     std::vector<int> pol_orders; // order of polynomial in each piece 
     std::vector<double> pol_range; // applicable range for each polynomial
+
+    const std::string TAG = color::GREEN_STR + "[AnaFitParameters]: " + color::RESET_STR;
+    const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
+    const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
 };
 
 #endif
