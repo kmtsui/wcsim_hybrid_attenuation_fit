@@ -1,0 +1,52 @@
+BootStrap: docker
+From: rootproject/root:6.22.08-centos7
+
+%runscript
+    echo "Container for optical_fit with WCSIM support"
+
+%environment
+    export LD_LIBRARY_PATH="/opt/geant4/lib:$LD_LIBRARY_PATH"
+    export G4LEDATA="/opt/geant4/share/Geant4-10.3.3/data/G4EMLOW6.50"
+    export G4LEVELGAMMADATA="/opt/geant4/share/Geant4-10.3.3/data/PhotonEvaporation4.3.2"
+    export G4NEUTRONHPDATA="/opt/geant4/share/Geant4-10.3.3/data/G4NDL4.5"
+    export G4NEUTRONXSDATA="/opt/geant4/share/Geant4-10.3.3/data/G4NEUTRONXS1.4"
+    export G4PIIDATA="/opt/geant4/share/Geant4-10.3.3/data/G4PII1.3"
+    export G4RADIOACTIVEDATA="/opt/geant4/share/Geant4-10.3.3/data/RadioactiveDecay5.1.1"
+    export G4REALSURFACEDATA="/opt/geant4/share/Geant4-10.3.3/data/RealSurface1.0"
+    export G4SAIDXSDATA="/opt/geant4/share/Geant4-10.3.3/data/G4SAIDDATA1.1"
+    export G4ENSDFSTATEDATA="/opt/geant4/share/Geant4-10.3.3/data/G4ENSDFSTATE2.1"
+    export G4ABLADATA="/opt/geant4/share/Geant4-10.3.3/data/G4ABLA3.0"
+    
+    export WCSIMDIR=/WCSim
+    export OPTICALFIT=/wcsim_hybrid_attenuation_fit/build/Linux
+    export LD_LIBRARY_PATH="$OPTICALFIT/lib:$WCSIMDIR:/opt/geant4/lib64:$LD_LIBRARY_PATH"
+    export PATH="$OPTICALFIT/bin:/opt/geant4/bin:$PATH"
+
+%post
+    echo "Hello from inside the container"
+    echo "Base image is from docker://rootproject/root:6.22.08-centos7"
+    echo "Install common software"
+    yum -y install wget git make cmake3 gcc-c++ gcc binutils libX11-devel libXpm-devel libXft-devel libXext-devel python openssl-devel
+    
+    echo "Install GEANT4"
+    wget https://github.com/Geant4/geant4/archive/refs/tags/v10.3.3.tar.gz && tar xvf v10.3.3.tar.gz
+    cd geant4-10.3.3 && mkdir build && cd build
+    cmake3 .. -DCMAKE_INSTALL_PREFIX=/opt/geant4 -DGEANT4_INSTALL_DATA=ON
+    make && make install 
+    cd ../.. && rm -rf geant4-10.3.3 v10.3.3.tar.gz
+    
+    echo "Install WCSIM"
+    git clone https://github.com/kmtsui/WCSim.git
+    cd WCSim && git checkout feature_scattering 
+    mkdir build && cd build
+    source /opt/geant4/bin/geant4.sh
+    cmake3 ../ && make
+    cd ../ && ln -s build/libWCSimRoot.so
+    export WCSIMDIR=/WCSim && cd ../
+
+    echo "Install optical_fit"
+    git clone https://github.com/kmtsui/wcsim_hybrid_attenuation_fit.git
+    cd wcsim_hybrid_attenuation_fit 
+    mkdir build && cd build
+    cmake3 ../ -DUSE_WCSIM=1
+    make install
