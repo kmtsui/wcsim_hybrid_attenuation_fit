@@ -317,8 +317,8 @@ void AnaSample::FillEventHist(bool reset_weights)
     }
 #endif
     m_hpred->Reset();
-    if (m_scatter) m_hpred_tail->Reset();
-    if (m_scatter_map) m_hpred_err2->Reset();
+    //if (m_scatter) m_hpred_tail->Reset();
+    if (m_scatter||m_scatter_map) m_hpred_err2->Reset();
 
     for(const auto& e : m_pmts)
     {
@@ -326,7 +326,7 @@ void AnaSample::FillEventHist(bool reset_weights)
         const int reco_bin  = e.GetSampleBin();
         m_hpred->Fill(reco_bin + 0.5, weight);
 
-        if (m_scatter_map)
+        if (m_scatter||m_scatter_map)
         {
             m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect());
             m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr());
@@ -365,8 +365,12 @@ void AnaSample::FillDataHist(bool stat_fluc)
         double weight = m_hdata_unbinned->GetBinContent(pmtID+1);
         if (m_scatter) 
         {
-            weight -= m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_scatter_factor;
-            if (weight<0) weight=0;
+            double val = m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_scatter_factor;
+            double err = 1./m_hdata_unbinned_tail->GetBinContent(pmtID+1)*val*val;
+            e.SetPEIndirect(val);
+            e.SetPEIndirectErr(err);
+            // weight -= m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_scatter_factor;
+            // if (weight<0) weight=0;
         }
         else if (m_scatter_map)
         {
