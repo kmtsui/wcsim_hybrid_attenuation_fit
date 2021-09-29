@@ -140,7 +140,7 @@ void AnaFitParameters::InitParameters(std::vector<std::string> names, std::vecto
                 startingCoeff = 1;
                 pol_names.push_back(Form("%s_segment0_pol%i_p0",m_name.c_str(),order));
                 pol_priors.push_back(priors[0]); // Set p0 prior to a reasonable guess
-                pol_steps.push_back(0.1);
+                pol_steps.push_back(steps[0]);
                 pol_lows.push_back(0);
                 pol_highs.push_back(10);
                 pol_fixed.push_back(false);
