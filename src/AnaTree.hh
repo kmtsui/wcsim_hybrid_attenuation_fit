@@ -16,6 +16,7 @@
 #include <TLeaf.h>
 
 #include "AnaEvent.hh"
+#include "ColorOutput.hh"
 
 class AnaTree
 {
@@ -25,7 +26,9 @@ private:
     TTree* t_pmt; // pointer to PMT tree
 
     std::vector<int> pmt_mask;
+    std::vector<int> mpmt_mask;
     bool m_maskpmt;
+    bool m_maskmpmt;
 
     // Declaration of leaf types
     double nHits;
@@ -33,6 +36,7 @@ private:
     double R;
     double costh;
     double cosths;
+    double phis;
     double costhm;
     double phim;
     double omega;
@@ -41,11 +45,16 @@ private:
     int mPMT_id;
     double weight;
 
+    const std::string TAG = color::GREEN_STR + "[AnaTree]: " + color::RESET_STR;
+    const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
+    const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
+
 public:
     AnaTree(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name);
     ~AnaTree();
 
     void MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT = 19);
+    void MaskmPMT(std::vector<int> vec, int nPMTpermPMT = 19);
 
     long int GetEntry(long int entry) const;
     void SetDataBranches();
@@ -65,6 +74,8 @@ public:
             return costhm;
         else if(var == "cosths")
             return cosths;
+        else if(var == "phis")
+            return phis;
         else if(var == "phim")
             return phim;
         else if(var == "timetof")
@@ -79,7 +90,7 @@ public:
             return mPMT_id;
         else
         {
-            std::cout<<" Error! Variable "<<var<<" not available in AnaTree"<<std::endl;
+            std::cout << ERR <<" Error! Variable "<<var<<" not available in AnaTree"<<std::endl;
             return -1;
         }
     }

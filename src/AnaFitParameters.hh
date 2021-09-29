@@ -15,6 +15,7 @@ using TMatrixDSym = TMatrixTSym<double>;
 #include "BinManager.hh"
 #include "ParameterFunction.hh"
 #include "EigenDecomp.hh"
+#include "ColorOutput.hh"
 
 // some error codes
 const int PASSEVENT = -1;
@@ -29,6 +30,7 @@ public:
     void InitParameters(std::vector<std::string> names, std::vector<double> priors, std::vector<double> steps, 
                         std::vector<double> lows, std::vector<double> highs, std::vector<bool> fixed);
     void InitEventMap(std::vector<AnaSample*>& sample);
+    void ApplyParameters(std::vector<double>& params);
     void ReWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
     double GetWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
 
@@ -120,12 +122,20 @@ protected:
     BinManager m_bm;
 
     ParameterFunction* m_func;
+    int m_func_type;
 
     EigenDecomp* eigen_decomp;
     TMatrixDSym* covariance;
     TMatrixDSym* covarianceI;
     TMatrixDSym* original_cov;
     bool m_decompose;
+
+    std::vector<int> pol_orders; // order of polynomial in each piece 
+    std::vector<double> pol_range; // applicable range for each polynomial
+
+    const std::string TAG = color::GREEN_STR + "[AnaFitParameters]: " + color::RESET_STR;
+    const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
+    const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
 };
 
 #endif

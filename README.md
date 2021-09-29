@@ -47,7 +47,7 @@ The fitter `optical_fit` imports the data samples produced by `WCSIM_TreeConvert
 
     $ optical_fit -o fitoutput.root -c config.toml
 
-The sample and fit configurations are defined in the toml file. See `app/config/config.toml` for detailed explanation.
+The sample and fit configurations are defined in the toml file. See `$OPTICALFIT/var/OPTICALFIT/config/config.toml` for detailed explanation. You can copy the entire `config` folder to somewhere else and run the code there.
 
 `AnaSample` class handles the input of analysis samples to load the PMT hits and geometry. Modify `AnaEvent` and `AnaTree` classes to load extra information if necessary. `AnaSample` bins the PMT hits (p.e.) according to the binning defined in `config.toml`.
 

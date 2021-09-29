@@ -15,12 +15,16 @@ class AnaEvent
             m_pmtid = -99;
             m_mpmtid = -99;
             m_cosths = -999.0;
+            m_phis = -999.0;
             m_costh = -999.0;
             m_costhm = -999.0;
             m_phim = -999.0;
             m_omega = -999.0;
             m_R   = -999.0;
             m_nPE   = -999.0;
+            //m_nPE_tail = 0.0;
+            m_nPE_indirect = -999.0;
+            m_nPE_indirect_err = -999.0;
             m_timetof   = -999.0;
             m_wght     = 1.0;
             m_wghtMC   = 1.0;
@@ -44,6 +48,9 @@ class AnaEvent
         inline void SetCosths(double val) {m_cosths = val;}
         inline double GetCosths() const { return m_cosths; }
 
+        inline void SetPhis(double val) {m_phis = val;}
+        inline double GetPhis() const { return m_phis; }
+
         inline void SetCosth(double val){ m_costh = val; }
         inline double GetCosth() const { return m_costh; }
 
@@ -61,6 +68,15 @@ class AnaEvent
 
         inline void SetPE(double val){ m_nPE = val; }
         inline double GetPE() const { return m_nPE; }
+
+        //inline void SetTailPE(double val){ m_nPE_tail = val; }
+        //inline double GetTailPE() const { return m_nPE_tail; }
+
+        inline void SetPEIndirect(double val){ m_nPE_indirect = val; }
+        inline double GetPEIndirect() const { return m_nPE_indirect; }
+
+        inline void SetPEIndirectErr(double val){ m_nPE_indirect_err = val; }
+        inline double GetPEIndirectErr() const { return m_nPE_indirect_err; }
 
         inline void SetTimetof(double val){ m_timetof = val; }
         inline double GetTimetof() const { return m_timetof; }
@@ -80,6 +96,7 @@ class AnaEvent
                       << "Bin         " << GetSampleBin() << std::endl
                       << "PMT id      " << GetPMTID() << std::endl
                       << "cosths      " << GetCosths() << std::endl
+                      << "phis        " << GetPhis() << std::endl
                       << "costh       " << GetCosth() << std::endl
                       << "costhm      " << GetCosthm() << std::endl
                       << "phim        " << GetPhim() << std::endl
@@ -101,12 +118,20 @@ class AnaEvent
                 return m_costhm;
             else if(var == "cosths")
                 return m_cosths;
+            else if(var == "phis")
+                return m_phis;
             else if(var == "phim")
                 return m_phim;
             else if(var == "timetof")
                 return m_timetof;
             else if(var == "nPE")
                 return m_nPE;
+            //else if(var == "nPE_tail")
+            //    return m_nPE_tail;
+            else if(var == "m_nPE_indirect")
+                return m_nPE_indirect;
+            else if(var == "m_nPE_indirect_err")
+                return m_nPE_indirect_err;
             else if(var == "sample")
                 return m_sample;
             else if(var == "omega")
@@ -137,12 +162,16 @@ class AnaEvent
         int m_pmtid;       //pmt unique id
         int m_mpmtid;      //pmt unique id inside a mPMT
         double m_cosths;   //PMT angle relative to source
+        double m_phis;     //PMT phi angle relative to source
         double m_costh;    //photon incident angle relative to PMT
         double m_costhm;   //photon incident theta angle relative to central PMT ( = costh for B&L PMT )
         double m_phim;     //photon incident phi angle relative to central PMT, only for mPMT
         double m_omega;    //solid angle subtended by PMT
         double m_R;        //distance to source
         double m_nPE;      //number of PE
+        //double m_nPE_tail; //number of PE at the tail
+        double m_nPE_indirect; //indirect PE prediction
+        double m_nPE_indirect_err; //err^2
         double m_timetof;  //hittime-tof
         double m_wght;     //event weight
         double m_wghtMC;   //event weight from original MC

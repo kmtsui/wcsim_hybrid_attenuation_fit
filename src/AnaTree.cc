@@ -5,16 +5,18 @@ AnaTree::AnaTree(const std::string& file_name, const std::string& tree_name, con
     fChain = new TChain(tree_name.c_str());
     fChain->Add(file_name.c_str());
 
-    std::cout<<"Loading data files: "<<file_name.c_str()<<std::endl;
+    std::cout << TAG<<"Loading data files: "<<file_name.c_str()<<std::endl;
 
+    // only need the first file to read PMT tree
     std::string single_file_name = fChain->GetFile()->GetName();
 
     f_pmt = new TFile(single_file_name.c_str());
     t_pmt = (TTree*)f_pmt->Get(pmt_tree_name.c_str());
 
-    std::cout<<"Loading PMT tree from : "<<f_pmt->GetName()<<std::endl;
+    std::cout << TAG<<"Loading PMT tree from : "<<f_pmt->GetName()<<std::endl;
 
     m_maskpmt = false;
+    m_maskmpmt = false;
 
 }
 
@@ -27,11 +29,12 @@ AnaTree::~AnaTree()
 
 void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
 {
+    // mask the whole PMT
     pmt_mask.clear();
     m_maskpmt = false;
 
     if (nPMT<=0) {
-        std::cout << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " <=0\n"
+        std::cout << TAG << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " <=0\n"
                   << "No PMT is masked"<<std::endl;
 
         return;
@@ -41,13 +44,13 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
     if (mPMT) nPMT_total = nPMT_total/nPMTpermPMT;
 
     if (nPMT>=nPMT_total) {
-        std::cout << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " >= total nPMT = " << nPMT_total <<"\n"
+        std::cout << TAG << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " >= total nPMT = " << nPMT_total <<"\n"
                   << "No PMT is masked"<<std::endl;
 
         return;
     }
 
-    std::cout<< "In AnaTree::MaskPMT(), enabling "<< nPMT << " out of "<< nPMT_total << " PMTs" << std::endl;
+    std::cout << TAG<< "In AnaTree::MaskPMT(), enabling "<< nPMT << " out of "<< nPMT_total << " PMTs" << std::endl;
     double PMT_frac = (nPMT+0.)/(nPMT_total);
     int PMT_count = 0;
     for (int i=0;i<nPMT_total;i++)
@@ -56,7 +59,7 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
         {
             if (!mPMT) pmt_mask.emplace_back(0);
             else 
-            {    
+            {   // this assumes the PMTs are properly ordered, the whole mPMT is turned on/off
                 for (int j=i*nPMTpermPMT;j<(i+1)*nPMTpermPMT;j++) {
                     pmt_mask.emplace_back(0);
                 }
@@ -78,6 +81,29 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
     m_maskpmt = true;
 }
 
+void AnaTree::MaskmPMT(std::vector<int> vec, int nPMTpermPMT)
+{
+    // mask the small PMT in mPMT
+    mpmt_mask.clear();
+    m_maskmpmt = false;
+
+    mpmt_mask.resize(nPMTpermPMT,0);
+    bool mask = false;
+    for (auto m : vec) 
+    {
+        if ( m<0 || m>=nPMTpermPMT )
+            std::cout << ERR << "In AnaTree::MaskmPMT(), mPMT_id = " << m << " is invalid, this PMT is not masked" << std::endl;
+        else
+        {
+            std::cout << TAG << "Masking mPMT_id = " << m << std::endl;
+            mpmt_mask[m] = 1;
+            mask = true;
+        }
+    }
+
+    if (mask) m_maskmpmt = true;
+}
+
 long int AnaTree::GetEntry(long int entry) const
 {
     // Read contents of entry.
@@ -89,7 +115,7 @@ long int AnaTree::GetEntry(long int entry) const
 
 void AnaTree::SetDataBranches()
 {    
-    // Set branch addresses and branch pointers
+    // Set branch addresses and branch pointers for PMT hits
 
     fChain->SetBranchAddress("nPE", &nPE);
     fChain->SetBranchAddress("timetof", &timetof);
@@ -99,12 +125,13 @@ void AnaTree::SetDataBranches()
 
 void AnaTree::SetPMTBranches()
 {
-    // Set branch addresses and branch pointers
+    // Set branch addresses and branch pointers for PMT geometry
 
     t_pmt->SetBranchAddress("R", &R);
     t_pmt->SetBranchAddress("costh", &costh);
     t_pmt->SetBranchAddress("costhm", &costhm);
     t_pmt->SetBranchAddress("cosths", &cosths);
+    t_pmt->SetBranchAddress("phis", &phis);
     t_pmt->SetBranchAddress("phim", &phim);
     t_pmt->SetBranchAddress("omega", &omega);
     t_pmt->SetBranchAddress("PMT_id", &PMT_id);
@@ -118,10 +145,18 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
 
     if(t_pmt == nullptr)
     {
-        std::cout<<"[Error] Reading no PMTs in AnaTree::GetPMTs()"<<std::endl;
+        std::cout << TAG<<"[Error] Reading no PMTs in AnaTree::GetPMTs()"<<std::endl;
         return pmt_vec;
     }
-    unsigned long nentries = fChain->GetEntries();
+
+    // enforce maskpmt if maskmpmt is true
+    if (m_maskmpmt)
+        if (!m_maskpmt)
+        {
+            m_maskpmt = true;
+            pmt_mask.clear();
+            pmt_mask.resize(t_pmt->GetEntries(),0);
+        }
 
     SetPMTBranches();
     for(long int jentry = 0; jentry < t_pmt->GetEntries(); jentry++)
@@ -129,12 +164,20 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
         t_pmt->GetEntry(jentry);
 
         if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
+        // Mask small PMT at run time to avoid possible ordering problem
+        if (m_maskmpmt) 
+            if (mpmt_mask.at(mPMT_id))
+            {
+                pmt_mask.at(PMT_id) = 1;
+                continue;
+            }
 
         AnaEvent ev(jentry);
         ev.SetR(R);
         ev.SetCosth(costh);
         ev.SetCosthm(costhm);
         ev.SetCosths(cosths);
+        ev.SetPhis(phis);
         ev.SetPhim(phim);
         ev.SetOmega(omega); 
         ev.SetPMTID(PMT_id);
@@ -155,6 +198,7 @@ bool AnaTree::GetDataEntry(unsigned long entry, double& time, double& charge, in
 {
     fChain->GetEntry(entry);
 
+    // ignore PMT hits from masked PMT
     if (m_maskpmt) if (pmt_mask.at(PMT_id)) return false;
 
     time = timetof;

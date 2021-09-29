@@ -11,12 +11,27 @@
 #include "OPTICALFIT/BinManager.hh"
 #include "OPTICALFIT/Fitter.hh"
 #include "OPTICALFIT/AnaFitParameters.hh"
+#include "OPTICALFIT/ColorOutput.hh"
 
 #include "toml/toml_helper.h"
 
+const std::string TAG = color::GREEN_STR + "[optical_fit]: " + color::RESET_STR;
+const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
+const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
+
+void HelpMessage()
+{
+    std::cout   << TAG << "USAGE: "
+                << "optical_fit" << "\nOPTIONS:\n"
+                << "-o : Output file\n"
+                << "-c : Config file\n"
+                << "-s : RNG seed \n"
+                << "-n : Number of threads\n";
+}
+
 int main(int argc, char** argv)
 {
-    std::string fname_output;
+    std::string fname_output = "fitoutput.root";
     std::string config_file;
     int num_threads = 1;
     int seed = 0;
@@ -39,18 +54,24 @@ int main(int argc, char** argv)
             case 's':
                 seed = std::stoi(optarg);
                 if (seed<0) seed = 0;
+                std::cout << TAG<<"Set seed = "<<seed<<std::endl;
                 break;
             case 'h':
-                std::cout << "USAGE: "
-                          << argv[0] << "\nOPTIONS:\n"
-                          << "-o : Output file\n"
-                          << "-c : Config file\n"
-                          << "-s : RNG seed \n"
-                          << "-n : Number of threads\n";
+                HelpMessage();
             default:
                 return 0;
         }
     }
+
+    if (config_file.size()==0)
+    {
+        std::cout<< ERR << "No config file!" << std::endl;
+        HelpMessage();
+        return -1;
+    }
+
+    TFile* fout = TFile::Open(fname_output.c_str(), "RECREATE");
+    Fitter fitter(fout,seed,num_threads);
 
     auto const &card_toml = toml_h::parse_card(config_file);
     auto const &samples_config = toml_h::find(card_toml, "samples");
@@ -61,13 +82,13 @@ int main(int argc, char** argv)
     std::vector<AnaSample*> samples;
     for (auto const &name : toml_h::find<std::vector<std::string>>(samples_config, "names"))
     {
-        std::cout << "Sample name: " << name << std::endl;
+        std::cout << TAG << "Sample name: " << name << std::endl;
         auto const &ele = toml_h::find<toml::array>(samples_config, name);
         auto pmttype = toml_h::find<int>(ele,0);
         auto filename = toml_h::find<std::string>(ele,1);
         auto ev_tree_name = toml_h::find<std::string>(ele,2);
         auto pmt_treename = toml_h::find<std::string>(ele,3);
-        std::cout << " pmttype =  "<<pmttype<<", filename =  "<<filename<<", ev_tree_name =  "<<ev_tree_name<<", pmt_treename =  "<<pmt_treename<<std::endl;
+        std::cout << TAG << " pmttype =  "<<pmttype<<", filename =  "<<filename<<", ev_tree_name =  "<<ev_tree_name<<", pmt_treename =  "<<pmt_treename<<std::endl;
 
         auto binning = toml_h::find<toml::array>(ele,5);
         auto binning_file = toml_h::find<std::string>(binning,0);
@@ -80,18 +101,19 @@ int main(int argc, char** argv)
             }
         }
         auto binning_var = toml_h::find<std::vector<std::string>>(binning,1);
-        std::cout<< "binning_file = "<<binning_file<<", binning_var = [ ";
-        for (auto t : binning_var) std::cout<< t <<", ";
-        std::cout<<"]"<<std::endl;
+        std::cout << TAG<< "binning_file = "<<binning_file<<", binning_var = [ ";
+        for (auto t : binning_var) std::cout << t <<", ";
+        std::cout <<"]"<<std::endl;
 
         auto s = new AnaSample(samples.size(), name , binning_file, pmttype);
         s->SetBinVar(binning_var);
 
-        for (auto const &cut : toml_h::find<toml::array>(ele,4)){
+        for (auto const &cut : toml_h::find<toml::array>(ele,4))
+        {
             auto cutvar = toml_h::find<std::string>(cut,0);
             auto cutlow = toml_h::find<double>(cut,1);
             auto cuthigh = toml_h::find<double>(cut,2);
-            std::cout << " cutvar =  "<<cutvar<<", cutlow =  "<<cutlow<<", cuthigh =  "<<cuthigh<<std::endl;
+            std::cout << TAG << " cutvar =  "<<cutvar<<", cutlow =  "<<cutlow<<", cuthigh =  "<<cuthigh<<std::endl;
             s->SetCut(cutvar,cutlow,cuthigh);
         }
 
@@ -104,14 +126,62 @@ int main(int argc, char** argv)
                 if (optname=="norm")
                 {
                     auto norm = toml_h::find<double>(opt,1);
-                    std::cout<<"Setting norm = "<<norm<<std::endl;
+                    std::cout << TAG<<"Setting norm = "<<norm<<std::endl;
                     s->SetNorm(norm);
                 } 
                 else if (optname=="mask")
                 {
                     auto mask = toml_h::find<int>(opt,1);
-                    std::cout<<"Masking to use only "<< mask << " PMTs" <<std::endl;
+                    std::cout << TAG<<"Masking to use only "<< mask << " PMTs" <<std::endl;
+                    auto nPMTpermPMT = toml_h::find<int>(samples_config, "nPMTpermPMT");
+                    std::cout << TAG << "Set nPMTpermPMT =  "<< nPMTpermPMT <<std::endl;
                     s->MaskPMT(mask);
+                    s->SetnPMTpermPMT(nPMTpermPMT);
+                }
+                else if (optname=="mask_mPMT")
+                {
+                    auto mask = toml_h::find<std::vector<int>>(opt,1);
+                    std::cout << TAG << "Masking the small PMTs inside mPMT: ";
+                    for (auto m : mask) std::cout << m <<" ";
+                    std::cout << std::endl;
+                    auto nPMTpermPMT = toml_h::find<int>(samples_config, "nPMTpermPMT");
+                    std::cout << TAG << "Set nPMTpermPMT =  "<< nPMTpermPMT <<std::endl;
+                    s->MaskmPMT(mask);
+                    s->SetnPMTpermPMT(nPMTpermPMT);
+                }
+                else if (optname=="scatter_control")
+                {
+                    auto time1 = toml_h::find<double>(opt,1);
+                    auto time2 = toml_h::find<double>(opt,2);
+                    auto time3 = toml_h::find<double>(opt,3);
+                    auto factor = toml_h::find<double>(opt,4);
+                    std::cout << TAG<<"Fitting with scattering control region. timetof region = ["<<time1<<","<<time2<<","<<time3<<"], scaling factor = "<< factor <<std::endl;
+                    s->SetScatter(time1,time2,time3,factor);
+                }
+                else if (optname=="scatter_map")
+                {
+                    auto fname = toml_h::find<std::string>(opt,1);
+                    auto hname = toml_h::find<std::string>(opt,2);
+                    auto time1 = toml_h::find<double>(opt,3);
+                    auto time2 = toml_h::find<double>(opt,4);
+                    auto time3 = toml_h::find<double>(opt,5);
+                    std::cout << TAG<<"Applying scattering map "<<hname<<" from "<<fname<<", for timetof region = ["<<time1<<","<<time2<<","<<time3<<"]"<<std::endl;
+                    TFile fs(fname.c_str());
+                    TH1D* hs = (TH1D*)fs.Get(hname.c_str());
+                    s->SetScatterMap(time1,time2,time3,*hs);
+                }
+                else if (optname=="time_offset")
+                {
+                    auto width = toml_h::find<double>(opt,1);
+                    std::cout << TAG<<"Random timetof offset per PMT, sampled from a Gaussian of width = "<< width <<std::endl;
+                    s->SetTimeOffset(true, width);
+                }
+                else if (optname=="time_smear")
+                {
+                    auto mean = toml_h::find<double>(opt,1);
+                    auto width = toml_h::find<double>(opt,2);
+                    std::cout << TAG<<"Random timetof smearing per PMT, sampled from a Gaussian of mean = "<< mean << ", width = "<< width <<std::endl;
+                    s->SetTimeSmear(true, mean, width);
                 }
             }
         }
@@ -125,7 +195,7 @@ int main(int argc, char** argv)
     std::vector<AnaFitParameters*> fitparas;
     for (auto const &name : toml_h::find<std::vector<std::string>>(fitparameters_config, "names"))
     {
-        std::cout << "Parameter name: " << name << std::endl;
+        std::cout << TAG << "Parameter name: " << name << std::endl;
         auto const &ele = toml_h::find<toml::array>(fitparameters_config, name);
         auto pmttype = toml_h::find<int>(ele,0);
         auto functype = toml_h::find<std::string>(ele,1);
@@ -169,7 +239,7 @@ int main(int argc, char** argv)
             }
         }
         for (int i=0;i<npar;i++)
-            std::cout<<parnames[i]<<" "<<priors[i]<<" "<<steps[i]<<" "<<lows[i]<<" "<<highs[i]<<" "<<fixeds[i]<<" "<<std::endl;
+            std::cout << TAG<<parnames[i]<<" "<<priors[i]<<" "<<steps[i]<<" "<<lows[i]<<" "<<highs[i]<<" "<<fixeds[i]<<" "<<std::endl;
 
         auto binning = toml_h::find<toml::array>(ele,4);
         auto binning_file = toml_h::find<std::string>(binning,0);
@@ -182,35 +252,47 @@ int main(int argc, char** argv)
             }
         }
         auto binning_var = toml_h::find<std::vector<std::string>>(binning,1);
-        std::cout<< "binning_file = "<<binning_file<<", binning_var = [ ";
-        for (auto t : binning_var) std::cout<< t <<", ";
-        std::cout<<"]"<<std::endl;
+        std::cout << TAG<< "binning_file = "<<binning_file<<", binning_var = [ ";
+        for (auto t : binning_var) std::cout << t <<", ";
+        std::cout <<"]"<<std::endl;
 
         auto fitpara = new AnaFitParameters(name,pmttype);
+        // Optional config
         if (ele.size()>5)
         {
-            // Optionally load prior covariance matrix
-            auto covariance_config = toml_h::find<toml::array>(ele,5);
-            if (covariance_config.size()>0)
+            for (int i=5; i<ele.size();i++ )
             {
-                auto fname = toml_h::find<std::string>(covariance_config,0);
-                auto matname = toml_h::find<std::string>(covariance_config,1);
-                TFile f(fname.c_str());
-                std::cout<<"Using covariance matrix "<<matname<<" from "<<fname<<std::endl;
-                TMatrixDSym* cov_mat = (TMatrixDSym*)f.Get(matname.c_str());
-                fitpara->SetCovarianceMatrix(*cov_mat);
+                auto opt = toml_h::find<toml::array>(ele,i);
+                auto optname = toml_h::find<std::string>(opt,0);
+                if (optname=="covariance") // load prior covariance matrix
+                {
+                    auto fname = toml_h::find<std::string>(opt,1);
+                    auto matname = toml_h::find<std::string>(opt,2);
+                    TFile f(fname.c_str());
+                    std::cout << TAG<<"Using covariance matrix "<<matname<<" from "<<fname<<std::endl;
+                    TMatrixDSym* cov_mat = (TMatrixDSym*)f.Get(matname.c_str());
+                    fitpara->SetCovarianceMatrix(*cov_mat);
+                } 
+                else if (optname=="prior") // set prior central values
+                {
+                    auto fname = toml_h::find<std::string>(opt,1);
+                    auto hname = toml_h::find<std::string>(opt,2);
+                    TFile f(fname.c_str());
+                    std::cout << TAG<<"Set prior central values to  "<<hname<<" from "<<fname<<std::endl;
+                    TH1D* hist = (TH1D*)f.Get(hname.c_str());
+                    for (int j=0;j<npar;j++)
+                        priors[j] = hist->GetBinContent(j+1);
+                } 
             }
         }
-        fitpara->InitParameters(parnames,priors,steps,lows,highs,fixeds);
         fitpara->SetParameterFunction(functype);
+        fitpara->InitParameters(parnames,priors,steps,lows,highs,fixeds);
         fitpara->SetBinVar(binning_var);
         fitpara->SetBinning(binning_file);
         fitpara->InitEventMap(samples);
 
         fitparas.push_back(fitpara);
     }
-
-    TFile* fout = TFile::Open(fname_output.c_str(), "RECREATE");
 
     // Load minimizer config
     MinSettings min_settings;
@@ -222,8 +304,10 @@ int main(int argc, char** argv)
     min_settings.tolerance = toml_h::find<double>(minimizer_config, "tolerance");
     min_settings.max_iter = toml_h::find<double>(minimizer_config, "max_iter");
     min_settings.max_fcn = toml_h::find<double>(minimizer_config, "max_fcn");
+    // optonal MCMC for error estimation
+    int MCMCSteps = toml_h::find<double>(minimizer_config, "MCMCSteps");
+    double MCMCStepSize = toml_h::find<double>(minimizer_config, "MCMCStepSize");
 
-    Fitter fitter(fout,seed,num_threads);
     fitter.SetMinSettings(min_settings);
     fitter.InitFitter(fitparas);
 
@@ -231,10 +315,17 @@ int main(int argc, char** argv)
 
     did_converge = fitter.Fit(samples);
     if(!did_converge)
-        std::cout << "Fit did not coverge." << std::endl;
+        std::cout << TAG << "Fit did not coverge." << std::endl;
 
+    if (MCMCSteps>0)
+    {
+        std::cout << TAG << "Running MCMC for " << MCMCSteps << " steps, with step size = " << MCMCStepSize << std::endl;
+        fitter.RunMCMCScan(MCMCSteps,MCMCStepSize);
+    }
 
     fout->Close();
+
+    std::cout << TAG << "Output saved to " << fname_output << std::endl;
 
     return 0;
 }    
