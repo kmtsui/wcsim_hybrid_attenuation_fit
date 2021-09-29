@@ -1,11 +1,20 @@
 // Use with WCSIM_TreeConvert output with -d options to produce a maping of indirect light background
-void make_scatter_map(){
+void make_scatter_map(std::string filename = "/bundle/data/T2K/users/kmtsui/LI/production/out_diffuser4_350nm_nominal_*.root", int pmttype = 0){
 
-    TChain* fChain_digitized = new TChain("hitRate_pmtType0");
-    fChain_digitized->Add("/bundle/data/T2K/users/kmtsui/LI/production/out_diffuser4_350nm_nominal_*.root");
+    std::string chainname = pmttype == 0 ? "hitRate_pmtType0" : "hitRate_pmtType1";
+    std::string treename = pmttype == 0 ? "pmt_type0" : "pmt_type1";
+    double timetof_indirect = pmttype == 0 ? 1.0 : 0.6 ;
+    double timetof_cut1 = pmttype == 0 ? 15 : 2 ;
+    double timetof_cut2 = 200;
+
+    std::string outname = pmttype == 0 ? "scattering_map_BnL.root" : "scattering_map_mPMT.root";
+
+    TChain* fChain_digitized = new TChain(chainname.c_str());
+    fChain_digitized->Add(filename.c_str());
 
     TFile* f = new TFile(fChain_digitized->GetFile()->GetName());
-    TTree* t = (TTree*)f->Get("pmt_type0");
+
+    TTree* t = (TTree*)f->Get(treename.c_str());
     double R, costh, cosths, omega, phim;
     t->SetBranchAddress("R",&R);
     t->SetBranchAddress("costh",&costh);
@@ -36,14 +45,14 @@ void make_scatter_map(){
     TH1D* h_control_region = new TH1D("","",nPMTs,0,nPMTs);
     for (unsigned long int i=0;i<fChain_digitized->GetEntries();i++){
         fChain_digitized->GetEntry(i);
-        if (nRaySct>0 || (nReflec>0 && timetof>0.1)) // scattered light is of course indirect light, but not all reflected light is
+        if (timetof>timetof_indirect) // use timetof to get indirect photon
         {
-            if (timetof_digi<15) h_signal_region->Fill(PMT_id+0.5,nPE_digi);
-            else if (timetof_digi<200) h_control_region->Fill(PMT_id+0.5,nPE_digi);
+            if (timetof_digi<timetof_cut1) h_signal_region->Fill(PMT_id+0.5,nPE_digi);
+            else if (timetof_digi<timetof_cut2) h_control_region->Fill(PMT_id+0.5,nPE_digi);
         }
     }
 
-    TFile* fout = new TFile("diffuser4_350nm_scattering_map.root","RECREATE");
+    TFile* fout = new TFile(outname.c_str(),"RECREATE");
     for (int i=1;i<=h_signal_region->GetNbinsX();i++)
     {
         double x = h_control_region->GetBinContent(i);
@@ -56,6 +65,6 @@ void make_scatter_map(){
             h_signal_region->SetBinError(i,err);
         }
     }
-    h_signal_region->Write("scattering_map_15_200");
+    h_signal_region->Write("scattering_map");
     fout->Close();
 }
