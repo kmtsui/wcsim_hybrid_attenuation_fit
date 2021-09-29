@@ -67,6 +67,7 @@ public:
 
     inline void MaskPMT(const int nPMT) { m_pmtmask = nPMT; }
     inline void SetnPMTpermPMT(const int nPMTpermPMT) { m_nPMTpermPMT = nPMTpermPMT; }
+    inline void MaskmPMT(std::vector<int> vec) { m_mPMTmask = vec; }
 
     inline const std::vector<std::string>& GetBinVar() const { return m_binvar; }
     inline void SetBinVar(std::vector<std::string> vec) { m_binvar = vec; }
@@ -93,6 +94,7 @@ protected:
     int m_pmttype;
     int m_pmtmask;
     int m_nPMTpermPMT;
+    std::vector<int> m_mPMTmask;
     bool m_stat_fluc;
 
     bool m_scatter;

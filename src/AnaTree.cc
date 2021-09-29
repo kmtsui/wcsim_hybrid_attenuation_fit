@@ -15,6 +15,7 @@ AnaTree::AnaTree(const std::string& file_name, const std::string& tree_name, con
     std::cout << TAG<<"Loading PMT tree from : "<<f_pmt->GetName()<<std::endl;
 
     m_maskpmt = false;
+    m_maskmpmt = false;
 
 }
 
@@ -56,7 +57,7 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
         {
             if (!mPMT) pmt_mask.emplace_back(0);
             else 
-            {    
+            {   // this assumes the PMTs are properly ordered
                 for (int j=i*nPMTpermPMT;j<(i+1)*nPMTpermPMT;j++) {
                     pmt_mask.emplace_back(0);
                 }
@@ -76,6 +77,28 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
     }
 
     m_maskpmt = true;
+}
+
+void AnaTree::MaskmPMT(std::vector<int> vec, int nPMTpermPMT)
+{
+    mpmt_mask.clear();
+    m_maskmpmt = false;
+
+    mpmt_mask.resize(nPMTpermPMT,0);
+    bool mask = false;
+    for (auto m : vec) 
+    {
+        if ( m<0 || m>=nPMTpermPMT )
+            std::cout << ERR << "In AnaTree::MaskmPMT(), mPMT_id = " << m << " is invalid, this PMT is not masked" << std::endl;
+        else
+        {
+            std::cout << TAG << "Masking mPMT_id = " << m << std::endl;
+            mpmt_mask[m] = 1;
+            mask = true;
+        }
+    }
+
+    if (mask) m_maskmpmt = true;
 }
 
 long int AnaTree::GetEntry(long int entry) const
@@ -122,7 +145,15 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
         std::cout << TAG<<"[Error] Reading no PMTs in AnaTree::GetPMTs()"<<std::endl;
         return pmt_vec;
     }
-    unsigned long nentries = fChain->GetEntries();
+
+    // enforce maskpmt if maskmpmt is true
+    if (m_maskmpmt)
+        if (!m_maskpmt)
+        {
+            m_maskpmt = true;
+            pmt_mask.clear();
+            pmt_mask.resize(t_pmt->GetEntries(),0);
+        }
 
     SetPMTBranches();
     for(long int jentry = 0; jentry < t_pmt->GetEntries(); jentry++)
@@ -130,6 +161,13 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
         t_pmt->GetEntry(jentry);
 
         if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
+        // Mask small PMT at run time to avoid unknown ordering problem
+        if (m_maskmpmt) 
+            if (mpmt_mask.at(mPMT_id))
+            {
+                pmt_mask.at(PMT_id) = 1;
+                continue;
+            }
 
         AnaEvent ev(jentry);
         ev.SetR(R);

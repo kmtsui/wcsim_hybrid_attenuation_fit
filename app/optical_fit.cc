@@ -19,6 +19,16 @@ const std::string TAG = color::GREEN_STR + "[optical_fit]: " + color::RESET_STR;
 const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
 const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
 
+void HelpMessage()
+{
+    std::cout   << TAG << "USAGE: "
+                << "optical_fit" << "\nOPTIONS:\n"
+                << "-o : Output file\n"
+                << "-c : Config file\n"
+                << "-s : RNG seed \n"
+                << "-n : Number of threads\n";
+}
+
 int main(int argc, char** argv)
 {
     std::string fname_output = "fitoutput.root";
@@ -47,15 +57,17 @@ int main(int argc, char** argv)
                 std::cout << TAG<<"Set seed = "<<seed<<std::endl;
                 break;
             case 'h':
-                std::cout << TAG << "USAGE: "
-                          << argv[0] << "\nOPTIONS:\n"
-                          << "-o : Output file\n"
-                          << "-c : Config file\n"
-                          << "-s : RNG seed \n"
-                          << "-n : Number of threads\n";
+                HelpMessage();
             default:
                 return 0;
         }
+    }
+
+    if (config_file.size()==0)
+    {
+        std::cout<< ERR << "No config file!" << std::endl;
+        HelpMessage();
+        return -1;
     }
 
     TFile* fout = TFile::Open(fname_output.c_str(), "RECREATE");
@@ -96,7 +108,8 @@ int main(int argc, char** argv)
         auto s = new AnaSample(samples.size(), name , binning_file, pmttype);
         s->SetBinVar(binning_var);
 
-        for (auto const &cut : toml_h::find<toml::array>(ele,4)){
+        for (auto const &cut : toml_h::find<toml::array>(ele,4))
+        {
             auto cutvar = toml_h::find<std::string>(cut,0);
             auto cutlow = toml_h::find<double>(cut,1);
             auto cuthigh = toml_h::find<double>(cut,2);
@@ -120,7 +133,21 @@ int main(int argc, char** argv)
                 {
                     auto mask = toml_h::find<int>(opt,1);
                     std::cout << TAG<<"Masking to use only "<< mask << " PMTs" <<std::endl;
+                    auto nPMTpermPMT = toml_h::find<int>(samples_config, "nPMTpermPMT");
+                    std::cout << TAG << "Set nPMTpermPMT =  "<< nPMTpermPMT <<std::endl;
                     s->MaskPMT(mask);
+                    s->SetnPMTpermPMT(nPMTpermPMT);
+                }
+                else if (optname=="mask_mPMT")
+                {
+                    auto mask = toml_h::find<std::vector<int>>(opt,1);
+                    std::cout << TAG << "Masking the small PMTs inside mPMT: ";
+                    for (auto m : mask) std::cout << m <<" ";
+                    std::cout << std::endl;
+                    auto nPMTpermPMT = toml_h::find<int>(samples_config, "nPMTpermPMT");
+                    std::cout << TAG << "Set nPMTpermPMT =  "<< nPMTpermPMT <<std::endl;
+                    s->MaskmPMT(mask);
+                    s->SetnPMTpermPMT(nPMTpermPMT);
                 }
                 else if (optname=="scatter_control")
                 {
@@ -297,6 +324,8 @@ int main(int argc, char** argv)
     }
 
     fout->Close();
+
+    std::cout << TAG << "Output saved to " << fname_output << std::endl;
 
     return 0;
 }    

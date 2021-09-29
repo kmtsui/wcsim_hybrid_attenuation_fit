@@ -68,6 +68,7 @@ AnaSample::~AnaSample()
 void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name)
 {
     AnaTree selTree(file_name, tree_name, pmt_tree_name);
+    if (m_pmttype==1 && m_mPMTmask.size()>0) selTree.MaskmPMT(m_mPMTmask, m_nPMTpermPMT);
     if (m_pmtmask>0) selTree.MaskPMT(m_pmtmask, m_pmttype, m_nPMTpermPMT);
 
     std::cout << TAG  << "Reading events for from "<<file_name<<"...\n";

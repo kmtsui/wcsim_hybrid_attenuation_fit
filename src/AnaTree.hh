@@ -26,7 +26,9 @@ private:
     TTree* t_pmt; // pointer to PMT tree
 
     std::vector<int> pmt_mask;
+    std::vector<int> mpmt_mask;
     bool m_maskpmt;
+    bool m_maskmpmt;
 
     // Declaration of leaf types
     double nHits;
@@ -52,6 +54,7 @@ public:
     ~AnaTree();
 
     void MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT = 19);
+    void MaskmPMT(std::vector<int> vec, int nPMTpermPMT = 19);
 
     long int GetEntry(long int entry) const;
     void SetDataBranches();
