@@ -26,6 +26,8 @@
 // Mock up digitization code copied from WCSIM
 // Currently contains BoxandLine20inchHQE and PMT3inchR14374 options
 #include "OPTICALFIT/utils/WCSIMDigitization.hh"
+#include "OPTICALFIT/utils/CalcGroupVelocity.hh"
+#include "OPTICALFIT/utils/LEDProfile.hh"
 
 using namespace std;
 
@@ -44,126 +46,6 @@ double CalcSolidAngle(double r, double R, double costh)
   //weight *= 0.5+0.5*costh;
 
   return weight;
-}
-
-double CalcGroupVelocity(double wavelength) {
-    const int NUMENTRIES_water=60;
-    const double GeV=1.e9;
-
-    const double c_light   = 2.99792458e+8;
-
-    // arrray of refractive index copied from WCSIM
-    double ENERGY_water[NUMENTRIES_water] =
-     { 1.56962e-09*GeV, 1.58974e-09*GeV, 1.61039e-09*GeV, 1.63157e-09*GeV, 
-       1.65333e-09*GeV, 1.67567e-09*GeV, 1.69863e-09*GeV, 1.72222e-09*GeV, 
-       1.74647e-09*GeV, 1.77142e-09*GeV, 1.7971e-09*GeV, 1.82352e-09*GeV, 
-       1.85074e-09*GeV, 1.87878e-09*GeV, 1.90769e-09*GeV, 1.93749e-09*GeV, 
-       1.96825e-09*GeV, 1.99999e-09*GeV, 2.03278e-09*GeV, 2.06666e-09*GeV,
-       2.10169e-09*GeV, 2.13793e-09*GeV, 2.17543e-09*GeV, 2.21428e-09*GeV, 
-       2.25454e-09*GeV, 2.29629e-09*GeV, 2.33962e-09*GeV, 2.38461e-09*GeV, 
-       2.43137e-09*GeV, 2.47999e-09*GeV, 2.53061e-09*GeV, 2.58333e-09*GeV, 
-       2.63829e-09*GeV, 2.69565e-09*GeV, 2.75555e-09*GeV, 2.81817e-09*GeV, 
-       2.88371e-09*GeV, 2.95237e-09*GeV, 3.02438e-09*GeV, 3.09999e-09*GeV,
-       3.17948e-09*GeV, 3.26315e-09*GeV, 3.35134e-09*GeV, 3.44444e-09*GeV, 
-       3.54285e-09*GeV, 3.64705e-09*GeV, 3.75757e-09*GeV, 3.87499e-09*GeV, 
-       3.99999e-09*GeV, 4.13332e-09*GeV, 4.27585e-09*GeV, 4.42856e-09*GeV, 
-       4.59258e-09*GeV, 4.76922e-09*GeV, 4.95999e-09*GeV, 5.16665e-09*GeV, 
-       5.39129e-09*GeV, 5.63635e-09*GeV, 5.90475e-09*GeV, 6.19998e-09*GeV };
-
-    double RINDEX1[NUMENTRIES_water] = 
-     {1.32885, 1.32906, 1.32927, 1.32948, 1.3297, 1.32992, 1.33014, 
-      1.33037, 1.3306, 1.33084, 1.33109, 1.33134, 1.3316, 1.33186, 1.33213,
-      1.33241, 1.3327, 1.33299, 1.33329, 1.33361, 1.33393, 1.33427, 1.33462,
-      1.33498, 1.33536, 1.33576, 1.33617, 1.3366, 1.33705, 1.33753, 1.33803,
-      1.33855, 1.33911, 1.3397, 1.34033, 1.341, 1.34172, 1.34248, 1.34331,
-      1.34419, 1.34515, 1.3462, 1.34733, 1.34858, 1.34994, 1.35145, 1.35312,
-      1.35498, 1.35707, 1.35943, 1.36211, 1.36518, 1.36872, 1.37287, 1.37776,
-      1.38362, 1.39074, 1.39956, 1.41075, 1.42535};
-
-    // Calculate group velocity
-    // Copy from G4MaterialPropertiesTable.cc
-    double energy_vg[NUMENTRIES_water];
-    double groupvel[NUMENTRIES_water];
-
-    double E0 = ENERGY_water[0];
-    double n0 = RINDEX1[0];
-
-    double E1 = ENERGY_water[1];
-    double n1 = RINDEX1[1];
-
-    // add entry at first photon energy
-    double vg = c_light/(n0+(n1-n0)/std::log(E1/E0));
-    // allow only for 'normal dispersion' -> dn/d(logE) > 0
-    if((vg<0) || (vg>c_light/n0))  { vg = c_light/n0; }
-    energy_vg[0] = E0; 
-    groupvel[0] = vg;
-
-    // add entries at midpoints between remaining photon energies
-    for (int i=2;i<NUMENTRIES_water;i++)
-    {
-      vg = c_light/( 0.5*(n0+n1)+(n1-n0)/std::log(E1/E0));
-      if((vg<0) || (vg>c_light/(0.5*(n0+n1))))  { vg = c_light/(0.5*(n0+n1)); }
-      energy_vg[i-1] =  0.5*(E0+E1);
-      groupvel[i-1] = vg;
-
-      E0 = E1;
-      n0 = n1;
-      E1 = ENERGY_water[i];
-      n1 = RINDEX1[i];
-    }
-
-    vg = c_light/(n1+(n1-n0)/std::log(E1/E0));
-    if((vg<0) || (vg>c_light/n1))  { vg = c_light/n1; }
-    energy_vg[NUMENTRIES_water-1] = E1;
-    groupvel[NUMENTRIES_water-1] = vg;
-
-    TGraph* gr_groupvel = new TGraph(NUMENTRIES_water,energy_vg,groupvel);
-    double photoEnergy = 1239.84193/wavelength;
-
-    return gr_groupvel->Eval(photoEnergy,0,"S");
-}
-
-TGraph *gr_power_cosths, *gr_variation_cosths;
-void SetLEDProfile()
-{
-  std::cout<<"Set up LED profile for event reweight"<<std::endl;
-  const int nCosths = 41;
-  double Cosths[nCosths] = 
-    {
-      0.76655, 0.77700, 0.78761, 0.79875, 0.80872, 0.81934, 0.82883, 0.83808,
-      0.84711, 0.85590, 0.86523, 0.87426, 0.88229, 0.89008, 0.89831, 0.90623,
-      0.91259, 0.92055, 0.92700, 0.93319, 0.93911, 0.94477, 0.95063, 0.95618,
-      0.96098, 0.96551, 0.96976, 0.97408, 0.97808, 0.98116, 0.98454, 0.98736,
-      0.98989, 0.99233, 0.99444, 0.99607, 0.99742, 0.99857, 0.99933, 0.99981,
-      1.00000
-    };
-  double Power_cosths[nCosths] =
-    {
-      0.50152, 0.54801, 0.59419, 0.63473, 0.67604, 0.71697, 0.75712, 0.80037,
-      0.83589, 0.86910, 0.90307, 0.93628, 0.95584, 0.97296, 0.98300, 0.98918,
-      0.99844, 1.00063, 1.00848, 1.01041, 1.01466, 1.01608, 1.01813, 1.02019,
-      1.02200, 1.02122, 1.02277, 1.02084, 1.02007, 1.01813, 1.01698, 1.01402,
-      1.01427, 1.01273, 1.01080, 1.00938, 1.00810, 1.00694, 1.00578, 1.00501,
-      1.00308
-    };
-  gr_power_cosths = new TGraph(nCosths,Cosths,Power_cosths);
-
-  double Variation_cosths[nCosths] =
-    {
-      1.52148, 1.32716, 1.60492, 1.51191, 1.32437, 1.07736, 0.80404, 0.84281,
-      0.89956, 0.97436, 0.87347, 0.95811, 1.03983, 1.16010, 1.18226, 1.17236,
-      1.14083, 1.09142, 1.10767, 1.02450, 0.96195, 0.91277, 0.88456, 0.85350,
-      0.82181, 0.78467, 0.74606, 0.67583, 0.60713, 0.54087, 0.50040, 0.42365,
-      0.37995, 0.32521, 0.27719, 0.23896, 0.19595, 0.17128, 0.13077, 0.08523,
-      0.06337
-    };
-  gr_variation_cosths = new TGraph(nCosths,Cosths,Variation_cosths);
-}
-
-double GetLEDWeight(double cosths, double phis)
-{
-  if (cosths<0.76655) return 0.;
-  return gr_power_cosths->Eval(cosths)*(1.+gr_variation_cosths->Eval(cosths)/100.*cos(phis));
 }
 
 void HelpMessage()
@@ -189,7 +71,7 @@ int main(int argc, char **argv){
   char * outfilename=NULL;
   bool verbose=false;
   bool hybrid = true;
-  double cvacuum = 3e8 / 1e9;//speed of light, in meter per ns.
+  double cvacuum = 3e8 ;//speed of light, in m/s.
   double nindex = 1.373;//refraction index of water
   bool plotDigitized = true; //using digitized hits
   bool separatedTriggers=false; //Assume two independent triggers, one for mPMT, one for B&L
@@ -252,26 +134,27 @@ int main(int argc, char **argv){
     }
   }
   
-  double vg = CalcGroupVelocity(wavelength);
-  std::cout<<"Using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
-  vg /= 1.e9; // convert to m/ns
-
-  rng = new TRandom3(seed);
-  gRandom = rng;
-  
-  TFile *file = TFile::Open(filename);
   // Open the file
   if (filename==NULL){
     std::cout << "Error, no input file: " << std::endl;
     HelpMessage();
     return -1;
   }
+  TFile *file = TFile::Open(filename);
   if (!file->IsOpen()){
     std::cout << "Error, could not open input file: " << filename << std::endl;
     return -1;
   }
   
-  SetLEDProfile();
+  double vg = CalcGroupVelocity(wavelength);
+  std::cout<<"Using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
+  vg /= 1.e9; // convert to m/ns
+
+  rng = new TRandom3(seed);
+  gRandom = rng;
+
+  LEDProfile* led;
+  if (diffuserProfile) led = new LEDProfile();
 
   // Get the a pointer to the tree from the file
   TTree *tree = (TTree*)file->Get("wcsimT");
@@ -478,9 +361,12 @@ int main(int argc, char **argv){
       double localx = vDir[0]*vSource_localXaxis[0]+vDir[1]*vSource_localXaxis[1]+vDir[2]*vSource_localXaxis[2];
       double localy = vDir[0]*vSource_localYaxis[0]+vDir[1]*vSource_localYaxis[1]+vDir[2]*vSource_localYaxis[2];
       phis = atan2(localy,localx);
-      weight = GetLEDWeight(cosths,phis);
-      if (pmtType==0) ledweight_type0[i]=weight;
-      if (pmtType==1) ledweight_type1[i]=weight;
+      if (diffuserProfile)
+      {
+        weight = led->GetLEDWeight(cosths,phis);
+        if (pmtType==0) ledweight_type0[i]=weight;
+        if (pmtType==1) ledweight_type1[i]=weight;
+      }
       double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
       omega = CalcSolidAngle(pmtradius,dist,costh);
       costhm = costh;
@@ -704,6 +590,14 @@ int main(int argc, char **argv){
         if (pmtType==0) BnLDigitizer->Digitize(nPE_digi,timetof_digi);
         if (pmtType==1) mPMTDigitizer->Digitize(nPE_digi,timetof_digi);
 
+        weight = 1;
+        if (diffuserProfile) 
+        {
+          weight = pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
+          nPE *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];  
+          nPE_digi *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];  
+        }
+
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
 
@@ -800,7 +694,7 @@ int main(int argc, char **argv){
         timetof = time-tof+triggerTime[pmtType]-triggerShift[pmtType];
 
         nHits = 1; nPE = peForTube; 
-        weight = 0;
+        weight = 1;
         if (diffuserProfile) 
         {
           weight = pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
