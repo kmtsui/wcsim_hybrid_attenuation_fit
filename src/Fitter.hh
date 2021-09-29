@@ -81,6 +81,8 @@ public:
     int PMT_id;
     int mPMT_id;
     std::vector<double> weight;
+    double indirectPE;
+    double indirectPEerr2;
 
     void InitOutputTree()
     {
@@ -95,6 +97,8 @@ public:
         m_outtree->Branch("PMT_id", &PMT_id, "PMT_id/I");
         m_outtree->Branch("mPMT_id", &mPMT_id, "mPMT_id/I");
         m_outtree->Branch("weight", &weight);
+        m_outtree->Branch("indirectPE", &indirectPE, "indirectPE/D");
+        m_outtree->Branch("indirectPEerr2", &indirectPEerr2, "indirectPEerr2/D");
     }
 
     void RunMCMCScan(int step, double stepsize, bool do_force_posdef = true, double force_padd = 1.0E-9, bool do_incompl_chol = false, double dropout_tol = 1.0E-3);
@@ -139,12 +143,12 @@ private:
     std::vector<double> par_mcmc;
     TTree* m_mcmctree;
     double m_chi2;
-    int m_jump;
+    int m_accept;
     void InitMCMCOutputTree()
     {
         m_mcmctree = new TTree("MCMCTree", "MCMCTree");
         m_mcmctree->Branch("chi2", &m_chi2, "chi2/D");
-        m_mcmctree->Branch("jump", &m_jump, "jump/I");
+        m_mcmctree->Branch("accept", &m_accept, "accept/I");
         m_mcmctree->Branch("par_mcmc", &par_mcmc);
     }
     

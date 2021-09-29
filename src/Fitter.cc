@@ -13,7 +13,7 @@ Fitter::Fitter(TDirectory* dirout, const int seed, const int num_threads)
     , m_npar(0)
     , m_calls(0)
 {
-    gRandom = rng;
+    gRandom = rng; // global rng used in all classes
 
     min_settings.minimizer = "Minuit2";
     min_settings.algorithm = "Migrad";
@@ -64,7 +64,7 @@ void Fitter::FixParameter(const std::string& par_name, const double& value)
     }
     else
     {
-        std::cerr  << "In function Fitter::FixParameter()\n"
+        std::cerr  << ERR << "In function Fitter::FixParameter()\n"
                    << "Parameter " << par_name << " not found!" << std::endl;
     }
 }
@@ -168,6 +168,7 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
     TVectorD v_prefit_original(m_npar);
     TVectorD v_prefit_start(m_npar, par_prefit.data());
 
+    // Store all the prefit parameters and uncertainties
     int num_par = 1;
     for(int i = 0; i < m_fitpara.size(); ++i)
     {
@@ -201,7 +202,7 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 
     if(m_fitter == nullptr)
     {
-        std::cerr  << "In Fitter::Fit()\n"
+        std::cerr  << ERR << "In Fitter::Fit()\n"
                    << "Fitter has not been initialized." << std::endl;
         return false;
     }
@@ -343,6 +344,7 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 
 double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
 {
+    // loop over all PMTs to update the predicted PE and get stat chi2
     double chi2      = 0.0;
     bool output_chi2 = false;
     if((m_calls < 1001 && (m_calls % 100 == 0 || m_calls < 20))
@@ -644,6 +646,8 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
             omega   = ev->GetOmega();
             PMT_id  = ev->GetPMTID();
             mPMT_id = ev->GetmPMTID();
+            indirectPE = ev->GetPEIndirect();
+            indirectPEerr2 = ev->GetPEIndirectErr();
             m_outtree->Fill();
         }
     }
@@ -653,6 +657,7 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
 
 void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double force_padd, bool do_incompl_chol, double dropout_tol)
 {
+    // Use MCMC to scan around the best-fit point for error estimation
     const int ndim        = m_fitter->NDim();
     double cov_array[ndim * ndim];
     m_fitter->GetCovMatrix(cov_array);
@@ -663,7 +668,7 @@ void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double
     {
         if(!toy_thrower->ForcePosDef(force_padd, 1E-48))
         {
-            std::cout << TAG << "Covariance matrix could not be made positive definite.\n"
+            std::cout << ERR << "Covariance matrix could not be made positive definite.\n"
                       << "Exiting." << std::endl;
             return;
         }
@@ -686,13 +691,13 @@ void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double
     // First MCMC step is the best-fit point
     par_mcmc = par_postfit;
     m_chi2 = CalcLikelihood(par_mcmc.data());
-    m_jump = 0;
+    m_accept = 0;
     m_mcmctree->Fill();
 
     std::vector<double> toy(ndim, 0.0);
     for (int i=0; i<step; i++)
     {
-        m_jump = 0;
+        m_accept = 0;
 
         toy_thrower->Throw(toy);
         for (int j=0;j<ndim;j++)
@@ -707,7 +712,7 @@ void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double
         {
             m_chi2 = chi2_next;
             par_mcmc = toy;
-            m_jump = 1;
+            m_accept = 1;
         }
         m_mcmctree->Fill();
     }

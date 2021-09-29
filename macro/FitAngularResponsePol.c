@@ -88,7 +88,7 @@ double CalcLikelihood(const double* par)
 
 void FitAngularResponsePol()
 {
-    TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_350nm_nominal_BnLPMT.root");
+    TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_400nm_nominal_BnLPMT.root");
     //TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_400nm_nominal_mPMT.root");
     TVectorD* res_vector = (TVectorD*)f.Get("res_vector");
     TMatrixDSym* res_cov_matrix = (TMatrixDSym*)f.Get("res_cov_matrix");
@@ -105,7 +105,7 @@ void FitAngularResponsePol()
     // mPMT requires one more polynomial 
     // int orders[] = {2,3,3};
     // double ranges[] = {0.5,0.6,0.75,1.0};
-    bool plot_extra_pol = true; // use this with par_pol to plot an extra polynomials for comparison
+    bool plot_extra_pol = false; // use this with par_pol to plot an extra polynomials for comparison
     //double par_pol[] = {0.200778,0.248166,-0.298219,0.288687,-0.15455};
     //double par_pol[] = {0.20845,0.252388,-0.288586,0.315924,-0.183385};
     //double par_pol[] = {0.213834,0.218174,0.121592,-0.0341528,0.358366};
@@ -288,6 +288,18 @@ void FitAngularResponsePol()
 
         // h_fit_pol_fit->Divide(h_fit_pol);
         // h_fit_pol_fit->Draw();
+    }
+    for (int i=1;i<pol_range.size();i++)
+    {
+        TLine* l = new TLine(pol_range[i],hist_postfit->GetMinimum(),pol_range[i],hist_postfit->GetMaximum());
+        l->SetLineStyle(2);
+        l->Draw("same");
+    }
+    TLatex latex;
+    latex.SetTextSize(0.06);
+    for (int i=0;i<pol_orders.size();i++)
+    {
+        latex.DrawLatex(pol_range[i]+0.02,hist_postfit->GetMaximum(),Form("pol%i",pol_orders[i]));
     }
     c1->SaveAs("test.pdf");
 }

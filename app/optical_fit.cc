@@ -304,7 +304,7 @@ int main(int argc, char** argv)
     min_settings.tolerance = toml_h::find<double>(minimizer_config, "tolerance");
     min_settings.max_iter = toml_h::find<double>(minimizer_config, "max_iter");
     min_settings.max_fcn = toml_h::find<double>(minimizer_config, "max_fcn");
-
+    // optonal MCMC for error estimation
     int MCMCSteps = toml_h::find<double>(minimizer_config, "MCMCSteps");
     double MCMCStepSize = toml_h::find<double>(minimizer_config, "MCMCStepSize");
 

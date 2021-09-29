@@ -81,7 +81,7 @@ public:
 
     void SetScatterMap(double time1, double time2, double time3, const TH1D& hist);
 
-    inline void UnsetScatter() { m_scatter = false; }
+    inline void UnsetScatter() { m_scatter = false; m_scatter_map = false; }
 
     inline void SetTimeOffset(bool offset, double width) { m_time_offset = offset; m_time_offset_width = width; }
 
@@ -121,19 +121,19 @@ protected:
 
     std::string m_name;
     std::string m_binning;
-    std::vector<AnaEvent> m_events;
+    std::vector<AnaEvent> m_events; // not used anymore
     std::vector<AnaEvent> m_pmts;  // PMT geometry has the same kind of information as hits except T/Q
 
     BinManager m_bm;
     CalcLLHFunc* m_llh;
 
-    TH1D* m_hpred;
-    TH1D* m_hpred_err2;
-    TH1D* m_hpred_tail;
-    TH1D* m_hdata;
-    TH1D* m_hdata_tail;
-    TH1D* m_hdata_unbinned;
-    TH1D* m_hdata_unbinned_tail;
+    TH1D* m_hpred; // direct PE prediction
+    TH1D* m_hpred_indirect; // indirect PE prediction
+    TH1D* m_hpred_err2; // MC stat error in PE prediction
+    TH1D* m_hdata; // data histogram
+    TH1D* m_hdata_control; // data histogram in control region
+    TH1D* m_hdata_unbinned; // data histogram without PMT binning
+    TH1D* m_hdata_unbinned_control; // data histogram in control region without PMT binning
 
     const std::string TAG = color::GREEN_STR + "[AnaSample]: " + color::RESET_STR;
     const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;

@@ -11,11 +11,11 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_binning(binning)
     , m_hpred(nullptr)
     , m_hpred_err2(nullptr)
-    , m_hpred_tail(nullptr)
+    , m_hpred_indirect(nullptr)
     , m_hdata(nullptr)
-    , m_hdata_tail(nullptr)
+    , m_hdata_control(nullptr)
     , m_hdata_unbinned(nullptr)
-    , m_hdata_unbinned_tail(nullptr)
+    , m_hdata_unbinned_control(nullptr)
     , m_scatter(false)
     , m_scatter_map(false)
     , m_h_scatter_map(nullptr)
@@ -45,20 +45,20 @@ AnaSample::~AnaSample()
     if(m_hpred_err2 != nullptr)
         delete m_hpred_err2;
 
-    if(m_hpred_tail != nullptr)
-        delete m_hpred_tail;
+    if(m_hpred_indirect != nullptr)
+        delete m_hpred_indirect;
 
     if(m_hdata != nullptr)
         delete m_hdata;
 
-    if(m_hdata_tail != nullptr)
-        delete m_hdata_tail;
+    if(m_hdata_control != nullptr)
+        delete m_hdata_control;
 
     if(m_hdata_unbinned != nullptr)
         delete m_hdata_unbinned;
 
-    if(m_hdata_unbinned_tail != nullptr)
-        delete m_hdata_unbinned_tail;
+    if(m_hdata_unbinned_control != nullptr)
+        delete m_hdata_unbinned_control;
 
     if(m_h_scatter_map != nullptr)
         delete m_h_scatter_map;
@@ -82,7 +82,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         bool skip = false;
         for (int j=0;j<m_cutvar.size();j++) {
             if (m_cutvar[j]=="nPE"||m_cutvar[j]=="timetof") continue;
-            double val = pmt_vec[i].GetEventVar(m_cutvar[j]);
+            double val = pmt_vec[i].GetEventVar(m_cutvar[j]); // check if PMT passes the cuts
             if (val<m_cutlow[j] || val>m_cuthigh[j]) {
                 skip=true;
                 break;
@@ -103,6 +103,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     int nPMTs = selTree.GetPMTEntries();
     m_hdata_unbinned = new TH1D("","",nPMTs,0,nPMTs);
 
+    // determine the random offset for each PMT
     std::vector<double> timetof_shift;
     if (m_time_offset)
     {
@@ -110,6 +111,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
             timetof_shift.push_back( gRandom->Gaus(0,m_time_offset_width) );
     }
 
+    // determine the random smearing for each PMT
     std::vector<double> time_resolution;
     if (m_time_smear)
     {
@@ -122,11 +124,12 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         }
     }
 
+    // Setup control region if the scattering option is on
     if (m_scatter || m_scatter_map)
     {
-        if(m_hdata_unbinned_tail != nullptr)
-            delete m_hdata_unbinned_tail;
-        m_hdata_unbinned_tail = new TH1D("","",nPMTs,0,nPMTs);
+        if(m_hdata_unbinned_control != nullptr)
+            delete m_hdata_unbinned_control;
+        m_hdata_unbinned_control = new TH1D("","",nPMTs,0,nPMTs);
     }
 
     int pmtID;
@@ -162,7 +165,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         if (m_scatter || m_scatter_map)
         {
             if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_unbinned->Fill(pmtID+0.5, nPE);
-            else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_unbinned_tail->Fill(pmtID+0.5, nPE);
+            else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_unbinned_control->Fill(pmtID+0.5, nPE);
         }
         else m_hdata_unbinned->Fill(pmtID+0.5, nPE);
     }
@@ -170,7 +173,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     PrintStats();
 }
 
-AnaEvent* AnaSample::GetEvent(const unsigned int evnum)
+AnaEvent* AnaSample::GetEvent(const unsigned int evnum) // not used anymore
 {
 #ifndef NDEBUG
     if(m_events.empty())
@@ -230,20 +233,20 @@ void AnaSample::MakeHistos()
     m_hpred_err2 = new TH1D(Form("%s_pred_err2", m_name.c_str()), Form("%s_pred_err2", m_name.c_str()), m_nbins, 0, m_nbins);
     m_hpred_err2->SetDirectory(0);
 
-    if(m_hpred_tail != nullptr)
-        delete m_hpred_tail;
-    m_hpred_tail = new TH1D(Form("%s_pred_tail", m_name.c_str()), Form("%s_pred_tail", m_name.c_str()), m_nbins, 0, m_nbins);
-    m_hpred_tail->SetDirectory(0);
+    if(m_hpred_indirect != nullptr)
+        delete m_hpred_indirect;
+    m_hpred_indirect = new TH1D(Form("%s_pred_indirect", m_name.c_str()), Form("%s_pred_tail", m_name.c_str()), m_nbins, 0, m_nbins);
+    m_hpred_indirect->SetDirectory(0);
 
     if(m_hdata != nullptr)
         delete m_hdata;
     m_hdata = new TH1D(Form("%s_data", m_name.c_str()), Form("%s_data", m_name.c_str()), m_nbins, 0, m_nbins);
     m_hdata->SetDirectory(0);
 
-    if(m_hdata_tail != nullptr)
-        delete m_hdata_tail;
-    m_hdata_tail = new TH1D(Form("%s_data_tail", m_name.c_str()), Form("%s_data_tail", m_name.c_str()), m_nbins, 0, m_nbins);
-    m_hdata_tail->SetDirectory(0);
+    if(m_hdata_control != nullptr)
+        delete m_hdata_control;
+    m_hdata_control = new TH1D(Form("%s_data_control", m_name.c_str()), Form("%s_data_tail", m_name.c_str()), m_nbins, 0, m_nbins);
+    m_hdata_control->SetDirectory(0);
 
     // if(m_h_scatter_map != nullptr)
     //     delete m_h_scatter_map;
@@ -253,26 +256,26 @@ void AnaSample::MakeHistos()
 
 void AnaSample::InitEventMap()
 {
-    for(auto& e : m_events)
-    {
-        std::vector<double> binvar;
-        for (auto t : m_binvar)
-            binvar.push_back(e.GetEventVar(t));
-        const int b = m_bm.GetBinIndex(binvar);
-#ifndef NDEBUG
-        if(b < 0)
-        {
-            std::cout << TAG << "In AnaSample::InitEventMap()\n"
-                      << "No bin for current event." << std::endl;
-            std::cout << TAG << "Event kinematics: " << std::endl;
-            for(const auto val : e.GetRecoVar())
-                std::cout << TAG << "\t" << val << std::endl;
-        }
-#endif
-        e.SetSampleBin(b);
-    }
+//     for(auto& e : m_events)
+//     {
+//         std::vector<double> binvar;
+//         for (auto t : m_binvar)
+//             binvar.push_back(e.GetEventVar(t));
+//         const int b = m_bm.GetBinIndex(binvar);
+// #ifndef NDEBUG
+//         if(b < 0)
+//         {
+//             std::cout << TAG << "In AnaSample::InitEventMap()\n"
+//                       << "No bin for current event." << std::endl;
+//             std::cout << TAG << "Event kinematics: " << std::endl;
+//             for(const auto val : e.GetRecoVar())
+//                 std::cout << TAG << "\t" << val << std::endl;
+//         }
+// #endif
+//         e.SetSampleBin(b);
+//     }
 
-    std::sort(m_events.begin(), m_events.end(), [](const AnaEvent a, const AnaEvent b){ return a.GetSampleBin() < b.GetSampleBin(); });
+//     std::sort(m_events.begin(), m_events.end(), [](const AnaEvent a, const AnaEvent b){ return a.GetSampleBin() < b.GetSampleBin(); });
 
     if (m_binvar[0]=="unbinned")
     {
@@ -317,19 +320,19 @@ void AnaSample::FillEventHist(bool reset_weights)
     }
 #endif
     m_hpred->Reset();
-    //if (m_scatter) m_hpred_tail->Reset();
+    //if (m_scatter) m_hpred_indirect->Reset();
     if (m_scatter||m_scatter_map) m_hpred_err2->Reset();
 
     for(const auto& e : m_pmts)
     {
         const double weight = reset_weights ? e.GetEvWghtMC() : e.GetEvWght();
         const int reco_bin  = e.GetSampleBin();
-        m_hpred->Fill(reco_bin + 0.5, weight);
+        m_hpred->Fill(reco_bin + 0.5, weight); // direct PE prediction
 
         if (m_scatter||m_scatter_map)
         {
-            m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect());
-            m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr());
+            m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
+            m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr()); // MC stat error of indirect PE prediction
         }
 
         // if (m_scatter)
@@ -339,7 +342,7 @@ void AnaSample::FillEventHist(bool reset_weights)
         //     const double scatter_pe_at_peak = weight*e.GetTailPE()*m_scatter_factor;
         //     m_hpred->Fill(reco_bin + 0.5, scatter_pe_at_peak);
         //     const double tailpe = (weight+scatter_pe_at_peak)*e.GetTailPE();
-        //     m_hpred_tail->Fill(reco_bin + 0.5, tailpe);
+        //     m_hpred_indirect->Fill(reco_bin + 0.5, tailpe);
         // }
     }
 
@@ -357,7 +360,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
     }
 #endif
     m_hdata->Reset();
-    if (m_scatter || m_scatter_map) m_hdata_tail->Reset();
+    if (m_scatter || m_scatter_map) m_hdata_control->Reset();
 
     for(auto& e : m_pmts)
     {
@@ -365,21 +368,21 @@ void AnaSample::FillDataHist(bool stat_fluc)
         double weight = m_hdata_unbinned->GetBinContent(pmtID+1);
         if (m_scatter) 
         {
-            double val = m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_scatter_factor;
-            double err = 1./m_hdata_unbinned_tail->GetBinContent(pmtID+1)*val*val;
+            double val = m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_scatter_factor; // constant scale factor for indirect PE prediction
+            double err = 1./m_hdata_unbinned_control->GetBinContent(pmtID+1)*val*val; // stat error from measured PE in control region
             e.SetPEIndirect(val);
             e.SetPEIndirectErr(err);
-            // weight -= m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_scatter_factor;
+            // weight -= m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_scatter_factor;
             // if (weight<0) weight=0;
         }
         else if (m_scatter_map)
         {
-            //weight -= m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1);
-            //std::cout << TAG<<pmtID<<" "<<m_hdata_unbinned->GetBinContent(pmtID+1)<<" "<<m_hdata_unbinned_tail->GetBinContent(pmtID+1)<<" "<<m_h_scatter_map->GetBinContent(pmtID+1)<<std::endl;
+            //weight -= m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1);
+            //std::cout << TAG<<pmtID<<" "<<m_hdata_unbinned->GetBinContent(pmtID+1)<<" "<<m_hdata_unbinned_control->GetBinContent(pmtID+1)<<" "<<m_h_scatter_map->GetBinContent(pmtID+1)<<std::endl;
             //if (weight<0) weight=0;
-            double val = m_hdata_unbinned_tail->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1);
-            double err = m_h_scatter_map->GetBinError(pmtID+1);
-            err = (err*err + 1./m_hdata_unbinned_tail->GetBinContent(pmtID+1))*val*val;
+            double val = m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1); // predefined scale factor for indirect PE prediction
+            double err = m_h_scatter_map->GetBinError(pmtID+1); // error from scale factor estimation
+            err = (err*err + 1./m_hdata_unbinned_control->GetBinContent(pmtID+1))*val*val; 
             // double val = m_h_scatter_map->GetBinContent(pmtID+1);
             // double err = m_h_scatter_map->GetBinError(pmtID+1);
             // err = err*err*val*val;
@@ -389,7 +392,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
         e.SetPE(weight);
         const int reco_bin  = e.GetSampleBin();
         m_hdata->Fill(reco_bin + 0.5, weight);
-        if (m_scatter || m_scatter_map) m_hdata_tail->Fill(reco_bin + 0.5, m_hdata_unbinned_tail->GetBinContent(pmtID+1));
+        if (m_scatter || m_scatter_map) m_hdata_control->Fill(reco_bin + 0.5, m_hdata_unbinned_control->GetBinContent(pmtID+1));
     }
 
     // if (m_scatter)
@@ -398,7 +401,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
     //     {
     //         double val = m_hdata->GetBinContent(j);
     //         if (val<=0) continue;
-    //         double ratio = m_hdata_tail->GetBinContent(j)/val;
+    //         double ratio = m_hdata_control->GetBinContent(j)/val;
     //         double correction = 1.-ratio*m_scatter_factor;
     //         m_hdata->SetBinContent(j, val*correction);
     //     }
@@ -406,7 +409,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
 
 
     m_hdata->Scale(m_norm);
-    if (m_scatter || m_scatter_map) m_hdata_tail->Scale(m_norm);
+    if (m_scatter || m_scatter_map) m_hdata_control->Scale(m_norm);
 
     if(stat_fluc) 
     {
@@ -419,7 +422,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
 #ifndef NDEBUG
             if(val <= 0.0)
             {
-                std::cout << TAG   << "In AnaSample::FillEventHist()\n"
+                std::cout << TAG   << "In AnaSample::FillDataHist()\n"
                             << "In Sample " <<  m_name << ", bin " << j
                             << " has 0 (or negative) entries. This may cause a problem with chi2 computations."
                             << std::endl;
@@ -428,20 +431,20 @@ void AnaSample::FillDataHist(bool stat_fluc)
             m_hdata->SetBinContent(j, val);
         }
 
-        if (m_scatter || m_scatter_map) for(int j = 1; j <= m_hdata_tail->GetNbinsX(); ++j)
+        if (m_scatter || m_scatter_map) for(int j = 1; j <= m_hdata_control->GetNbinsX(); ++j) // for now ignore the inconsistency of the indirect PE prediction
         {
-            double val = m_hdata_tail->GetBinContent(j);
+            double val = m_hdata_control->GetBinContent(j);
             val = gRandom->Poisson(val);
 #ifndef NDEBUG
             if(val <= 0.0)
             {
-                std::cout << TAG   << "In AnaSample::FillEventHist()\n"
+                std::cout << TAG   << "In AnaSample::FillDataHist()\n"
                             << "In Sample " <<  m_name << ", bin " << j
                             << " has 0 (or negative) entries at tail. This may cause a problem with chi2 computations."
                             << std::endl;
             }
 #endif
-            m_hdata_tail->SetBinContent(j, val);
+            m_hdata_control->SetBinContent(j, val);
         }
     }
 
@@ -494,9 +497,9 @@ double AnaSample::CalcLLH() const
 
     // if (m_scatter)
     // {
-    //     exp_w  = m_hpred_tail->GetArray();
-    //     exp_w2 = m_hpred_tail->GetSumw2()->GetArray();
-    //     data   = m_hdata_tail->GetArray();
+    //     exp_w  = m_hpred_indirect->GetArray();
+    //     exp_w2 = m_hpred_indirect->GetSumw2()->GetArray();
+    //     data   = m_hdata_control->GetArray();
     //     for(unsigned int i = 1; i <= nbins; ++i)
     //         chi2 += (*m_llh)(exp_w[i], exp_w2[i], data[i]);
     // }
@@ -504,7 +507,7 @@ double AnaSample::CalcLLH() const
     return chi2;
 }
 
-double AnaSample::CalcChi2() const
+double AnaSample::CalcChi2() const // deprecated
 {
     if(m_hdata == nullptr)
     {
@@ -569,8 +572,8 @@ void AnaSample::WriteEventHist(TDirectory* dirout, const std::string& bsname)
 
     if (m_scatter || m_scatter_map)
     {
-        if(m_hpred_tail != nullptr)
-            m_hpred_tail->Write(Form("evhist_tail_sam%d_pred%s", m_sample_id, bsname.c_str()));
+        if(m_hpred_indirect != nullptr)
+            m_hpred_indirect->Write(Form("evhist_indirect_sam%d_pred%s", m_sample_id, bsname.c_str()));
 
         if (m_scatter_map)
             if (m_hpred_err2 != nullptr)
@@ -585,12 +588,13 @@ void AnaSample::WriteDataHist(TDirectory* dirout, const std::string& bsname)
         m_hdata->Write(Form("evhist_sam%d_data%s", m_sample_id, bsname.c_str()));
 
     if (m_scatter || m_scatter_map)
-        if(m_hdata_tail != nullptr)
-            m_hdata_tail->Write(Form("evhist_tail_sam%d_data%s", m_sample_id, bsname.c_str()));         
+        if(m_hdata_control != nullptr)
+            m_hdata_control->Write(Form("evhist_control_sam%d_data%s", m_sample_id, bsname.c_str()));         
 }
 
 void AnaSample::SetScatterMap(double time1, double time2, double time3, const TH1D& hist)
 {
+    // read the prefined scale factor for indirect PE estimation
     m_scatter_map = true; m_scatter_time1 = time1; m_scatter_time2 = time2; m_scatter_time3 = time3;
     if(m_h_scatter_map != nullptr)
         delete m_h_scatter_map;

@@ -38,14 +38,22 @@ names = [
 # Available options are:
 # ["norm", double]: scale the number of hits in the whole sample
 # ["mask", int]: Enabling only the specified number of PMTs (for mPMT, the entire module of 19 PMTs is enabled/disabled as a whole) 
+# ["mask_mPMT", [int]]: Vector of integers to mask small PMTs in mPMT by mPMT_id
 # ["time_offset", width]: Random timetof offset per PMT, sampled from a Gaussian(mean = 0, sigma = width)
 # ["time_smear", mean, width]: Random time smearing per PMT, sampled from a Gaussian(mean, width)
 
 # Special optional configuration for this branch
-# ["scatter_map", root_file_name, hist_name, time1, time2, time3]:
-# Divide each bin into two region, {time1,time2} corresponds to the signal region, {time2,time3} corresponds to the control region
+
+# ["scatter_control", time1, time2, time3, correction_factor]: 
+# Divide each bin into two, {time1,time2} corresponds to the signal region, {time2,time3} corresponds to the control region due to indirect photon
 # Use control region to estimate the indirect photon background in signal region
-# Use macro/make_scatter_map.c to generate the input histogram
+# The PE count is calculated as: PE{time1,time2} = PE_direct + PE{time2,time3}*correction_factor
+
+# ["scatter_map", root_file_name, hist_name, time1, time2, time3]:
+# Divide each bin into two, {time1,time2} corresponds to the signal region, {time2,time3} corresponds to the control region
+# Use control region to estimate the indirect photon background in signal region
+# The PE count is calculated as: PE{time1,time2} = PE_direct + PE{time2,time3}*correction_factor
+# Use macro/make_scatter_map.c to generate the input histogram of correction_factor
 # Need to set likelihood to "Barlow" in order to correctly include MC statistical uncertainty in likelihood calculation
 
 # The example here specifies two samples, from the input file, with different pmt tree names
@@ -60,8 +68,12 @@ BnL_PMT = [  0, # pmt_type: 0 = B&L PMT, 1 = mPMT
                                                     # If bin_vars="unbinned", each bin corresponds to a single PMT, regardless of what the binning_file is
           ]
 mPMT    = [ 1, "out.root", "hitRate_pmtType1", "pmt_type1", [["timetof",-950,-940], ["cosths",0.766,1], ["costh",0.5,1]], ["sample_binning.txt",["costh","R"]],
-            ["mask", 2000] # only use 2000 mPMT in fit
+            ["mask", 2000], # only use 2000 mPMT in fit
+            #["mask_mPMT", [0,10,19]] # masking mPMT_id
           ]
+
+# Number of small PMTs per mPMT module
+nPMTpermPMT = 19
 
 
 # List of fit parameters input to fitter

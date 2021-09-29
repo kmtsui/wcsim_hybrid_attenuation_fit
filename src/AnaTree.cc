@@ -7,6 +7,7 @@ AnaTree::AnaTree(const std::string& file_name, const std::string& tree_name, con
 
     std::cout << TAG<<"Loading data files: "<<file_name.c_str()<<std::endl;
 
+    // only need the first file to read PMT tree
     std::string single_file_name = fChain->GetFile()->GetName();
 
     f_pmt = new TFile(single_file_name.c_str());
@@ -28,6 +29,7 @@ AnaTree::~AnaTree()
 
 void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
 {
+    // mask the whole PMT
     pmt_mask.clear();
     m_maskpmt = false;
 
@@ -57,7 +59,7 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
         {
             if (!mPMT) pmt_mask.emplace_back(0);
             else 
-            {   // this assumes the PMTs are properly ordered
+            {   // this assumes the PMTs are properly ordered, the whole mPMT is turned on/off
                 for (int j=i*nPMTpermPMT;j<(i+1)*nPMTpermPMT;j++) {
                     pmt_mask.emplace_back(0);
                 }
@@ -81,6 +83,7 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
 
 void AnaTree::MaskmPMT(std::vector<int> vec, int nPMTpermPMT)
 {
+    // mask the small PMT in mPMT
     mpmt_mask.clear();
     m_maskmpmt = false;
 
@@ -112,7 +115,7 @@ long int AnaTree::GetEntry(long int entry) const
 
 void AnaTree::SetDataBranches()
 {    
-    // Set branch addresses and branch pointers
+    // Set branch addresses and branch pointers for PMT hits
 
     fChain->SetBranchAddress("nPE", &nPE);
     fChain->SetBranchAddress("timetof", &timetof);
@@ -122,7 +125,7 @@ void AnaTree::SetDataBranches()
 
 void AnaTree::SetPMTBranches()
 {
-    // Set branch addresses and branch pointers
+    // Set branch addresses and branch pointers for PMT geometry
 
     t_pmt->SetBranchAddress("R", &R);
     t_pmt->SetBranchAddress("costh", &costh);
@@ -161,7 +164,7 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
         t_pmt->GetEntry(jentry);
 
         if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
-        // Mask small PMT at run time to avoid unknown ordering problem
+        // Mask small PMT at run time to avoid possible ordering problem
         if (m_maskmpmt) 
             if (mpmt_mask.at(mPMT_id))
             {
@@ -195,6 +198,7 @@ bool AnaTree::GetDataEntry(unsigned long entry, double& time, double& charge, in
 {
     fChain->GetEntry(entry);
 
+    // ignore PMT hits from masked PMT
     if (m_maskpmt) if (pmt_mask.at(PMT_id)) return false;
 
     time = timetof;

@@ -272,7 +272,7 @@ int main(int argc, char **argv){
   pmt_type0->Branch("omega",&omega);     // solid angle subtended by PMT
   pmt_type0->Branch("PMT_id",&PMT_id);   // unique PMT id
   pmt_type0->Branch("mPMT_id",&mPMT_id); // dummy 
-  pmt_type0->Branch("weight",&weight); 
+  pmt_type0->Branch("weight",&weight);   // weight from e.g. LED profile
   TTree* pmt_type1 = new TTree("pmt_type1","pmt_type1");
   pmt_type1->Branch("R",&dist);
   pmt_type1->Branch("costh",&costh);
@@ -288,12 +288,12 @@ int main(int argc, char **argv){
                                          // 18: central PMT
   pmt_type1->Branch("weight",&weight); 
 
+  // Assume the "source" is the UK injection system, either diffuser or collimator
   // LI source direction is always perpendicular to the wall
-  // Separate treatment for barrel and endcap 
   double vDirSource[3];
   double vSource_localXaxis[3];
   double vSource_localYaxis[3];
-  double endcapZ=3000;
+  double endcapZ=3000; // hardcoded, bad!
   // Barrel injector
   if (abs(vtxpos[2])<endcapZ) {
     vDirSource[0]=vtxpos[0];
@@ -304,7 +304,9 @@ int main(int argc, char **argv){
     vDirSource[2]=0;
     vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
     vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
-  } else {
+  } 
+  else // endcap injector
+  {
     vDirSource[0]=0;
     vDirSource[1]=0;
     if (vtxpos[2]>endcapZ) 
@@ -335,7 +337,7 @@ int main(int argc, char **argv){
       else pmt = geo->GetPMT(i,true);
       PMT_id = i;
       if (pmtType == 0) mPMT_id = 0;
-      else mPMT_id = PMT_id%nPMTpermPMT;
+      else mPMT_id = PMT_id%nPMTpermPMT; // assume the PMT_id is ordered properly for mPMT
       double PMTpos[3];
       double PMTdir[3];                   
       for(int j=0;j<3;j++){
@@ -373,13 +375,12 @@ int main(int argc, char **argv){
       phim = 0;
       if (pmtType==1 && mPMT_id!=nPMTpermPMT-1)
       { 
-        // Calculate photon incident cos(phi) angle relative to central PMT 
+        // Calculate photon incident cos(theta) and phi angle relative to central PMT 
         int idx_centralpmt = int(PMT_id/nPMTpermPMT)*nPMTpermPMT + nPMTpermPMT-1; // locate the central PMT
         double PMTpos_central[3], PMTdir_central[3];
         WCSimRootPMT pmt_central = geo->GetPMT(idx_centralpmt,true);
-        // central PMT position relative to current PMT
         for(int j=0;j<3;j++){
-          PMTpos_central[j] = pmt_central.GetPosition(j)-PMTpos[j];
+          PMTpos_central[j] = pmt_central.GetPosition(j)-PMTpos[j]; // central PMT position relative to current PMT
           PMTdir_central[j] = pmt_central.GetOrientation(j);
         }
         costhm = -(vDir[0]*PMTdir_central[0]+vDir[1]*PMTdir_central[1]+vDir[2]*PMTdir_central[2]);
@@ -584,7 +585,7 @@ int main(int argc, char **argv){
         timetof = time-tof;
         nHits = 1; nPE = peForTube; 
 
-        // A simple way to mimic the digitization procedure
+        // A simple way to mimic the digitization procedure, but triggering is not taken into account
         nPE_digi = nPE;
         timetof_digi = timetof;
         if (pmtType==0) BnLDigitizer->Digitize(nPE_digi,timetof_digi);

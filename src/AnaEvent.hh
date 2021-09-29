@@ -22,7 +22,7 @@ class AnaEvent
             m_omega = -999.0;
             m_R   = -999.0;
             m_nPE   = -999.0;
-            m_nPE_tail = 0.0;
+            //m_nPE_tail = 0.0;
             m_nPE_indirect = -999.0;
             m_nPE_indirect_err = -999.0;
             m_timetof   = -999.0;
@@ -69,8 +69,8 @@ class AnaEvent
         inline void SetPE(double val){ m_nPE = val; }
         inline double GetPE() const { return m_nPE; }
 
-        inline void SetTailPE(double val){ m_nPE_tail = val; }
-        inline double GetTailPE() const { return m_nPE_tail; }
+        //inline void SetTailPE(double val){ m_nPE_tail = val; }
+        //inline double GetTailPE() const { return m_nPE_tail; }
 
         inline void SetPEIndirect(double val){ m_nPE_indirect = val; }
         inline double GetPEIndirect() const { return m_nPE_indirect; }
@@ -126,8 +126,8 @@ class AnaEvent
                 return m_timetof;
             else if(var == "nPE")
                 return m_nPE;
-            else if(var == "nPE_tail")
-                return m_nPE_tail;
+            //else if(var == "nPE_tail")
+            //    return m_nPE_tail;
             else if(var == "m_nPE_indirect")
                 return m_nPE_indirect;
             else if(var == "m_nPE_indirect_err")
@@ -169,9 +169,9 @@ class AnaEvent
         double m_omega;    //solid angle subtended by PMT
         double m_R;        //distance to source
         double m_nPE;      //number of PE
-        double m_nPE_tail; //number of PE at the tail
-        double m_nPE_indirect;
-        double m_nPE_indirect_err;
+        //double m_nPE_tail; //number of PE at the tail
+        double m_nPE_indirect; //indirect PE prediction
+        double m_nPE_indirect_err; //err^2
         double m_timetof;  //hittime-tof
         double m_wght;     //event weight
         double m_wghtMC;   //event weight from original MC
