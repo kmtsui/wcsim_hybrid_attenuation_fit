@@ -28,5 +28,5 @@ jobs:
       run: ls ${{ github.workspace }}
 
     - name: Build with docker
-      uses: ./.github/workflows/docker-action
+      uses: ./.github/actions/docker-action
       
