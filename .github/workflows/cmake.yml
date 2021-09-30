@@ -21,6 +21,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: PWD
+      run: pwd
+
     - name: List files in the repository
       run: ls ${{ github.workspace }}
 
