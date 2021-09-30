@@ -1,0 +1,6 @@
+# docker_action.yml
+name: 'Docker build'
+description: 'Build with root docker'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
