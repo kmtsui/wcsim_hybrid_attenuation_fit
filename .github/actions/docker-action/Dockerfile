@@ -8,5 +8,5 @@ RUN yum -y install wget git make cmake3 gcc-c++ gcc binutils libX11-devel libXpm
 COPY . .
 
 # Compile the code
-RUN cmake -B build
-RUN cmake --build build
+RUN cmake3 -B build
+RUN cmake3 --build build
