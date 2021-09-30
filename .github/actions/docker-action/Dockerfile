@@ -7,7 +7,7 @@ FROM rootproject/root:6.22.08-centos7
 # Copies your code file from your action repository to the filesystem path `/` of the container
 #COPY ../../../../ /
 
-RUN git clone https://github.com/${GITHUB_REPOSITORY}.git optical_fit
+RUN git clone https://github.com/kmtsui/wcsim_hybrid_attenuation_fit.git optical_fit
 
 RUN pwd
 
