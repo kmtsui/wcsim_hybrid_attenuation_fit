@@ -641,6 +641,7 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
             R       = ev->GetR();
             costh   = ev->GetCosth();
             cosths  = ev->GetCosths();
+            phis    = ev->GetPhis();
             costhm  = ev->GetCosthm();
             phim    = ev->GetPhim();
             omega   = ev->GetOmega();

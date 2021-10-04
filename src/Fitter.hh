@@ -75,6 +75,7 @@ public:
     double R;
     double costh;
     double cosths;
+    double phis;
     double costhm;
     double phim;
     double omega;
@@ -91,6 +92,7 @@ public:
         m_outtree->Branch("R", &R, "R/D");
         m_outtree->Branch("costh", &costh, "costh/D");
         m_outtree->Branch("cosths", &cosths, "cosths/D");
+        m_outtree->Branch("phis", &phis, "phis/D");
         m_outtree->Branch("costhm", &costhm, "costhm/D");
         m_outtree->Branch("phim", &phim, "phim/D");
         m_outtree->Branch("omega", &omega, "omega/D");
