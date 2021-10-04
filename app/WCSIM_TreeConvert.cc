@@ -52,7 +52,7 @@ void HelpMessage()
 {
   std::cout << "USAGE: "
             << "WCSIM_TreeConvert" << "\nOPTIONS:\n"
-            << "-f : Intput file\n"
+            << "-f : Input file\n"
             << "-o : Output file\n"
             << "-l : Laser wavelength\n"
             << "-w : Apply diffuser profile reweight\n"

@@ -665,6 +665,7 @@ void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double
     m_fitter->GetCovMatrix(cov_array);
     TMatrixDSym cov_matrix(ndim, cov_array);
 
+    // Use post-fit covariance matrix to generate MCMC steps
     ToyThrower* toy_thrower = new ToyThrower(cov_matrix, false, 1E-48);
     if(do_force_posdef)
     {
