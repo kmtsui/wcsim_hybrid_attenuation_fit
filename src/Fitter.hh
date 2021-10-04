@@ -71,7 +71,8 @@ public:
 
     // Declaration of leaf types
     int sampleId;
-    double nPE;
+    double nPE_data;
+    double nPE_pred;
     double R;
     double costh;
     double cosths;
@@ -88,7 +89,8 @@ public:
     void InitOutputTree()
     {
         m_outtree->Branch("sampleId", &sampleId, "sampleId/I");
-        m_outtree->Branch("nPE", &nPE, "nPE/D");
+        m_outtree->Branch("nPE_data", &nPE_data, "nPE_data/D");
+        m_outtree->Branch("nPE_pred", &nPE_pred, "nPE_pred/D");
         m_outtree->Branch("R", &R, "R/D");
         m_outtree->Branch("costh", &costh, "costh/D");
         m_outtree->Branch("cosths", &cosths, "cosths/D");

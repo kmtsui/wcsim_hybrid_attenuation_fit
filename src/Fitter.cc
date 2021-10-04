@@ -637,7 +637,8 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
                 else weight[j] = m_fitpara[j]->GetWeight(ev, pmttype, s, i, res_params[j]);
             }
 
-            nPE     = ev->GetPE();
+            nPE_data= ev->GetPE();
+            nPE_pred= ev->GetEvWght();
             R       = ev->GetR();
             costh   = ev->GetCosth();
             cosths  = ev->GetCosths();
