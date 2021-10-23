@@ -7,15 +7,17 @@
 class AttenuationZ
 {
 public:
-    AttenuationZ(double wl, double zpos, double slope)
+    AttenuationZ(double wl, double zpos, double slope, double abw, double ray)
     {
         std::cout<<"Set up AttenuationZ for event reweight"<<std::endl;
         wavelength = wl;
         source_zpos = zpos;
         slopeA = slope;
 
-        ABWFF = 1.30;
-        RAYFF=0.75;
+        ABWFF = abw;
+        RAYFF = ray;
+
+        std::cout<<"wavelength = "<<wavelength<<" source_zpos = "<<source_zpos<<" slopeA = "<<slopeA<<" ABWFF = "<<ABWFF<<" RAYFF = "<<RAYFF<<std::endl;
 
         SetAttenuationLength();
     };
