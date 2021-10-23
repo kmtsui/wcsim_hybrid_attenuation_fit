@@ -443,7 +443,6 @@ int main(int argc, char **argv){
         if (pmtType==0) atten_weight0[i]=wgt;
         if (pmtType==1) atten_weight1[i]=wgt;
       }
-      weight = attenZ->GetAttenuationZWeight(dist,dz);
       if (pmtType==0) pmt_type0->Fill();
       if (pmtType==1) pmt_type1->Fill();
     }
