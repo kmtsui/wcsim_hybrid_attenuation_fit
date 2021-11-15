@@ -40,6 +40,7 @@ private:
     double costhm;
     double phim;
     double omega;
+    double dz;
     double timetof;
     int PMT_id;
     int mPMT_id;

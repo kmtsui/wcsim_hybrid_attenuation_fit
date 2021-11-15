@@ -21,6 +21,7 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_h_scatter_map(nullptr)
     , m_time_offset(false)
     , m_time_smear(false)
+    , m_z0(0.)
 {
     TH1::SetDefaultSumw2(true);
 
@@ -287,6 +288,8 @@ void AnaSample::InitEventMap()
         {
             const int b = e.GetPMTID();
             e.SetSampleBin(b);
+
+            e.SetZ0(m_z0);
         }
     }
     else for(auto& e : m_pmts)
@@ -306,6 +309,8 @@ void AnaSample::InitEventMap()
         }
 #endif
         e.SetSampleBin(b);
+
+        e.SetZ0(m_z0);
     }
 }
 
@@ -366,12 +371,16 @@ void AnaSample::FillDataHist(bool stat_fluc)
     {
         const int pmtID = e.GetPMTID();
         double weight = m_hdata_unbinned->GetBinContent(pmtID+1);
+
         if (m_scatter) 
         {
-            double val = m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_scatter_factor; // constant scale factor for indirect PE prediction
-            double err = 1./m_hdata_unbinned_control->GetBinContent(pmtID+1)*val*val; // stat error from measured PE in control region
-            e.SetPEIndirect(val);
-            e.SetPEIndirectErr(err);
+            if (m_hdata_unbinned_control->GetBinContent(pmtID+1)>0)
+            {
+                double val = m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_scatter_factor; // constant scale factor for indirect PE prediction
+                double err = 1./m_hdata_unbinned_control->GetBinContent(pmtID+1)*val*val; // stat error from measured PE in control region
+                e.SetPEIndirect(val);
+                e.SetPEIndirectErr(err);
+            }
             // weight -= m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_scatter_factor;
             // if (weight<0) weight=0;
         }
@@ -380,15 +389,19 @@ void AnaSample::FillDataHist(bool stat_fluc)
             //weight -= m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1);
             //std::cout << TAG<<pmtID<<" "<<m_hdata_unbinned->GetBinContent(pmtID+1)<<" "<<m_hdata_unbinned_control->GetBinContent(pmtID+1)<<" "<<m_h_scatter_map->GetBinContent(pmtID+1)<<std::endl;
             //if (weight<0) weight=0;
-            double val = m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1); // predefined scale factor for indirect PE prediction
-            double err = m_h_scatter_map->GetBinError(pmtID+1); // error from scale factor estimation
-            err = (err*err + 1./m_hdata_unbinned_control->GetBinContent(pmtID+1))*val*val; 
-            // double val = m_h_scatter_map->GetBinContent(pmtID+1);
-            // double err = m_h_scatter_map->GetBinError(pmtID+1);
-            // err = err*err*val*val;
-            e.SetPEIndirect(val);
-            e.SetPEIndirectErr(err);
+            if (m_hdata_unbinned_control->GetBinContent(pmtID+1)>0)
+            {
+                double val = m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1); // predefined scale factor for indirect PE prediction
+                double err = m_h_scatter_map->GetBinError(pmtID+1); // error from scale factor estimation
+                err = (err*err + 1./m_hdata_unbinned_control->GetBinContent(pmtID+1))*val*val; 
+                // double val = m_h_scatter_map->GetBinContent(pmtID+1);
+                // double err = m_h_scatter_map->GetBinError(pmtID+1);
+                // err = err*err*val*val;
+                e.SetPEIndirect(val);
+                e.SetPEIndirectErr(err);
+            }
         }
+
         e.SetPE(weight);
         const int reco_bin  = e.GetSampleBin();
         m_hdata->Fill(reco_bin + 0.5, weight);

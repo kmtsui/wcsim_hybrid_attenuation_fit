@@ -28,6 +28,7 @@
 #include "OPTICALFIT/utils/WCSIMDigitization.hh"
 #include "OPTICALFIT/utils/CalcGroupVelocity.hh"
 #include "OPTICALFIT/utils/LEDProfile.hh"
+#include "OPTICALFIT/utils/AttenuationZ.hh"
 
 using namespace std;
 
@@ -56,6 +57,8 @@ void HelpMessage()
             << "-o : Output file\n"
             << "-l : Laser wavelength\n"
             << "-w : Apply diffuser profile reweight\n"
+            << "-z : Reweighing attenuation factor with input slope\n"
+            << "-p : Set water parameters for attenuation factor reweight\n"
             << "-b : Use only B&L PMTs\n"
             << "-d : Run with raw Cherenkov hits and perform ad-hoc digitization\n"
             << "-t : Use separated triggers\n"
@@ -76,6 +79,10 @@ int main(int argc, char **argv){
   bool plotDigitized = true; //using digitized hits
   bool separatedTriggers=false; //Assume two independent triggers, one for mPMT, one for B&L
   bool diffuserProfile = false; //Reweigh PMT hits by source angle
+  bool zreweight = false; //Reweigh PMT hits by a z-dependence in attenuation length
+  double slopeA = 0;
+  double abwff = 1.3;
+  double rayff = 0.75;
 
   double wavelength = 400; //wavelength in nm
 
@@ -85,7 +92,7 @@ int main(int argc, char **argv){
   int endEvent=0;
   int seed = 0;
   char c;
-  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:hdtvw")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
+  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:z:p:hdtvw")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
     switch(c){
       case 'f':
         filename = optarg;
@@ -127,6 +134,32 @@ int main(int argc, char **argv){
       case 'w':
         diffuserProfile = true;
         break;
+      case 'z':
+        slopeA = std::stod(optarg);
+        if (fabs(slopeA)>1.e-9)
+        {
+          zreweight = true;
+          std::cout<<"Reweighing attenuation factor with linear z-dependence, slope = "<<slopeA<<std::endl;
+        }
+        break;
+      case 'p':
+        {
+          std::string wp = optarg;
+          std::stringstream ss(wp);
+          int count = 0;
+          for(std::string s; std::getline(ss, s, ',');)
+          {
+            double val = std::stod(s);
+            if (val>0)
+            {
+              if (count==0) abwff = val;
+              else if (count==1) rayff = val;
+            }
+            count++;
+          }
+          std::cout<<"Setting new water paramters, ABWFF = "<<abwff<<", RAYFF = "<<rayff<<std::endl;
+          break;
+        }
       case 'h':
         HelpMessage();
       default:
@@ -259,8 +292,11 @@ int main(int argc, char **argv){
   wcsimrootevent = wcsimrootsuperevent->GetTrigger(0);
   for (int i=0;i<3;i++) vtxpos[i]=wcsimrootevent->GetVtx(i);
 
+  AttenuationZ* attenZ;
+  if (zreweight) attenZ = new AttenuationZ(wavelength,vtxpos[2],slopeA,abwff,rayff);
+
   // Save the PMT geometry information relative to source
-  double dist, costh, cosths, phis, omega, phim, costhm;
+  double dist, costh, cosths, phis, omega, phim, costhm, dz;
   int mPMT_id;
   TTree* pmt_type0 = new TTree("pmt_type0","pmt_type0");
   pmt_type0->Branch("R",&dist);          // distance to source
@@ -270,6 +306,7 @@ int main(int argc, char **argv){
   pmt_type0->Branch("costhm",&costhm);   // costhm = costh
   pmt_type0->Branch("phim",&phim);       // dummy
   pmt_type0->Branch("omega",&omega);     // solid angle subtended by PMT
+  pmt_type0->Branch("dz",&dz);           // z-pos relative to source
   pmt_type0->Branch("PMT_id",&PMT_id);   // unique PMT id
   pmt_type0->Branch("mPMT_id",&mPMT_id); // dummy 
   pmt_type0->Branch("weight",&weight);   // weight from e.g. LED profile
@@ -281,6 +318,7 @@ int main(int argc, char **argv){
   pmt_type1->Branch("costhm",&costhm);   // photon incident theta angle relative to central PMT 
   pmt_type1->Branch("phim",&phim);       // photon incident phi angle relative to central PMT 
   pmt_type1->Branch("omega",&omega);
+  pmt_type1->Branch("dz",&dz);
   pmt_type1->Branch("PMT_id",&PMT_id);
   pmt_type1->Branch("mPMT_id",&mPMT_id); //sub-ID of PMT inside a mPMT module
                                          // 0 -11 : outermost ring
@@ -327,6 +365,8 @@ int main(int argc, char **argv){
   int nPMTs_type1=0; if (hybrid) nPMTs_type1=geo->GetWCNumPMT(true);
   std::vector<double> ledweight_type0(nPMTs_type0,-1);
   std::vector<double> ledweight_type1(nPMTs_type1,-1);
+  std::vector<double> atten_weight0(nPMTs_type0,-1);
+  std::vector<double> atten_weight1(nPMTs_type1,-1);
   for (int pmtType=0;pmtType<nPMTtypes;pmtType++) 
   {
     int nPMTs_type = pmtType==0 ? nPMTs_type0 : nPMTs_type1;
@@ -363,11 +403,13 @@ int main(int argc, char **argv){
       double localx = vDir[0]*vSource_localXaxis[0]+vDir[1]*vSource_localXaxis[1]+vDir[2]*vSource_localXaxis[2];
       double localy = vDir[0]*vSource_localYaxis[0]+vDir[1]*vSource_localYaxis[1]+vDir[2]*vSource_localYaxis[2];
       phis = atan2(localy,localx);
+      weight = 1;
       if (diffuserProfile)
       {
-        weight = led->GetLEDWeight(cosths,phis);
-        if (pmtType==0) ledweight_type0[i]=weight;
-        if (pmtType==1) ledweight_type1[i]=weight;
+        double wgt = led->GetLEDWeight(cosths,phis);
+        weight *= wgt;
+        if (pmtType==0) ledweight_type0[i]=wgt;
+        if (pmtType==1) ledweight_type1[i]=wgt;
       }
       double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
       omega = CalcSolidAngle(pmtradius,dist,costh);
@@ -392,6 +434,14 @@ int main(int argc, char **argv){
         TVector3 v_dir2 = v_orientation.Cross(-v_dir);
         // Use dot cross to calculate the phi angle
         phim = v_dir1.Angle(v_dir2);
+      }
+      dz = PMTpos[2] - vtxpos[2];
+      if (zreweight)
+      {
+        double wgt = attenZ->GetAttenuationZWeight(dist,dz);
+        weight *= wgt;
+        if (pmtType==0) atten_weight0[i]=wgt;
+        if (pmtType==1) atten_weight1[i]=wgt;
       }
       if (pmtType==0) pmt_type0->Fill();
       if (pmtType==1) pmt_type1->Fill();
@@ -594,10 +644,14 @@ int main(int argc, char **argv){
         weight = 1;
         if (diffuserProfile) 
         {
-          weight = pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
-          nPE *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];  
-          nPE_digi *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];  
+          weight *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
         }
+        if (zreweight)
+        {
+          weight *= pmtType==0 ? atten_weight0[PMT_id] : atten_weight1[PMT_id];   
+        }
+        nPE *= weight;  
+        nPE_digi *= weight;  
 
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
@@ -698,9 +752,13 @@ int main(int argc, char **argv){
         weight = 1;
         if (diffuserProfile) 
         {
-          weight = pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
-          nPE *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];  
+          weight *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
         }
+        if (zreweight)
+        {
+          weight *= pmtType==0 ? atten_weight0[PMT_id] : atten_weight1[PMT_id];   
+        }
+        nPE *= weight;  
         if (pmtType==0) hitRate_pmtType0->Fill();
         if (pmtType==1) hitRate_pmtType1->Fill();
 

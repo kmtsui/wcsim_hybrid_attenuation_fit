@@ -90,6 +90,12 @@ void AnaFitParameters::SetParameterFunction(const std::string& func_name)
         m_func = new PolynomialCosth;
         m_func_type = kPolynomialCosth;
     }
+    else if(func_name == "AttenuationZ")
+    {
+        std::cout << TAG << "Setting function to AttenuationZ." << std::endl;
+        m_func = new AttenuationZ;
+        m_func_type = kAttenuationZ;
+    }
     else
     {
         std::cout << TAG << "Invalid function name. Setting to Identity by default." << std::endl;
@@ -222,7 +228,7 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
     }
 
     // Fixing the un-used parameters in fit for proper error calculation
-    if (m_func_type != kPolynomialCosth)
+    if (m_func_type != kPolynomialCosth && m_func_type != kAttenuationZ)
         for (int i=0;i<Npar;i++)
             if (!params_used[i]) pars_fixed[i]=true;
 }
@@ -232,6 +238,11 @@ void AnaFitParameters::ApplyParameters(std::vector<double>& params)
     // Update parameters before reweight
     if (m_func_type == kPolynomialCosth)
         ((PolynomialCosth*)m_func)->SetPolynomial(params);
+    else if (m_func_type == kAttenuationZ)
+    {
+        ((AttenuationZ*)m_func)->alpha0 = params[0];
+        ((AttenuationZ*)m_func)->slopeA = params[1];
+    }
 }
 
 void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params)

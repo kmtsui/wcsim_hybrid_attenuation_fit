@@ -74,4 +74,4 @@ private:
     TGraph *gr_power_cosths, *gr_variation_cosths;
 };
 
-#endif // CALCGROUPVELOCITY_HH
+#endif // LEDPROFILE_HH

@@ -18,7 +18,8 @@ enum FunctionType
     kIdentity    = 0,
     kAttenuation = 1,
     kScatter = 2,
-    kPolynomialCosth = 3
+    kPolynomialCosth = 3,
+    kAttenuationZ = 4
 };
 
 
@@ -52,6 +53,33 @@ public:
 
         return val;
     }
+};
+
+class AttenuationZ : public ParameterFunction
+{
+public:
+    double operator()(double par, AnaEvent ev)
+    {
+        double R = ev.GetR();
+        double omega = ev.GetOmega();
+        double dz = ev.GetDz();
+        double z0 = ev.GetZ0();
+        double alpha_z0 = alpha0 + slopeA*z0;
+        double val;
+        double da = slopeA*dz;
+        if (fabs(da)>1.e-9)
+        {
+            val = TMath::Power(1+da/alpha_z0,-R/da)*omega;
+        }
+        else
+        {
+            val = TMath::Exp(-R/alpha_z0)*omega;
+        }
+
+        return val;
+    }
+    double alpha0;
+    double slopeA;
 };
 
 class Scatter : public ParameterFunction

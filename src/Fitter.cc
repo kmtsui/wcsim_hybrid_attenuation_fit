@@ -310,12 +310,6 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
         err_pars.emplace_back(vec_err);
     }
 
-    for(int i = 0; i < m_fitpara.size(); i++)
-    {
-        res_pars.emplace_back(par_val_vec[i]);
-        err_pars.emplace_back(std::sqrt(cov_matrix[i][i]));
-    }
-
     if(k != ndim)
     {
         std::cout << TAG << "Number of parameters does not match." << std::endl;

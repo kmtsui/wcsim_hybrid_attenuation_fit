@@ -20,11 +20,13 @@ class AnaEvent
             m_costhm = -999.0;
             m_phim = -999.0;
             m_omega = -999.0;
+            m_dz = 0;
+            m_z0 = 0;
             m_R   = -999.0;
             m_nPE   = -999.0;
             //m_nPE_tail = 0.0;
-            m_nPE_indirect = -999.0;
-            m_nPE_indirect_err = -999.0;
+            m_nPE_indirect = 0.0;
+            m_nPE_indirect_err = 0.0;
             m_timetof   = -999.0;
             m_wght     = 1.0;
             m_wghtMC   = 1.0;
@@ -62,6 +64,12 @@ class AnaEvent
 
         inline void SetOmega(double val){ m_omega = val; }
         inline double GetOmega() const { return m_omega; }
+
+        inline void SetDz(double val){ m_dz = val; }
+        inline double GetDz() const { return m_dz; }
+
+        inline void SetZ0(double val){ m_z0 = val; }
+        inline double GetZ0() const { return m_z0; }
 
         inline void SetR(double val){ m_R = val; }
         inline double GetR() const { return m_R; }
@@ -136,6 +144,10 @@ class AnaEvent
                 return m_sample;
             else if(var == "omega")
                 return m_omega;
+            else if(var == "dz")
+                return m_dz;
+            else if(var == "z0")
+                return m_z0;
             else if(var == "PMT_id")
                 return m_pmtid;
             else if(var == "mPMT_id")
@@ -167,6 +179,8 @@ class AnaEvent
         double m_costhm;   //photon incident theta angle relative to central PMT ( = costh for B&L PMT )
         double m_phim;     //photon incident phi angle relative to central PMT, only for mPMT
         double m_omega;    //solid angle subtended by PMT
+        double m_dz;       // z-pos relative to source
+        double m_z0;       // diffuser z-pos
         double m_R;        //distance to source
         double m_nPE;      //number of PE
         //double m_nPE_tail; //number of PE at the tail
