@@ -183,6 +183,12 @@ int main(int argc, char** argv)
                     std::cout << TAG<<"Random timetof smearing per PMT, sampled from a Gaussian of mean = "<< mean << ", width = "<< width <<std::endl;
                     s->SetTimeSmear(true, mean, width);
                 }
+                else if (optname=="z0")
+                {
+                    auto z0 = toml_h::find<double>(opt,1);
+                    std::cout << TAG<<"Setting diffuser Z-position to "<< z0 <<std::endl;
+                    s->SetZ0(z0);
+                }
             }
         }
 
