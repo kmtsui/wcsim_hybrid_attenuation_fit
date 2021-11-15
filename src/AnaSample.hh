@@ -87,6 +87,8 @@ public:
 
     inline void SetTimeSmear(bool smear, double mean, double width) { m_time_smear = smear; m_time_smear_mean = mean; m_time_smear_width = width; }
 
+    inline void SetZ0(double val) { m_z0 = val; }
+
 protected:
     int m_sample_id;
     int m_nbins;
@@ -112,6 +114,8 @@ protected:
     bool m_time_smear;
     double m_time_smear_mean;
     double m_time_smear_width;
+
+    double m_z0;
 
     std::vector<std::string> m_binvar;
 
