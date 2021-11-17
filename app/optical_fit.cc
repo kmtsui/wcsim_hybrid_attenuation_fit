@@ -133,21 +133,27 @@ int main(int argc, char** argv)
                 {
                     auto mask = toml_h::find<int>(opt,1);
                     std::cout << TAG<<"Masking to use only "<< mask << " PMTs" <<std::endl;
-                    auto nPMTpermPMT = toml_h::find<int>(samples_config, "nPMTpermPMT");
-                    std::cout << TAG << "Set nPMTpermPMT =  "<< nPMTpermPMT <<std::endl;
                     s->MaskPMT(mask);
-                    s->SetnPMTpermPMT(nPMTpermPMT);
+                    if (pmttype==1)
+                    {
+                        auto nPMTpermPMT = toml_h::find<int>(samples_config, "nPMTpermPMT");
+                        std::cout << TAG << "Set nPMTpermPMT =  "<< nPMTpermPMT <<std::endl;
+                        s->SetnPMTpermPMT(nPMTpermPMT);
+                    }
                 }
                 else if (optname=="mask_mPMT")
                 {
-                    auto mask = toml_h::find<std::vector<int>>(opt,1);
-                    std::cout << TAG << "Masking the small PMTs inside mPMT: ";
-                    for (auto m : mask) std::cout << m <<" ";
-                    std::cout << std::endl;
-                    auto nPMTpermPMT = toml_h::find<int>(samples_config, "nPMTpermPMT");
-                    std::cout << TAG << "Set nPMTpermPMT =  "<< nPMTpermPMT <<std::endl;
-                    s->MaskmPMT(mask);
-                    s->SetnPMTpermPMT(nPMTpermPMT);
+                    if (pmttype==1)
+                    {
+                        auto mask = toml_h::find<std::vector<int>>(opt,1);
+                        std::cout << TAG << "Masking the small PMTs inside mPMT: ";
+                        for (auto m : mask) std::cout << m <<" ";
+                        std::cout << std::endl;
+                        auto nPMTpermPMT = toml_h::find<int>(samples_config, "nPMTpermPMT");
+                        std::cout << TAG << "Set nPMTpermPMT =  "<< nPMTpermPMT <<std::endl;
+                        s->MaskmPMT(mask);
+                        s->SetnPMTpermPMT(nPMTpermPMT);
+                    }
                 }
                 else if (optname=="scatter_control")
                 {
@@ -310,9 +316,6 @@ int main(int argc, char** argv)
     min_settings.tolerance = toml_h::find<double>(minimizer_config, "tolerance");
     min_settings.max_iter = toml_h::find<double>(minimizer_config, "max_iter");
     min_settings.max_fcn = toml_h::find<double>(minimizer_config, "max_fcn");
-    // optonal MCMC for error estimation
-    int MCMCSteps = toml_h::find<double>(minimizer_config, "MCMCSteps");
-    double MCMCStepSize = toml_h::find<double>(minimizer_config, "MCMCStepSize");
 
     fitter.SetMinSettings(min_settings);
     fitter.InitFitter(fitparas);
@@ -323,10 +326,25 @@ int main(int argc, char** argv)
     if(!did_converge)
         std::cout << TAG << "Fit did not coverge." << std::endl;
 
+    // optonal MCMC for error estimation
+    int MCMCSteps = toml_h::find<int>(minimizer_config, "MCMCSteps");
     if (MCMCSteps>0)
     {
+        double MCMCStepSize = toml_h::find<double>(minimizer_config, "MCMCStepSize");
         std::cout << TAG << "Running MCMC for " << MCMCSteps << " steps, with step size = " << MCMCStepSize << std::endl;
         fitter.RunMCMCScan(MCMCSteps,MCMCStepSize);
+    }
+
+    // optional 1D parameter scan
+    int ScanSteps = toml_h::find<int>(minimizer_config, "ScanSteps");
+    if (ScanSteps>0)
+    {
+        std::vector<int> ParameterScans = toml_h::find<std::vector<int>>(minimizer_config, "ParameterScans");
+        std::cout << TAG << "Running 1D scan for parameters ";
+        for (int i=0;i<ParameterScans.size();i++)
+            std::cout << ParameterScans[i]<<", ";
+        std::cout << "for " << ScanSteps <<" steps" << std::endl;
+        fitter.ParameterScans(ParameterScans,ScanSteps);
     }
 
     fout->Close();

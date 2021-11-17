@@ -26,6 +26,7 @@
 // Mock up digitization code copied from WCSIM
 // Currently contains BoxandLine20inchHQE and PMT3inchR14374 options
 #include "OPTICALFIT/utils/WCSIMDigitization.hh"
+
 #include "OPTICALFIT/utils/CalcGroupVelocity.hh"
 #include "OPTICALFIT/utils/LEDProfile.hh"
 #include "OPTICALFIT/utils/AttenuationZ.hh"
@@ -58,7 +59,7 @@ void HelpMessage()
             << "-l : Laser wavelength\n"
             << "-w : Apply diffuser profile reweight\n"
             << "-z : Reweighing attenuation factor with input slope\n"
-            << "-p : Set water parameters for attenuation factor reweight\n"
+            << "-p : Set water parameters for attenuation factor reweight (ABWFF,RAYFF)\n"
             << "-b : Use only B&L PMTs\n"
             << "-d : Run with raw Cherenkov hits and perform ad-hoc digitization\n"
             << "-t : Use separated triggers\n"
@@ -186,15 +187,12 @@ int main(int argc, char **argv){
   rng = new TRandom3(seed);
   gRandom = rng;
 
-  LEDProfile* led;
-  if (diffuserProfile) led = new LEDProfile();
-
   // Get the a pointer to the tree from the file
   TTree *tree = (TTree*)file->Get("wcsimT");
 
   // Get the number of events
   int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
-  if(endEvent!=0 && endEvent<=nevent) nevent = endEvent;
+  if(endEvent>0 && endEvent<=nevent) nevent = endEvent;
   if(verbose) printf("nevent %d\n",nevent);
   
   // Create a WCSimRootEvent to put stuff from the tree in
@@ -226,6 +224,7 @@ int main(int argc, char **argv){
   geotree->GetEntry(0);
   PMTradius[0]=geo->GetWCPMTRadius();
   PMTradius[1]=geo->GetWCPMTRadius(true);
+  //std::cout<<"geo->GetWCCylLength() = "<<geo->GetWCCylLength()<<std::endl;
 
   // Options tree - only need 1 "event"
   TTree *opttree = (TTree*)file->Get("wcsimRootOptionsT");
@@ -287,11 +286,17 @@ int main(int argc, char **argv){
     hitRate_pmtType1->Branch("timetof_digi",&timetof_digi);
   }
 
+  // Load diffuser position into memory
   double vtxpos[3];
   tree->GetEntry(0);
   wcsimrootevent = wcsimrootsuperevent->GetTrigger(0);
   for (int i=0;i<3;i++) vtxpos[i]=wcsimrootevent->GetVtx(i);
 
+  // Reweight class for source angular profile
+  LEDProfile* led;
+  if (diffuserProfile) led = new LEDProfile();
+
+  // Reweight class for z-dependence attenuation length
   AttenuationZ* attenZ;
   if (zreweight) attenZ = new AttenuationZ(wavelength,vtxpos[2],slopeA,abwff,rayff);
 
@@ -331,7 +336,7 @@ int main(int argc, char **argv){
   double vDirSource[3];
   double vSource_localXaxis[3];
   double vSource_localYaxis[3];
-  double endcapZ=3000; // hardcoded, bad!
+  double endcapZ = geo->GetWCCylLength()/2.*0.9; // cut value to determine whether the diffuser is in the barrel or endcap
   // Barrel injector
   if (abs(vtxpos[2])<endcapZ) {
     vDirSource[0]=vtxpos[0];
@@ -363,6 +368,7 @@ int main(int argc, char **argv){
 
   int nPMTs_type0=geo->GetWCNumPMT();
   int nPMTs_type1=0; if (hybrid) nPMTs_type1=geo->GetWCNumPMT(true);
+  // reweight factor per PMT
   std::vector<double> ledweight_type0(nPMTs_type0,-1);
   std::vector<double> ledweight_type1(nPMTs_type1,-1);
   std::vector<double> atten_weight0(nPMTs_type0,-1);
@@ -415,6 +421,7 @@ int main(int argc, char **argv){
       omega = CalcSolidAngle(pmtradius,dist,costh);
       costhm = costh;
       phim = 0;
+      // mPMT specific
       if (pmtType==1 && mPMT_id!=nPMTpermPMT-1)
       { 
         // Calculate photon incident cos(theta) and phi angle relative to central PMT 
@@ -550,7 +557,7 @@ int main(int argc, char **argv){
       if(pmtType==0) timeArray = wcsimrootevent->GetCherenkovHitTimes();
       else timeArray = wcsimrootevent2->GetCherenkovHitTimes();
       
-      double particleRelativePMTpos[3];
+      //double particleRelativePMTpos[3];
       double totalPe = 0;
       //int totalHit = 0;
 
@@ -580,10 +587,10 @@ int main(int argc, char **argv){
         PMT_id = tubeNumber-1;
 
         double PMTpos[3];
-        double PMTdir[3];
+        //double PMTdir[3];
         for(int j=0;j<3;j++){
           PMTpos[j] = pmt.GetPosition(j);
-          PMTdir[j] = pmt.GetOrientation(j);
+          //PMTdir[j] = pmt.GetOrientation(j);
         }
         
         ////////////////////////////////////////////////////////////////////////////
@@ -595,21 +602,21 @@ int main(int argc, char **argv){
         //else phiAngle = TMath::Pi() + (TMath::Pi() - TMath::ACos(PMTpos[0]/radius));
         
         // Use vertex positions for LI events
-        for(int j=0;j<3;j++) particleRelativePMTpos[j] = PMTpos[j] - vtxpos[j];
+        // for(int j=0;j<3;j++) particleRelativePMTpos[j] = PMTpos[j] - vtxpos[j];
           
-        double vDir[3];double vOrientation[3];
+        double vDir[3]; //double vOrientation[3];
         for(int j=0;j<3;j++){
-          vDir[j] = particleRelativePMTpos[j];
-          vOrientation[j] = PMTdir[j];
+          vDir[j] = PMTpos[j] - vtxpos[j];
+          //vOrientation[j] = PMTdir[j];
         }
         double Norm = TMath::Sqrt(vDir[0]*vDir[0]+vDir[1]*vDir[1]+vDir[2]*vDir[2]);
         double tof = Norm*1e-2/(vg);
         //if(verbose) cout << "Time of flight = " << tof << endl;
-        double NormOrientation = TMath::Sqrt(vOrientation[0]*vOrientation[0]+vOrientation[1]*vOrientation[1]+vOrientation[2]*vOrientation[2]);
-        for(int j=0;j<3;j++){
-          vDir[j] /= Norm;
-          vOrientation[j] /= NormOrientation;
-        }
+        //double NormOrientation = TMath::Sqrt(vOrientation[0]*vOrientation[0]+vOrientation[1]*vOrientation[1]+vOrientation[2]*vOrientation[2]);
+        //for(int j=0;j<3;j++){
+          //vDir[j] /= Norm;
+          //vOrientation[j] /= NormOrientation;
+        //}
         
         WCSimRootCherenkovHitTime * HitTime = (WCSimRootCherenkovHitTime*) timeArray->At(timeArrayIndex);//Takes the first hit of the array as the timing, It should be the earliest hit
         //WCSimRootCherenkovHitTime HitTime = (WCSimRootCherenkovHitTime) timeArray->At(j);		  
@@ -622,7 +629,7 @@ int main(int argc, char **argv){
         for (int idx = timeArrayIndex; idx<timeArrayIndex+peForTube; idx++) {
           WCSimRootCherenkovHitTime * cht = (WCSimRootCherenkovHitTime*) timeArray->At(idx);
 
-          // only works for peForTube = 1
+          // only works well for peForTube = 1
           // if peForTube > 1, you don't know whether reflection and scattering happens at the same time for a single photon
           if (cht->GetReflection()>0) nReflec++;
           if (cht->GetRayScattering()>0) nRaySct++;
@@ -678,7 +685,7 @@ int main(int argc, char **argv){
       if(pmtType==0) timeArray = wcsimrootevent->GetCherenkovHitTimes();
       else timeArray = wcsimrootevent2->GetCherenkovHitTimes();
       */
-      double particleRelativePMTpos[3];
+      //double particleRelativePMTpos[3];
       double totalPe = 0;
       //int totalHit = 0;
 
@@ -709,10 +716,10 @@ int main(int argc, char **argv){
         PMT_id = (tubeNumber-1.);
         
         double PMTpos[3];
-        double PMTdir[3];                   
+        //double PMTdir[3];                   
         for(int j=0;j<3;j++){
           PMTpos[j] = pmt.GetPosition(j);
-          PMTdir[j] = pmt.GetOrientation(j);
+          //PMTdir[j] = pmt.GetOrientation(j);
         }
         
         
@@ -725,20 +732,20 @@ int main(int argc, char **argv){
         //else phiAngle = TMath::Pi() + (TMath::Pi() - TMath::ACos(PMTpos[0]/radius));
 
         // Use vertex positions for LI events
-        for(int j=0;j<3;j++) particleRelativePMTpos[j] = PMTpos[j] - vtxpos[j];
+        //for(int j=0;j<3;j++) particleRelativePMTpos[j] = PMTpos[j] - vtxpos[j];
         
-        double vDir[3];double vOrientation[3];
+        double vDir[3]; //double vOrientation[3];
         for(int j=0;j<3;j++){
-          vDir[j] = particleRelativePMTpos[j];
-          vOrientation[j] = PMTdir[j];	  
+          vDir[j] = PMTpos[j] - vtxpos[j];
+          //vOrientation[j] = PMTdir[j];	  
         }
         double Norm = TMath::Sqrt(vDir[0]*vDir[0]+vDir[1]*vDir[1]+vDir[2]*vDir[2]);
         double tof = Norm*1e-2/(vg);
-        double NormOrientation = TMath::Sqrt(vOrientation[0]*vOrientation[0]+vOrientation[1]*vOrientation[1]+vOrientation[2]*vOrientation[2]);
-        for(int j=0;j<3;j++){
-          vDir[j] /= Norm;
-          vOrientation[j] /= NormOrientation;
-        }
+        //double NormOrientation = TMath::Sqrt(vOrientation[0]*vOrientation[0]+vOrientation[1]*vOrientation[1]+vOrientation[2]*vOrientation[2]);
+        //for(int j=0;j<3;j++){
+        //  vDir[j] /= Norm;
+        //  vOrientation[j] /= NormOrientation;
+        //}
 
         double time = wcsimrootcherenkovdigihit->GetT();
       

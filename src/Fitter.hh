@@ -157,7 +157,7 @@ private:
     }
     
     const std::string TAG = color::GREEN_STR + "[Fitter]: " + color::RESET_STR;
-    const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
-    const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
+    const std::string ERR = color::RED_STR + "[Fitter ERROR]: " + color::RESET_STR;
+    const std::string WAR = color::RED_STR + "[Fitter WARNING]: " + color::RESET_STR;
 };
 #endif

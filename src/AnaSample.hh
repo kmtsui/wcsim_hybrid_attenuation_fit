@@ -132,16 +132,16 @@ protected:
     CalcLLHFunc* m_llh;
 
     TH1D* m_hpred; // direct PE prediction
-    TH1D* m_hpred_indirect; // indirect PE prediction
+    //TH1D* m_hpred_indirect; // indirect PE prediction
     TH1D* m_hpred_err2; // MC stat error in PE prediction
     TH1D* m_hdata; // data histogram
     TH1D* m_hdata_control; // data histogram in control region
-    TH1D* m_hdata_unbinned; // data histogram without PMT binning
-    TH1D* m_hdata_unbinned_control; // data histogram in control region without PMT binning
+    TH1D* m_hdata_pmt; // data histogram per PMT 
+    TH1D* m_hdata_pmt_control; // data histogram in control region per PMT
 
     const std::string TAG = color::GREEN_STR + "[AnaSample]: " + color::RESET_STR;
-    const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
-    const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
+    const std::string ERR = color::RED_STR + "[AnaSample ERROR]: " + color::RESET_STR;
+    const std::string WAR = color::RED_STR + "[AnaSample WARNING]: " + color::RESET_STR;
 
 };
 

@@ -11,11 +11,11 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_binning(binning)
     , m_hpred(nullptr)
     , m_hpred_err2(nullptr)
-    , m_hpred_indirect(nullptr)
+    // , m_hpred_indirect(nullptr)
     , m_hdata(nullptr)
     , m_hdata_control(nullptr)
-    , m_hdata_unbinned(nullptr)
-    , m_hdata_unbinned_control(nullptr)
+    , m_hdata_pmt(nullptr)
+    , m_hdata_pmt_control(nullptr)
     , m_scatter(false)
     , m_scatter_map(false)
     , m_h_scatter_map(nullptr)
@@ -46,8 +46,8 @@ AnaSample::~AnaSample()
     if(m_hpred_err2 != nullptr)
         delete m_hpred_err2;
 
-    if(m_hpred_indirect != nullptr)
-        delete m_hpred_indirect;
+    // if(m_hpred_indirect != nullptr)
+    //     delete m_hpred_indirect;
 
     if(m_hdata != nullptr)
         delete m_hdata;
@@ -55,11 +55,11 @@ AnaSample::~AnaSample()
     if(m_hdata_control != nullptr)
         delete m_hdata_control;
 
-    if(m_hdata_unbinned != nullptr)
-        delete m_hdata_unbinned;
+    if(m_hdata_pmt != nullptr)
+        delete m_hdata_pmt;
 
-    if(m_hdata_unbinned_control != nullptr)
-        delete m_hdata_unbinned_control;
+    if(m_hdata_pmt_control != nullptr)
+        delete m_hdata_pmt_control;
 
     if(m_h_scatter_map != nullptr)
         delete m_h_scatter_map;
@@ -98,11 +98,11 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
 
     unsigned long nDataEntries = selTree.GetDataEntries();
 
-    if(m_hdata_unbinned != nullptr)
-        delete m_hdata_unbinned;
+    if(m_hdata_pmt != nullptr)
+        delete m_hdata_pmt;
 
     int nPMTs = selTree.GetPMTEntries();
-    m_hdata_unbinned = new TH1D("","",nPMTs,0,nPMTs);
+    m_hdata_pmt = new TH1D("","",nPMTs,0,nPMTs);
 
     // determine the random offset for each PMT
     std::vector<double> timetof_shift;
@@ -128,9 +128,9 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     // Setup control region if the scattering option is on
     if (m_scatter || m_scatter_map)
     {
-        if(m_hdata_unbinned_control != nullptr)
-            delete m_hdata_unbinned_control;
-        m_hdata_unbinned_control = new TH1D("","",nPMTs,0,nPMTs);
+        if(m_hdata_pmt_control != nullptr)
+            delete m_hdata_pmt_control;
+        m_hdata_pmt_control = new TH1D("","",nPMTs,0,nPMTs);
     }
 
     int pmtID;
@@ -165,10 +165,10 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         if (skip) continue;
         if (m_scatter || m_scatter_map)
         {
-            if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_unbinned->Fill(pmtID+0.5, nPE);
-            else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_unbinned_control->Fill(pmtID+0.5, nPE);
+            if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_pmt->Fill(pmtID+0.5, nPE);
+            else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_pmt_control->Fill(pmtID+0.5, nPE);
         }
-        else m_hdata_unbinned->Fill(pmtID+0.5, nPE);
+        else m_hdata_pmt->Fill(pmtID+0.5, nPE);
     }
 
     PrintStats();
@@ -179,14 +179,14 @@ AnaEvent* AnaSample::GetEvent(const unsigned int evnum) // not used anymore
 #ifndef NDEBUG
     if(m_events.empty())
     {
-        std::cerr << " In AnaSample::GetEvent()" << std::endl;
-        std::cerr << " No events are found in " << m_name << " sample." << std::endl;
+        std::cerr << ERR << " In AnaSample::GetEvent()" << std::endl;
+        std::cerr << ERR << " No events are found in " << m_name << " sample." << std::endl;
         return nullptr;
     }
     else if(evnum >= m_events.size())
     {
-        std::cerr << " In AnaSample::GetEvent()" << std::endl;
-        std::cerr << " Event number out of bounds in " << m_name << " sample." << std::endl;
+        std::cerr << ERR << " In AnaSample::GetEvent()" << std::endl;
+        std::cerr << ERR << " Event number out of bounds in " << m_name << " sample." << std::endl;
         return nullptr;
     }
 #endif
@@ -199,14 +199,14 @@ AnaEvent* AnaSample::GetPMT(const unsigned int evnum)
 #ifndef NDEBUG
     if(m_pmts.empty())
     {
-        std::cerr << " In AnaSample::GetPMT()" << std::endl;
-        std::cerr << " No PMTs are found in " << m_name << " sample." << std::endl;
+        std::cerr << ERR << " In AnaSample::GetPMT()" << std::endl;
+        std::cerr << ERR << " No PMTs are found in " << m_name << " sample." << std::endl;
         return nullptr;
     }
     else if(evnum >= m_pmts.size())
     {
-        std::cerr << " In AnaSample::GetPMT()" << std::endl;
-        std::cerr << " PMT number out of bounds in " << m_name << " sample." << std::endl;
+        std::cerr << ERR << " In AnaSample::GetPMT()" << std::endl;
+        std::cerr << ERR << " PMT number out of bounds in " << m_name << " sample." << std::endl;
         return nullptr;
     }
 #endif
@@ -234,10 +234,10 @@ void AnaSample::MakeHistos()
     m_hpred_err2 = new TH1D(Form("%s_pred_err2", m_name.c_str()), Form("%s_pred_err2", m_name.c_str()), m_nbins, 0, m_nbins);
     m_hpred_err2->SetDirectory(0);
 
-    if(m_hpred_indirect != nullptr)
-        delete m_hpred_indirect;
-    m_hpred_indirect = new TH1D(Form("%s_pred_indirect", m_name.c_str()), Form("%s_pred_tail", m_name.c_str()), m_nbins, 0, m_nbins);
-    m_hpred_indirect->SetDirectory(0);
+    // if(m_hpred_indirect != nullptr)
+    //     delete m_hpred_indirect;
+    // m_hpred_indirect = new TH1D(Form("%s_pred_indirect", m_name.c_str()), Form("%s_pred_tail", m_name.c_str()), m_nbins, 0, m_nbins);
+    // m_hpred_indirect->SetDirectory(0);
 
     if(m_hdata != nullptr)
         delete m_hdata;
@@ -280,7 +280,7 @@ void AnaSample::InitEventMap()
 
     if (m_binvar[0]=="unbinned")
     {
-        m_nbins = m_hdata_unbinned->GetNbinsX();
+        m_nbins = m_hdata_pmt->GetNbinsX();
         MakeHistos();
         std::cout << TAG<<"Using unbinned histogram for fit"<<std::endl;
 
@@ -301,7 +301,7 @@ void AnaSample::InitEventMap()
 #ifndef NDEBUG
         if(b < 0)
         {
-            std::cout << TAG << "In AnaSample::InitEventMap()\n"
+            std::cout << TAG << "In InitEventMap()\n"
                       << "No bin for current PMT." << std::endl;
             std::cout << TAG << "PMT Var: " << std::endl;
             for(const auto val : e.GetRecoVar())
@@ -319,7 +319,7 @@ void AnaSample::FillEventHist(bool reset_weights)
 #ifndef NDEBUG
     if(m_hpred == nullptr)
     {
-        std::cerr << "In AnaSample::FillEventHist() h_pred is a nullptr!"
+        std::cerr << ERR << "In FillEventHist() h_pred is a nullptr!"
                   << "Returning from function." << std::endl;
         return;
     }
@@ -359,7 +359,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
 #ifndef NDEBUG
     if(m_hdata == nullptr)
     {
-        std::cerr << "In AnaSample::FillDataHist() m_hdata is a nullptr!"
+        std::cerr << ERR << "In FillDataHist() m_hdata is a nullptr!"
                   << "Returning from function." << std::endl;
         return;
     }
@@ -367,45 +367,67 @@ void AnaSample::FillDataHist(bool stat_fluc)
     m_hdata->Reset();
     if (m_scatter || m_scatter_map) m_hdata_control->Reset();
 
+    if(stat_fluc) 
+        std::cout << TAG << "Applying statistical fluctuations..." << std::endl;
+
     for(auto& e : m_pmts)
     {
         const int pmtID = e.GetPMTID();
-        double weight = m_hdata_unbinned->GetBinContent(pmtID+1);
+        double weight = m_hdata_pmt->GetBinContent(pmtID+1)*m_norm;
 
-        if (m_scatter) 
+        if (stat_fluc)
         {
-            if (m_hdata_unbinned_control->GetBinContent(pmtID+1)>0)
+            weight = gRandom->Poisson(weight);
+#ifndef NDEBUG
+            if(weight <= 0.0)
             {
-                double val = m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_scatter_factor; // constant scale factor for indirect PE prediction
-                double err = 1./m_hdata_unbinned_control->GetBinContent(pmtID+1)*val*val; // stat error from measured PE in control region
-                e.SetPEIndirect(val);
-                e.SetPEIndirectErr(err);
+                std::cout << ERR << "In FillDataHist()\n"
+                            << "In Sample " <<  m_name << ", PMT " << pmtID
+                            << " has 0 (or negative) entries. This may cause a problem with chi2 computations."
+                            << std::endl;
             }
-            // weight -= m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_scatter_factor;
-            // if (weight<0) weight=0;
+#endif
         }
-        else if (m_scatter_map)
+
+        double weight_control;
+        if (m_scatter || m_scatter_map) 
         {
-            //weight -= m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1);
-            //std::cout << TAG<<pmtID<<" "<<m_hdata_unbinned->GetBinContent(pmtID+1)<<" "<<m_hdata_unbinned_control->GetBinContent(pmtID+1)<<" "<<m_h_scatter_map->GetBinContent(pmtID+1)<<std::endl;
-            //if (weight<0) weight=0;
-            if (m_hdata_unbinned_control->GetBinContent(pmtID+1)>0)
+            if (m_hdata_pmt_control->GetBinContent(pmtID+1)>0)
             {
-                double val = m_hdata_unbinned_control->GetBinContent(pmtID+1)*m_h_scatter_map->GetBinContent(pmtID+1); // predefined scale factor for indirect PE prediction
-                double err = m_h_scatter_map->GetBinError(pmtID+1); // error from scale factor estimation
-                err = (err*err + 1./m_hdata_unbinned_control->GetBinContent(pmtID+1))*val*val; 
-                // double val = m_h_scatter_map->GetBinContent(pmtID+1);
-                // double err = m_h_scatter_map->GetBinError(pmtID+1);
-                // err = err*err*val*val;
-                e.SetPEIndirect(val);
-                e.SetPEIndirectErr(err);
+                weight_control = m_hdata_pmt_control->GetBinContent(pmtID+1)*m_norm;
+                if (stat_fluc)
+                {
+                    weight_control = gRandom->Poisson(weight_control);
+#ifndef NDEBUG
+                    if(weight_control <= 0.0)
+                    {
+                        std::cout << ERR << "In FillDataHist()\n"
+                                    << "In Sample " <<  m_name << ", PMT " << pmtID
+                                    << " has 0 (or negative) entries. This may cause a problem with chi2 computations."
+                                    << std::endl;
+                    }
+#endif
+                }
+                double indirect_pred = weight_control;
+                // m_scatter_factor: constant scale factor for indirect PE prediction
+                // m_scatter_map: PMT specific scale factor for indirect PE prediction
+                indirect_pred *= m_scatter ? m_scatter_factor : m_h_scatter_map->GetBinContent(pmtID+1);
+                // stat error from measured PE in control region
+                double indirect_err2 = 1./weight_control;
+                // MC stat error from scale factor estimation
+                if (m_scatter_map)
+                    indirect_err2 += m_h_scatter_map->GetBinError(pmtID+1)*m_h_scatter_map->GetBinError(pmtID+1);
+                indirect_err2 *= indirect_pred*indirect_pred;
+
+                e.SetPEIndirect(indirect_pred);
+                e.SetPEIndirectErr(indirect_err2);
             }
         }
 
         e.SetPE(weight);
         const int reco_bin  = e.GetSampleBin();
         m_hdata->Fill(reco_bin + 0.5, weight);
-        if (m_scatter || m_scatter_map) m_hdata_control->Fill(reco_bin + 0.5, m_hdata_unbinned_control->GetBinContent(pmtID+1));
+        if (m_scatter || m_scatter_map) m_hdata_control->Fill(reco_bin + 0.5, weight_control);
     }
 
     // if (m_scatter)
@@ -421,45 +443,45 @@ void AnaSample::FillDataHist(bool stat_fluc)
     // }
 
 
-    m_hdata->Scale(m_norm);
-    if (m_scatter || m_scatter_map) m_hdata_control->Scale(m_norm);
+//     m_hdata->Scale(m_norm);
+//     if (m_scatter || m_scatter_map) m_hdata_control->Scale(m_norm);
 
-    if(stat_fluc) 
-    {
-        std::cout << TAG << "Applying statistical fluctuations..." << std::endl;
+//     if(stat_fluc) 
+//     {
+//         std::cout << TAG << "Applying statistical fluctuations..." << std::endl;
 
-        for(int j = 1; j <= m_hdata->GetNbinsX(); ++j)
-        {
-            double val = m_hdata->GetBinContent(j);
-            val = gRandom->Poisson(val);
-#ifndef NDEBUG
-            if(val <= 0.0)
-            {
-                std::cout << TAG   << "In AnaSample::FillDataHist()\n"
-                            << "In Sample " <<  m_name << ", bin " << j
-                            << " has 0 (or negative) entries. This may cause a problem with chi2 computations."
-                            << std::endl;
-            }
-#endif
-            m_hdata->SetBinContent(j, val);
-        }
+//         for(int j = 1; j <= m_hdata->GetNbinsX(); ++j)
+//         {
+//             double val = m_hdata->GetBinContent(j);
+//             val = gRandom->Poisson(val);
+// #ifndef NDEBUG
+//             if(val <= 0.0)
+//             {
+//                 std::cout << ERR << "In FillDataHist()\n"
+//                             << "In Sample " <<  m_name << ", bin " << j
+//                             << " has 0 (or negative) entries. This may cause a problem with chi2 computations."
+//                             << std::endl;
+//             }
+// #endif
+//             m_hdata->SetBinContent(j, val);
+//         }
 
-        if (m_scatter || m_scatter_map) for(int j = 1; j <= m_hdata_control->GetNbinsX(); ++j) // for now ignore the inconsistency of the indirect PE prediction
-        {
-            double val = m_hdata_control->GetBinContent(j);
-            val = gRandom->Poisson(val);
-#ifndef NDEBUG
-            if(val <= 0.0)
-            {
-                std::cout << TAG   << "In AnaSample::FillDataHist()\n"
-                            << "In Sample " <<  m_name << ", bin " << j
-                            << " has 0 (or negative) entries at tail. This may cause a problem with chi2 computations."
-                            << std::endl;
-            }
-#endif
-            m_hdata_control->SetBinContent(j, val);
-        }
-    }
+//         if (m_scatter || m_scatter_map) for(int j = 1; j <= m_hdata_control->GetNbinsX(); ++j) // for now ignore the inconsistency of the indirect PE prediction
+//         {
+//             double val = m_hdata_control->GetBinContent(j);
+//             val = gRandom->Poisson(val);
+// #ifndef NDEBUG
+//             if(val <= 0.0)
+//             {
+//                 std::cout << ERR << "In FillDataHist()\n"
+//                             << "In Sample " <<  m_name << ", bin " << j
+//                             << " has 0 (or negative) entries at tail. This may cause a problem with chi2 computations."
+//                             << std::endl;
+//             }
+// #endif
+//             m_hdata_control->SetBinContent(j, val);
+//         }
+//     }
 
     return;
 }
@@ -585,8 +607,8 @@ void AnaSample::WriteEventHist(TDirectory* dirout, const std::string& bsname)
 
     if (m_scatter || m_scatter_map)
     {
-        if(m_hpred_indirect != nullptr)
-            m_hpred_indirect->Write(Form("evhist_indirect_sam%d_pred%s", m_sample_id, bsname.c_str()));
+        // if(m_hpred_indirect != nullptr)
+        //     m_hpred_indirect->Write(Form("evhist_indirect_sam%d_pred%s", m_sample_id, bsname.c_str()));
 
         if (m_scatter_map)
             if (m_hpred_err2 != nullptr)
@@ -607,7 +629,7 @@ void AnaSample::WriteDataHist(TDirectory* dirout, const std::string& bsname)
 
 void AnaSample::SetScatterMap(double time1, double time2, double time3, const TH1D& hist)
 {
-    // read the prefined scale factor for indirect PE estimation
+    // read the pre-calculated scale factor for indirect PE estimation
     m_scatter_map = true; m_scatter_time1 = time1; m_scatter_time2 = time2; m_scatter_time3 = time3;
     if(m_h_scatter_map != nullptr)
         delete m_h_scatter_map;

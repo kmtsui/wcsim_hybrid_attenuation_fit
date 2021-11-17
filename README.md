@@ -59,7 +59,7 @@ The `pmt_typeX` tree contains the branches:
 
 The `hitRate_pmtTypeX` tree contains the branches:
 - `nPE/D` : number of PE
-- `timetof/D` : time-to-flighted subtracted hit time
+- `timetof/D` : time-to-flight subtracted hit time
 - `PMT_id/I` : PMT id that the hit belongs to
 
 ## optical_fit

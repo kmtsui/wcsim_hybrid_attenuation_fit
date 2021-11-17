@@ -42,7 +42,7 @@ int BinManager::SetBinning(const std::string& filename)
     std::ifstream fin(filename, std::ios::in);
     if(!fin.is_open())
     {
-        std::cerr << "[ERROR]: Failed to open " << filename << std::endl;
+        std::cerr << "[ERROR] BinManager::SetBinning(): Failed to open " << filename << std::endl;
         return 0;
     }
     else
@@ -66,7 +66,7 @@ int BinManager::SetBinning(const std::string& filename)
             {
                 if(!(ss >> bin_low >> bin_high))
                 {
-                    std::cerr << "[ERROR]: Bad line format: " << std::endl
+                    std::cerr << "[ERROR] BinManager::SetBinning(): Bad line format: " << std::endl
                               << line << std::endl;
                     continue;
                 }
@@ -92,7 +92,7 @@ int BinManager::GetBinIndex(const std::vector<double>& val) const
 {
     if(val.size() != dimension)
     {
-        std::cout << "[ERROR]: Number of parameters does not match dimension!" << std::endl;
+        std::cout << "[ERROR] BinManager::GetBinIndex(): Number of parameters does not match dimension!" << std::endl;
         return -1;
     }
 
@@ -129,7 +129,7 @@ double BinManager::GetBinWidth(const unsigned int i) const
 {
     if(i >= nbins)
     {
-        std::cout << "[WARNING]: Index " << i << " out of bounds." << std::endl;
+        std::cout << "[WARNING] BinManager::GetBinWidth(): Index " << i << " out of bounds." << std::endl;
         return 1.0;
     }
 
@@ -155,7 +155,7 @@ bool BinManager::CheckBinIndex(const int i, const int d, const double val) const
 
 void BinManager::Print() const
 {
-    std::cout << "Bin Edges: " << std::endl;
+    std::cout << "BinManager::Print() : Bin Edges: " << std::endl;
     std::cout << std::setprecision(3) << std::fixed;
     for(unsigned int i = 0; i < nbins; ++i)
     {

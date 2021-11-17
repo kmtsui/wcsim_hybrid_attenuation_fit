@@ -64,7 +64,7 @@ void Fitter::FixParameter(const std::string& par_name, const double& value)
     }
     else
     {
-        std::cerr  << ERR << "In function Fitter::FixParameter()\n"
+        std::cerr  << ERR << "In FixParameter()\n"
                    << "Parameter " << par_name << " not found!" << std::endl;
     }
 }
@@ -121,7 +121,7 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
 
     if(m_npar == 0)
     {
-        std::cerr << "No fit parameters were defined." << std::endl;
+        std::cerr << ERR << "No fit parameters were defined." << std::endl;
         return;
     }
 
@@ -148,7 +148,7 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
     m_fitter->SetTolerance(min_settings.tolerance);
     m_fitter->SetMaxIterations(min_settings.max_iter);
     m_fitter->SetMaxFunctionCalls(min_settings.max_fcn);
-    std::cout << TAG<<"m_npar = "<<m_npar<<std::endl;
+    //std::cout << TAG<<"m_npar = "<<m_npar<<std::endl;
     for(int i = 0; i < m_npar; ++i)
     {
         m_fitter->SetVariable(i, par_names[i], par_prefit[i], par_step[i]);
@@ -202,7 +202,7 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 
     if(m_fitter == nullptr)
     {
-        std::cerr  << ERR << "In Fitter::Fit()\n"
+        std::cerr  << ERR << "In Fit()\n"
                    << "Fitter has not been initialized." << std::endl;
         return false;
     }
@@ -224,7 +224,7 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
     if(!did_converge)
     {
         std::cout << TAG  << "Fit did not converge while running " << min_settings.algorithm
-                   << std::endl;
+                  << std::endl;
         std::cout << TAG  << "Failed with status code: " << m_fitter->Status() << std::endl;
     }
     else
@@ -345,14 +345,14 @@ double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
        || (m_calls > 1001 && m_calls % 1000 == 0))
         output_chi2 = true;
 
-    unsigned int par_offset = 0;
+    //unsigned int par_offset = 0;
     for(int i = 0; i < m_fitpara.size(); ++i)
     {
         if(m_fitpara[i]->IsDecomposed())
         {
             new_pars[i] = m_fitpara[i]->GetOriginalParameters(new_pars[i]);
         }
-        par_offset += m_fitpara[i]->GetNpar();
+        //par_offset += m_fitpara[i]->GetNpar();
 
         m_fitpara[i]->ApplyParameters(new_pars[i]);
     }

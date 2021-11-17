@@ -98,7 +98,7 @@ void AnaFitParameters::SetParameterFunction(const std::string& func_name)
     }
     else
     {
-        std::cout << TAG << "Invalid function name. Setting to Identity by default." << std::endl;
+        std::cout << WAR << "Invalid function name. Setting to Identity by default." << std::endl;
         m_func = new Identity;
         m_func_type = kIdentity;
     }
@@ -114,6 +114,7 @@ void AnaFitParameters::InitParameters(std::vector<std::string> names, std::vecto
     SetParFixed(fixed);
 
     // PolynomialCosth parameterizes angular response in piecewise continuous polynomials of costh
+    // Determine necessary parameters on flight
     if (m_func_type == kPolynomialCosth)
     {
         std::vector<std::string> pol_names; 
@@ -168,6 +169,7 @@ void AnaFitParameters::InitParameters(std::vector<std::string> names, std::vecto
         SetParLimits(pol_lows,pol_highs);
         SetParFixed(pol_fixed);
 
+        // Propagate polynomial orders and ranges to ParameterFunction
         ((PolynomialCosth*)m_func)->pol_orders = pol_orders;
         ((PolynomialCosth*)m_func)->pol_range = pol_range;
         //((PolynomialCosth*)m_func)->Print();
@@ -223,7 +225,7 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
             }
             else sample_map.push_back(PASSEVENT);
         }
-        std::cout << TAG<<"In AnaFitParameters::InitEventMap, built event map for sample "<< sample[s]->GetName() << " of total "<< sample[s] -> GetNPMTs() << "PMTs"<<std::endl;
+        std::cout << TAG<<"InitEventMap: built event map for sample "<< sample[s]->GetName() << " of total "<< sample[s] -> GetNPMTs() << "PMTs"<<std::endl;
         m_evmap.push_back(sample_map);
     }
 
@@ -256,7 +258,7 @@ void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int n
     }
 #endif
 
-    if (m_pmttype >=0 && pmttype != m_pmttype) return;
+    //if (m_pmttype >=0 && pmttype != m_pmttype) return;
 
     const int bin = m_evmap[nsample][nevent];
     if(bin == PASSEVENT || bin == BADBIN)
@@ -266,7 +268,7 @@ void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int n
 #ifndef NDEBUG
         if(bin > params.size())
         {
-            std::cout << TAG  << "In AnaFitParameters::ReWeight()\n"
+            std::cout << ERR  << "In ReWeight()\n"
                         << "Number of bins in " << m_name << " does not match num of parameters.\n"
                         << "Setting event weight to zero." << std::endl;
             event -> AddEvWght(0.0);
@@ -301,7 +303,7 @@ double AnaFitParameters::GetWeight(AnaEvent* event, int pmttype, int nsample, in
 #ifndef NDEBUG
         if(bin > params.size())
         {
-            std::cout << TAG  << "In AnaFitParameters::GetWeight()\n"
+            std::cout << ERR  << "In GetWeight()\n"
                         << "Number of bins in " << m_name << " does not match num of parameters.\n"
                         << "Setting event weight to zero." << std::endl;
             return 1.;
@@ -348,7 +350,7 @@ void AnaFitParameters::SetCovarianceMatrix(const TMatrixDSym& covmat, bool decom
     }
     else
     {
-        std::cerr << "In AnaFitParameters::SetCovarianceMatrix():\n"
+        std::cout << ERR << "In SetCovarianceMatrix():\n"
                   << "Covariance matrix is non invertable. Determinant is " << det
                   << std::endl;
         return;
@@ -365,7 +367,7 @@ double AnaFitParameters::GetChi2(const std::vector<double>& params) const
 
     if(CheckDims(params) == false)
     {
-        std::cout << TAG << "In AnaFitParameters::GetChi2()\n"
+        std::cout << ERR << "In GetChi2()\n"
                   << "Dimension check failed. Returning zero." << std::endl;
         return 0.0;
     }

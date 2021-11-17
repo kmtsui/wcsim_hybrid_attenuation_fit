@@ -103,9 +103,14 @@ public:
             if (costh>=pol_range[i] && costh<pol_range[i+1])
             {
                 //std::cout<<"Using pol"<<i<<std::endl;
-                for (int j=0;j<=pol_orders[i];j++)
+                // for (int j=0;j<=pol_orders[i];j++)
+                // {
+                //     val += pol_coeff[i][j]*TMath::Power(costh-pol_range[i],j);
+                // }
+                double x = costh-pol_range[i];
+                for (int j=pol_orders[i];j>=0;j--)
                 {
-                    val += pol_coeff[i][j]*TMath::Power(costh-pol_range[i],j);
+                    val = val*x + pol_coeff[i][j];
                 }
                 break;
             }

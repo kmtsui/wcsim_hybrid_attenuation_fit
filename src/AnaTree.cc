@@ -34,7 +34,7 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
     m_maskpmt = false;
 
     if (nPMT<=0) {
-        std::cout << TAG << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " <=0\n"
+        std::cout << TAG << "In MaskPMT(), nPMT = " << nPMT << " <=0\n"
                   << "No PMT is masked"<<std::endl;
 
         return;
@@ -44,13 +44,13 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
     if (mPMT) nPMT_total = nPMT_total/nPMTpermPMT;
 
     if (nPMT>=nPMT_total) {
-        std::cout << TAG << "In AnaTree::MaskPMT(), nPMT = " << nPMT << " >= total nPMT = " << nPMT_total <<"\n"
+        std::cout << WAR << "In MaskPMT(), nPMT = " << nPMT << " >= total nPMT = " << nPMT_total <<"\n"
                   << "No PMT is masked"<<std::endl;
 
         return;
     }
 
-    std::cout << TAG<< "In AnaTree::MaskPMT(), enabling "<< nPMT << " out of "<< nPMT_total << " PMTs" << std::endl;
+    std::cout << TAG<< "In MaskPMT(), enabling "<< nPMT << " out of "<< nPMT_total << " PMTs" << std::endl;
     double PMT_frac = (nPMT+0.)/(nPMT_total);
     int PMT_count = 0;
     for (int i=0;i<nPMT_total;i++)
@@ -92,7 +92,7 @@ void AnaTree::MaskmPMT(std::vector<int> vec, int nPMTpermPMT)
     for (auto m : vec) 
     {
         if ( m<0 || m>=nPMTpermPMT )
-            std::cout << ERR << "In AnaTree::MaskmPMT(), mPMT_id = " << m << " is invalid, this PMT is not masked" << std::endl;
+            std::cout << ERR << "In MaskmPMT(), mPMT_id = " << m << " is invalid, this PMT is not masked" << std::endl;
         else
         {
             std::cout << TAG << "Masking mPMT_id = " << m << std::endl;
@@ -146,7 +146,7 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
 
     if(t_pmt == nullptr)
     {
-        std::cout << TAG<<"[Error] Reading no PMTs in AnaTree::GetPMTs()"<<std::endl;
+        std::cout << ERR <<"Reading no PMTs in GetPMTs()"<<std::endl;
         return pmt_vec;
     }
 

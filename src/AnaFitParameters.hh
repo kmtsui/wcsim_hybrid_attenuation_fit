@@ -134,8 +134,8 @@ protected:
     std::vector<double> pol_range; // applicable range for each polynomial
 
     const std::string TAG = color::GREEN_STR + "[AnaFitParameters]: " + color::RESET_STR;
-    const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
-    const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
+    const std::string ERR = color::RED_STR + "[AnaFitParameters ERROR]: " + color::RESET_STR;
+    const std::string WAR = color::RED_STR + "[AnaFitParameters WARNING]: " + color::RESET_STR;
 };
 
 #endif

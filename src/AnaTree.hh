@@ -47,8 +47,8 @@ private:
     double weight;
 
     const std::string TAG = color::GREEN_STR + "[AnaTree]: " + color::RESET_STR;
-    const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
-    const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
+    const std::string ERR = color::RED_STR + "[AnaTree ERROR]: " + color::RESET_STR;
+    const std::string WAR = color::RED_STR + "[AnaTree WARNING]: " + color::RESET_STR;
 
 public:
     AnaTree(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name);
