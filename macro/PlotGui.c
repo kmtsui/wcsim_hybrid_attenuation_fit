@@ -13,28 +13,13 @@ class PlotMainFrame {
    RQ_OBJECT("PlotMainFrame")
 private:
    TGMainFrame         *fMain;
-   TRootEmbeddedCanvas *fEcanvas;
-   TGPopupMenu *fMenuFile;
-   TGMenuBar* fMenuBar;
-   TGLayoutHints* fMBItemLayout;
-   TGLayoutHints* fMBHelpLayout;
-   TGTextEntry* fConfigText;
-   TGTextEntry* fOutputText;
-   TGNumberEntry* fThreads;
-   TGNumberEntry* fSeed;
    std::string fCurDir;
    TFile* fIn;
-   std::vector<std::string> histList;
-   TGVerticalFrame *fHistframe;
 public:
    PlotMainFrame(const TGWindow *p,const char* fName,UInt_t w,UInt_t h);
    virtual ~PlotMainFrame();
-   void DoDraw();
-   void Config();
-   void Output();
+   void Open();
    void CloseWindow();
-   void RunFit();
-   void ListHist();
    void Created() { Emit("Created()"); } //*SIGNAL*
 };
 class FileHandle {
@@ -45,7 +30,6 @@ private:
    TGTransientFrame *fMain;
    TGShutter        *fShutter;
    TGLayoutHints    *fLayout;
-   const TGPicture  *fDefaultPic;
    TFile* fIn;
    std::vector<std::string> histList;
    std::vector<bool> histAxis;
@@ -61,7 +45,6 @@ private:
    std::vector<std::vector<double>> histPolyRanges;
    std::vector<TGTextEntry*> PolyOrderEntry;
    std::vector<TGTextEntry*> PolyRangeEntry;
-   TCanvas* cFplot;
    TRootEmbeddedCanvas *fEcanvas;
    TGCheckButton* drawSame;
    TGCheckButton* ignoreFixed;
@@ -73,8 +56,9 @@ public:
    //void AddShutterItem(const char *name, shutterData_t *data);
 
    // slots
+   void SaveAs();
    void CloseWindow();
-   void HandleButtons();
+   void HandleButtons_draw();
    void HandleButtons_xaxis();
    void HandleButtons_poly();
    void SetAxis();
@@ -97,8 +81,6 @@ FileHandle::FileHandle(const char* fName, const TGWindow *p, const TGWindow *mai
          return;
       }
    }
-
-   //cFplot = new TCanvas();
 
    fMain = new TGTransientFrame(p, main, w, h);
    fMain->Connect("CloseWindow()", "FileHandle", this, "CloseWindow()");
@@ -137,7 +119,7 @@ FileHandle::FileHandle(const char* fName, const TGWindow *p, const TGWindow *mai
          histframe->AddFrame(lab, new TGLayoutHints(kLHintsCenterX,
                                             5,5,3,4));
          TGTextButton *prefit = new TGTextButton(histframe,"Draw", histList.size()-1);
-         prefit->Connect("Clicked()","FileHandle",this,"HandleButtons()");
+         prefit->Connect("Clicked()","FileHandle",this,"HandleButtons_draw()");
          histframe->AddFrame(prefit, new TGLayoutHints(kLHintsCenterX,
                                                 5,5,3,4));
          TGTextButton *postfit = new TGTextButton(histframe,"X-axis", histList.size()-1);
@@ -151,7 +133,7 @@ FileHandle::FileHandle(const char* fName, const TGWindow *p, const TGWindow *mai
                                                 5,5,3,4));
          ColorSel.push_back(new TGColorSelect(histframe, TColor::Number2Pixel(histList.size()), 0));
          histframe->AddFrame(ColorSel[histList.size()-1]);
-         fHistframe->AddFrame(histframe,new TGLayoutHints(kLHintsCenterX,
+         fHistframe->AddFrame(histframe,new TGLayoutHints(kLHintsLeft,
                                                 5,5,3,4));
       }
    }
@@ -171,7 +153,11 @@ FileHandle::FileHandle(const char* fName, const TGWindow *p, const TGWindow *mai
    drawSame = new TGCheckButton(optGroup, new TGHotString("Same"));
    ignoreFixed = new TGCheckButton(optGroup, new TGHotString("Ignore fixed"));
    showPrior = new TGCheckButton(optGroup, new TGHotString("Show Prior"));
-   fOptframe->AddFrame(optGroup);
+   fOptframe->AddFrame(optGroup,new TGLayoutHints(kLHintsCenterX,5,5,3,4));
+   TGTextButton *saveas = new TGTextButton(fOptframe,"Save As", -1);
+   saveas->Connect("Clicked()","FileHandle",this,"SaveAs()");
+   fOptframe->AddFrame(saveas,new TGLayoutHints(kLHintsLeft,5,5,3,4));
+
    hframe->AddFrame(fOptframe);
 
    fMain->AddFrame(hframe, new TGLayoutHints(kLHintsCenterX,
@@ -192,9 +178,9 @@ FileHandle::FileHandle(const char* fName, const TGWindow *p, const TGWindow *mai
 FileHandle::~FileHandle()
 {
    // dtor
-
-   gClient->FreePicture(fDefaultPic);
+   fMain->Cleanup();
    fMain->DeleteWindow();  // deletes fMain
+   //delete fMain;
 }
 
 void FileHandle::CloseWindow()
@@ -203,7 +189,38 @@ void FileHandle::CloseWindow()
    delete this;
 }
 
-void FileHandle::HandleButtons()
+void FileHandle::SaveAs()
+{
+   const char *ftypes[] = { "PDF",    "*.pdf",
+                            "PostScript", "*.ps",
+                            "Encapsulated PostScript", "*.eps",
+                            "SVG", "*.svg",
+                            "TeX", "*.tex",
+                            "GIF", "*.gif",
+                            "ROOT macros", "*C",
+                            "ROOT files", "*.root",
+                            "XML", "*.xml",
+                            "PNG", "*.png",
+                            "XPM", "*.xpm",
+                            "JPEG", "*.jpg",
+                            "TIFF", "*.tiff",
+                            "XCF", "*.xcf"
+                            "All files",     "*",
+                            0,               0 };
+   static TString dir(".");
+   TGFileInfo fio;
+   //fio.fFilename = (char*)"fitoutput.root";
+   fio.fFileTypes = ftypes;
+   fio.fIniDir    = StrDup(dir);
+   //printf("fIniDir = %s\n", fio.fIniDir);
+   new TGFileDialog(gClient->GetRoot(), fMain, kFDSave, &fio);
+   //printf("Save file: %s (dir: %s)\n", fio.fFilename, fio.fIniDir);
+   dir = fio.fIniDir;
+   TCanvas *fCanvas = fEcanvas->GetCanvas();
+   fCanvas->SaveAs(fio.fFilename);
+}
+
+void FileHandle::HandleButtons_draw()
 {
    TGButton *btn = (TGButton *) gTQSender;
    printf("Drawing %s\n", histList[btn->WidgetId()].c_str());
@@ -219,7 +236,7 @@ void FileHandle::HandleButtons()
    if (!histPoly[btn->WidgetId()])
    {
       if (histAxis[btn->WidgetId()])
-         hist_result = new TH1D("","",histNbinsX[btn->WidgetId()],histXmin[btn->WidgetId()],histXmax[btn->WidgetId()]);
+         hist_result = new TH1D(Form("hist_%s",histList[btn->WidgetId()].c_str()),"",histNbinsX[btn->WidgetId()],histXmin[btn->WidgetId()],histXmax[btn->WidgetId()]);
       else
       {
          hist_result = (TH1D*)hist_val->Clone();
@@ -236,7 +253,7 @@ void FileHandle::HandleButtons()
    }
    else
    {
-      hist_result = new TH1D("","",1000,histPolyRanges[btn->WidgetId()].front(),histPolyRanges[btn->WidgetId()].back());
+      hist_result = new TH1D(Form("hist_%s",histList[btn->WidgetId()].c_str()),"",1000,histPolyRanges[btn->WidgetId()].front(),histPolyRanges[btn->WidgetId()].back());
       std::vector<double> pltpts;
       for (int i=1;i<=hist_result->GetNbinsX();i++)
       {
@@ -386,10 +403,6 @@ std::vector<double> FileHandle::CalcPol(const double* par, std::vector<double> c
             } 
         }
         pol_coeff.emplace_back(coeff);
-        // std::cout<<"pol "<<i<<": ";
-        // for (int j=0;j<pol_coeff[i].size();j++)
-        //     std::cout<<pol_coeff[i][j]<<" ";
-        // std::cout<<std::endl;
         double p0 = 0;
         double p1 = 0;
         for (int j=0;j<=pol_orders[i];j++) // store the 0-th and 1-st order derivatives at end-point as boundary conditions
@@ -410,14 +423,12 @@ std::vector<double> FileHandle::CalcPol(const double* par, std::vector<double> c
         {
             if (costh>=pol_range[i] && costh<pol_range[i+1])
             {
-                //std::cout<<"Using pol"<<i<<std::endl;
                 for (int j=0;j<=pol_orders[i];j++)
                 {
                     val += pol_coeff[i][j]*TMath::Power(costh-pol_range[i],j);
                 }
             }
         }
-        //std::cout<<"CalcPol:: costh = "<<costh<<", val = "<<val<<std::endl;
         angular_response.push_back(val);
     }
         
@@ -488,35 +499,10 @@ PlotMainFrame::PlotMainFrame(const TGWindow *p,const char* fName,UInt_t w,UInt_t
 
    fMain->Connect("CloseWindow()", "PlotMainFrame", this, "CloseWindow()");
 
-//    // a popup menu
-//    fMenuFile = new TGPopupMenu(gClient->GetRoot());
-//    // adding menu entries
-//    fMenuFile->AddEntry("&Open...",M_FILE_OPEN);
-//    fMenuFile->AddEntry("&Close", -1);
-
-//    // menu bar
-//    fMenuBar = new TGMenuBar(fMain,100,20,kHorizontalFrame);
-
-//    // menu bar item layout hints
-//    fMBItemLayout = new TGLayoutHints(kLHintsTop|kLHintsLeft,0,4,0,0);
-//    fMBHelpLayout = new TGLayoutHints(kLHintsTop|kLHintsRight);
-
-//    // adding popup menus
-//    fMenuBar->AddPopup("&File", fMenuFile, fMBItemLayout);
-
-   // Create canvas widget
-   // fEcanvas = new TRootEmbeddedCanvas("Ecanvas",fMain,200,200);
-   // fMain->AddFrame(fEcanvas, new TGLayoutHints(kLHintsExpandX |
-   //                 kLHintsExpandY, 10,10,10,1));
    // Create a horizontal frame widget with buttons
    TGHorizontalFrame *hframe = new TGHorizontalFrame(fMain,200,40);
-   //TGVerticalFrame *hframe = new TGVerticalFrame(fMain,200,40);
-   // TGTextButton *draw = new TGTextButton(hframe,"&Draw");
-   // draw->Connect("Clicked()","PlotMainFrame",this,"DoDraw()");
-   // hframe->AddFrame(draw, new TGLayoutHints(kLHintsCenterX,
-   //                                          5,5,3,4));
    TGTextButton *config = new TGTextButton(hframe,"&Open File");
-   config->Connect("Clicked()","PlotMainFrame",this,"Config()");
+   config->Connect("Clicked()","PlotMainFrame",this,"Open()");
    hframe->AddFrame(config, new TGLayoutHints(kLHintsCenterX,
                                             5,5,3,4));
    TGTextButton *exit = new TGTextButton(hframe,"&Exit",
@@ -526,42 +512,8 @@ PlotMainFrame::PlotMainFrame(const TGWindow *p,const char* fName,UInt_t w,UInt_t
    fMain->AddFrame(hframe, new TGLayoutHints(kLHintsCenterX,
                                              2,2,2,2));
 
-   // fConfigText = new TGTextEntry(hframe, new TGTextBuffer(100));
-   // fConfigText->SetToolTipText("Input config file");
-   // fConfigText->Resize(300, fConfigText->GetDefaultHeight());
-   // hframe->AddFrame(fConfigText, new TGLayoutHints(kLHintsTop | kLHintsLeft,
-   //                                                     10, 2, 2, 2));
-
-   // TGTextButton *output = new TGTextButton(hframe,"&Output");
-   // output->Connect("Clicked()","PlotMainFrame",this,"Output()");
-   // hframe->AddFrame(output, new TGLayoutHints(kLHintsCenterX,
-   //                                          5,5,3,4));
-   // fOutputText = new TGTextEntry(hframe, new TGTextBuffer(100));
-   // fOutputText->SetToolTipText("Output file");
-   // fOutputText->Resize(300, fOutputText->GetDefaultHeight());
-   // hframe->AddFrame(fOutputText, new TGLayoutHints(kLHintsTop | kLHintsLeft,
-   //                                                     10, 2, 2, 2));
-   // fOutputText->SetText("fitoutput.root");
-
-   // TGLabel* fThreadsLabel = new TGLabel(hframe, "No. Threads");
-   // hframe->AddFrame(fThreadsLabel, new TGLayoutHints(kLHintsCenterX,
-   //                                          5,5,3,4));
-   // fThreads = new TGNumberEntry(hframe,1,3,0,TGNumberFormat::kNESInteger,TGNumberFormat::kNEAPositive);
-   // hframe->AddFrame(fThreads, new TGLayoutHints(kLHintsCenterX,
-   //                                          5,5,3,4));
-
-   // TGTextButton *runfit = new TGTextButton(hframe,"&Run");
-   // runfit->Connect("Clicked()","PlotMainFrame",this,"RunFit()");
-   // hframe->AddFrame(runfit, new TGLayoutHints(kLHintsCenterX,
-   //                                          5,5,3,4));
-
-   // fHistframe = new TGVerticalFrame(fMain,200,40);
-   // fHistframe->SetCleanup(kDeepCleanup);
-   // fMain->AddFrame(fHistframe, new TGLayoutHints(kLHintsCenterX,
-   //                                           2,2,2,2));
-
    // Set a name to the main frame
-   fMain->SetWindowName("Simple Example");
+   fMain->SetWindowName("Plot GUI");
 
    // Map all subwindows of main frame
    fMain->MapSubwindows();
@@ -584,134 +536,27 @@ PlotMainFrame::PlotMainFrame(const TGWindow *p,const char* fName,UInt_t w,UInt_t
          new FileHandle(fIn->GetName(), gClient->GetRoot(), fMain, 400, 200);
    }
 }
-void PlotMainFrame::RunFit() {
-   TString appName("optical_fit");
-   std::string runCommand(Form("optical_fit -c %s -o %s -n %i \n",fConfigText->GetText(),fOutputText->GetText(),(int)fThreads->GetIntNumber()));
-   printf("Run: %s",runCommand.c_str());
-   gSystem->ChangeDirectory(fCurDir.c_str());
-   gSystem->Exec("pwd");
-   gSystem->Exec(runCommand.c_str());
-}
-void PlotMainFrame::DoDraw() {
-   // Draws function graphics in randomly chosen interval
-   TF1 *f1 = new TF1("f1","sin(x)/x",0,gRandom->Rndm()*10);
-   f1->SetLineWidth(3);
-   f1->Draw();
-   TCanvas *fCanvas = fEcanvas->GetCanvas();
-   fCanvas->cd();
-   fCanvas->Update();
-}
-const char *filetypes[] = { "All files",     "*",
-                            "ROOT files",    "*.root",
-                            "ROOT macros",   "*.C",
-                            "Text files",    "*.[tT][xX][tT]",
-                            0,               0 };
-void PlotMainFrame::Config(){
-    const char *ftypes[] = { "ROOT files",    "*.root",
-                             "All files",     "*",
-                            0,               0 };
-    static TString dir(".");
-    TGFileInfo fi;
-    fi.fFileTypes = ftypes;
-    fi.fIniDir    = StrDup(dir);
-    printf("fIniDir = %s\n", fi.fIniDir);
-    new TGFileDialog(gClient->GetRoot(), fMain, kFDOpen, &fi);
-    printf("Open file: %s (dir: %s)\n", fi.fFilename, fi.fIniDir);
-    dir = fi.fIniDir;
-    //fConfigText->SetText(fi.fFilename);
+void PlotMainFrame::Open(){
+   const char *ftypes[] = { "ROOT files",    "*.root",
+                           "All files",     "*",
+                           0,               0 };
+   static TString dir(".");
+   TGFileInfo fi;
+   fi.fFileTypes = ftypes;
+   fi.fIniDir    = StrDup(dir);
+   printf("fIniDir = %s\n", fi.fIniDir);
+   new TGFileDialog(gClient->GetRoot(), fMain, kFDOpen, &fi);
+   printf("Open file: %s (dir: %s)\n", fi.fFilename, fi.fIniDir);
+   dir = fi.fIniDir;
+   //fConfigText->SetText(fi.fFilename);
 
-    fIn = new TFile(fi.fFilename);
-    if (!fIn->IsOpen()){
-         std::cout << "Error, could not open input file: " << fi.fFilename << std::endl;
-         return;
-    }
-
-   new FileHandle(fIn->GetName(), gClient->GetRoot(), fMain, 400, 200);
-
-   //ListHist();
-}
-int loop=0;
-void PlotMainFrame::ListHist()
-{
+   fIn = new TFile(fi.fFilename);
    if (!fIn->IsOpen()){
-      std::cout << "Error, could not open input file" << std::endl;
+      std::cout << "Error, could not open input file: " << fi.fFilename << std::endl;
       return;
    }
 
-   std::cout<<"Getting hist now..."<<std::endl;
-
-   //fHistframe->Clear();
-   fMain->RemoveFrame(fHistframe);
-   if (fHistframe != nullptr)
-      delete fHistframe;
-   fMain->MapSubwindows();
-
-   // Initialize the layout algorithm
-   fMain->Resize(fMain->GetDefaultSize());
-
-   // Map main frame
-   fMain->MapWindow();
-
-   fHistframe = new TGVerticalFrame(fMain,200,40);
-   //fHistframe->RemoveAll();
-   histList.clear();
-   TList* list = fIn->GetListOfKeys();
-   for (int i=0;i<list->GetSize();i++)
-   {
-      std::string objname = (std::string)list->At(i)->GetName();
-      if (objname.find("hist_")==0 && objname.find("_result",objname.size()-7)==objname.size()-7)
-      {
-         objname.erase(0,5); objname.erase(objname.size()-7); 
-         std::cout<<"Getting hist: "<<objname<<std::endl;
-         objname += Form("%i",loop);
-         histList.push_back(objname);
-
-         TGHorizontalFrame *histframe = new TGHorizontalFrame(fHistframe,200,40);
-         TGLabel* lab = new TGLabel(histframe, objname.c_str());
-         histframe->AddFrame(lab, new TGLayoutHints(kLHintsCenterX,
-                                            5,5,3,4));
-         TGTextButton *prefit = new TGTextButton(histframe,"Prefit");
-         prefit->Connect("Clicked()","PlotMainFrame",this,"DoDraw()");
-         histframe->AddFrame(prefit, new TGLayoutHints(kLHintsCenterX,
-                                                5,5,3,4));
-         fHistframe->AddFrame(histframe,new TGLayoutHints(kLHintsCenterX,
-                                                5,5,3,4));
-      }
-   }
-   loop++;
-   fMain->AddFrame(fHistframe, new TGLayoutHints(kLHintsCenterX,
-                                             2,2,2,2));
-
-
-   // // Set a name to the main frame
-   // fMain->SetWindowName("Simple Example");
-
-   // Map all subwindows of main frame
-   fMain->MapSubwindows();
-
-   // Initialize the layout algorithm
-   fMain->Resize(fMain->GetDefaultSize());
-
-   // Map main frame
-   fMain->MapWindow();
-
    new FileHandle(fIn->GetName(), gClient->GetRoot(), fMain, 400, 200);
-
-}
-void PlotMainFrame::Output(){
-    const char *ftypes[] = { "ROOT files",    "*.root",
-                             "All files",     "*",
-                            0,               0 };
-    static TString dir(".");
-    TGFileInfo fio;
-    //fio.fFilename = (char*)"fitoutput.root";
-    fio.fFileTypes = ftypes;
-    fio.fIniDir    = StrDup(dir);
-    printf("fIniDir = %s\n", fio.fIniDir);
-    new TGFileDialog(gClient->GetRoot(), fMain, kFDSave, &fio);
-    printf("Save file: %s (dir: %s)\n", fio.fFilename, fio.fIniDir);
-    dir = fio.fIniDir;
-    fOutputText->SetText(fio.fFilename);
 }
 void PlotMainFrame::CloseWindow()
 {
