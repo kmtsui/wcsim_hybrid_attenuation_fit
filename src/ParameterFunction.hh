@@ -19,7 +19,8 @@ enum FunctionType
     kAttenuation = 1,
     kScatter = 2,
     kPolynomialCosth = 3,
-    kAttenuationZ = 4
+    kAttenuationZ = 4,
+    kSourcePhiVar = 5
 };
 
 
@@ -88,6 +89,15 @@ public:
     double operator()(double par, AnaEvent ev)
     {
         return par;
+    }
+};
+
+class SourcePhiVar : public ParameterFunction
+{
+public:
+    double operator()(double par, AnaEvent ev)
+    {
+        return 1+par*cos(ev.GetPhis());
     }
 };
 

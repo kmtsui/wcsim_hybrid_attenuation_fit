@@ -96,6 +96,12 @@ void AnaFitParameters::SetParameterFunction(const std::string& func_name)
         m_func = new AttenuationZ;
         m_func_type = kAttenuationZ;
     }
+    else if(func_name == "SourcePhiVar")
+    {
+        std::cout << TAG << "Setting function to SourcePhiVar." << std::endl;
+        m_func = new SourcePhiVar;
+        m_func_type = kSourcePhiVar;
+    }
     else
     {
         std::cout << WAR << "Invalid function name. Setting to Identity by default." << std::endl;
