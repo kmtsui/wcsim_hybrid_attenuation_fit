@@ -89,13 +89,22 @@ class AnaEvent
         inline void SetTimetof(double val){ m_timetof = val; }
         inline double GetTimetof() const { return m_timetof; }
 
+        inline void SetTimetofNom(std::vector<double> val){ m_timetof_nom = val; }
+        inline std::vector<double> GetTimetofNom() const { return m_timetof_nom; }
+
+        inline void SetTimetofNomSig2(std::vector<double> val){ m_timetof_nom_sig2 = val; }
+        inline std::vector<double> GetTimetofNomSig2() const { return m_timetof_nom_sig2; }
+
+        inline void SetTimetofPred(std::vector<double> val){ m_timetof_pred = val; }
+        inline std::vector<double> GetTimetofPred() const { return m_timetof_pred; }
+
         inline void SetEvWght(double val){ m_wght  = val; }
         inline double GetEvWght() const { return m_wght; }
         inline void AddEvWght(double val){ m_wght *= val; }
         inline void SetEvWghtMC(double val){ m_wghtMC  = val; }
         inline double GetEvWghtMC() const { return m_wghtMC; }
 
-        inline void ResetEvWght(){ m_wght = m_wghtMC; }
+        inline void ResetEvWght(){ m_wght = m_wghtMC; m_timetof_pred = m_timetof_nom; }
 
         void Print() const
         {
@@ -189,6 +198,9 @@ class AnaEvent
         double m_timetof;  //hittime-tof
         double m_wght;     //event weight
         double m_wghtMC;   //event weight from original MC
+        std::vector<double> m_timetof_nom;
+        std::vector<double> m_timetof_nom_sig2;
+        std::vector<double> m_timetof_pred;
         std::vector<int> par_list;
         std::vector<double> reco_var;
 

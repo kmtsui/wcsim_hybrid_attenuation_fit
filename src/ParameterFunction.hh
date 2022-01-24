@@ -20,7 +20,8 @@ enum FunctionType
     kScatter = 2,
     kPolynomialCosth = 3,
     kAttenuationZ = 4,
-    kSourcePhiVar = 5
+    kSourcePhiVar = 5,
+    kSpline = 6, 
 };
 
 
@@ -88,7 +89,7 @@ class Scatter : public ParameterFunction
 public:
     double operator()(double par, AnaEvent ev)
     {
-        return par;
+        return 1.;
     }
 };
 
@@ -181,6 +182,15 @@ public:
             pol_p0.push_back(p0);
             pol_p1.push_back(p1);
         }
+    }
+};
+
+class Spline : public ParameterFunction
+{
+public:
+    double operator()(double par, AnaEvent ev)
+    {
+        return 1.;
     }
 };
 

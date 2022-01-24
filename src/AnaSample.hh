@@ -12,9 +12,11 @@
 
 #include <TDirectory.h>
 #include <TH1D.h>
+#include <TH2D.h>
 #include <TMath.h>
 #include <TRandom3.h>
 #include <TTree.h>
+#include <TGraph.h>
 
 #include "AnaEvent.hh"
 #include "AnaTree.hh"
@@ -49,7 +51,6 @@ public:
 
     void SetLLHFunction(const std::string& func_name);
     double CalcLLH() const;
-    double CalcChi2() const;
 
     void FillEventHist(bool reset_weights = false);
     void FillDataHist(bool stat_fluc = false);
@@ -80,6 +81,10 @@ public:
     }
 
     void SetScatterMap(double time1, double time2, double time3, const TH1D& hist);
+
+    void SetTemplate(const TH2D& hist, double offset, bool combine);
+    inline bool UseTemplate() { return m_template; } 
+    TH2D* GetTemplate() { return h_timetof_pmt_pred;}
 
     inline void UnsetScatter() { m_scatter = false; m_scatter_map = false; }
 
@@ -138,6 +143,14 @@ protected:
     TH1D* m_hdata_control; // data histogram in control region
     TH1D* m_hdata_pmt; // data histogram per PMT 
     TH1D* m_hdata_pmt_control; // data histogram in control region per PMT
+
+    TH2D* h_timetof_pred; // timetof distribution for fit
+    TH2D* h_timetof_pred_w2; 
+    TH2D* h_timetof_data;
+    TH2D* h_timetof_pmt_pred; // timetof distribution for each PMT
+    TH2D* h_timetof_pmt_data;
+    bool m_template, m_template_combine;
+    double m_timetof_offset;
 
     const std::string TAG = color::GREEN_STR + "[AnaSample]: " + color::RESET_STR;
     const std::string ERR = color::RED_STR + "[AnaSample ERROR]: " + color::RESET_STR;
