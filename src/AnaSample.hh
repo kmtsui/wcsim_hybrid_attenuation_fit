@@ -84,7 +84,7 @@ public:
 
     void SetTemplate(const TH2D& hist, double offset, bool combine);
     inline bool UseTemplate() { return m_template; } 
-    TH2D* GetTemplate() { return h_timetof_pmt_pred;}
+    TH2D* GetTemplate() { return m_htimetof_pmt_pred;}
 
     inline void UnsetScatter() { m_scatter = false; m_scatter_map = false; }
 
@@ -144,11 +144,11 @@ protected:
     TH1D* m_hdata_pmt; // data histogram per PMT 
     TH1D* m_hdata_pmt_control; // data histogram in control region per PMT
 
-    TH2D* h_timetof_pred; // timetof distribution for fit
-    TH2D* h_timetof_pred_w2; 
-    TH2D* h_timetof_data;
-    TH2D* h_timetof_pmt_pred; // timetof distribution for each PMT
-    TH2D* h_timetof_pmt_data;
+    TH2D* m_htimetof_pred; // timetof distribution for fit
+    TH2D* m_htimetof_pred_w2; 
+    TH2D* m_htimetof_data;
+    TH2D* m_htimetof_pmt_pred; // timetof distribution for each PMT
+    TH2D* m_htimetof_pmt_data;
     bool m_template, m_template_combine;
     double m_timetof_offset;
 

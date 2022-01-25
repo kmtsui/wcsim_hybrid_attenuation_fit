@@ -22,11 +22,11 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_time_offset(false)
     , m_time_smear(false)
     , m_z0(0.)
-    , h_timetof_data(nullptr)
-    , h_timetof_pred(nullptr)
-    , h_timetof_pred_w2(nullptr)
-    , h_timetof_pmt_pred(nullptr)
-    , h_timetof_pmt_data(nullptr)
+    , m_htimetof_data(nullptr)
+    , m_htimetof_pred(nullptr)
+    , m_htimetof_pred_w2(nullptr)
+    , m_htimetof_pmt_pred(nullptr)
+    , m_htimetof_pmt_data(nullptr)
     , m_template(false)
 {
     TH1::SetDefaultSumw2(true);
@@ -70,20 +70,20 @@ AnaSample::~AnaSample()
     if(m_h_scatter_map != nullptr)
         delete m_h_scatter_map;
 
-    if(h_timetof_data != nullptr)
-        delete h_timetof_data;
+    if(m_htimetof_data != nullptr)
+        delete m_htimetof_data;
     
-    if(h_timetof_pred != nullptr)
-        delete h_timetof_pred;
+    if(m_htimetof_pred != nullptr)
+        delete m_htimetof_pred;
 
-    if(h_timetof_pred_w2 != nullptr)
-        delete h_timetof_pred_w2;
+    if(m_htimetof_pred_w2 != nullptr)
+        delete m_htimetof_pred_w2;
 
-    if(h_timetof_pmt_data != nullptr)
-        delete h_timetof_pmt_data;
+    if(m_htimetof_pmt_data != nullptr)
+        delete m_htimetof_pmt_data;
     
-    if(h_timetof_pmt_pred != nullptr)
-        delete h_timetof_pmt_pred;
+    if(m_htimetof_pmt_pred != nullptr)
+        delete m_htimetof_pmt_pred;
 
 }
 
@@ -185,7 +185,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
 
         if (m_template)
         {
-            h_timetof_pmt_data->Fill(pmtID+0.5,timetof+m_timetof_offset,nPE);
+            m_htimetof_pmt_data->Fill(pmtID+0.5,timetof+m_timetof_offset,nPE);
         }
 
         if (skip) continue;
@@ -347,10 +347,10 @@ void AnaSample::InitEventMap()
             const int pmtID = e.GetPMTID();
             std::vector<double> timetof_nom;
             std::vector<double> timetof_nom_sig2;
-            for (int i=1;i<=h_timetof_pmt_pred->GetNbinsY();i++)
+            for (int i=1;i<=m_htimetof_pmt_pred->GetNbinsY();i++)
             {
-                timetof_nom.push_back(h_timetof_pmt_pred->GetBinContent(pmtID+1,i));
-                double sig2 = h_timetof_pmt_pred->GetBinError(pmtID+1,i);
+                timetof_nom.push_back(m_htimetof_pmt_pred->GetBinContent(pmtID+1,i));
+                double sig2 = m_htimetof_pmt_pred->GetBinError(pmtID+1,i);
                 if (sig2>0) sig2 = sig2*sig2/timetof_nom[i-1]/timetof_nom[i-1];
                 timetof_nom_sig2.push_back(sig2);
             }
@@ -360,19 +360,19 @@ void AnaSample::InitEventMap()
         }
 
         int nx = m_template_combine ? 1 : m_nbins ;
-        int ny = h_timetof_pmt_pred->GetNbinsY();
-        if(h_timetof_pred != nullptr)
-            delete h_timetof_pred;
-        if(h_timetof_pred_w2 != nullptr)
-            delete h_timetof_pred_w2;
-        if(h_timetof_data != nullptr)
-            delete h_timetof_data;
-        h_timetof_pred = new TH2D(Form("%s_timetof_pred", m_name.c_str()), Form("%s_timetof_pred", m_name.c_str()), nx, 0, nx, ny, 0, ny );
-        h_timetof_pred->SetDirectory(0);
-        h_timetof_pred_w2 = new TH2D(Form("%s_timetof_pred_w2", m_name.c_str()), Form("%s_timetof_pred_w2", m_name.c_str()), nx, 0, nx, ny, 0, ny );
-        h_timetof_pred_w2->SetDirectory(0);
-        h_timetof_data = new TH2D(Form("%s_timetof_data", m_name.c_str()), Form("%s_timetof_data", m_name.c_str()), nx, 0, nx, ny, 0, ny );
-        h_timetof_data->SetDirectory(0);
+        int ny = m_htimetof_pmt_pred->GetNbinsY();
+        if(m_htimetof_pred != nullptr)
+            delete m_htimetof_pred;
+        if(m_htimetof_pred_w2 != nullptr)
+            delete m_htimetof_pred_w2;
+        if(m_htimetof_data != nullptr)
+            delete m_htimetof_data;
+        m_htimetof_pred = new TH2D(Form("%s_timetof_pred", m_name.c_str()), Form("%s_timetof_pred", m_name.c_str()), nx, 0, nx, ny, 0, ny );
+        m_htimetof_pred->SetDirectory(0);
+        m_htimetof_pred_w2 = new TH2D(Form("%s_timetof_pred_w2", m_name.c_str()), Form("%s_timetof_pred_w2", m_name.c_str()), nx, 0, nx, ny, 0, ny );
+        m_htimetof_pred_w2->SetDirectory(0);
+        m_htimetof_data = new TH2D(Form("%s_timetof_data", m_name.c_str()), Form("%s_timetof_data", m_name.c_str()), nx, 0, nx, ny, 0, ny );
+        m_htimetof_data->SetDirectory(0);
     }
 }
 
@@ -392,8 +392,8 @@ void AnaSample::FillEventHist(bool reset_weights)
 
     if (m_template) 
     {
-        h_timetof_pred->Reset();
-        h_timetof_pred_w2->Reset();
+        m_htimetof_pred->Reset();
+        m_htimetof_pred_w2->Reset();
     }
 
     for(const auto& e : m_pmts)
@@ -412,19 +412,19 @@ void AnaSample::FillEventHist(bool reset_weights)
         {
             std::vector<double> timetof_pred = e.GetTimetofPred();
             std::vector<double> timetof_nom_sig2 = e.GetTimetofNomSig2();
-            for (int i=1;i<=h_timetof_pred->GetNbinsY();i++)
+            for (int i=1;i<=m_htimetof_pred->GetNbinsY();i++)
             {
-                // h_timetof_pmt_pred->SetBinContent(e.GetPMTID()+1,i,timetof_pred[i-1]);
-                // h_timetof_pmt_pred->SetBinError(e.GetPMTID()+1,i,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
+                // m_htimetof_pmt_pred->SetBinContent(e.GetPMTID()+1,i,timetof_pred[i-1]);
+                // m_htimetof_pmt_pred->SetBinError(e.GetPMTID()+1,i,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
                 if (!m_template_combine) 
                 {
-                    h_timetof_pred->Fill(reco_bin + 0.5,i-0.5,timetof_pred[i-1]);
-                    h_timetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
+                    m_htimetof_pred->Fill(reco_bin + 0.5,i-0.5,timetof_pred[i-1]);
+                    m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
                 }
                 else
                 {
-                    h_timetof_pred->Fill(0.5,i-0.5,timetof_pred[i-1]);
-                    h_timetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
+                    m_htimetof_pred->Fill(0.5,i-0.5,timetof_pred[i-1]);
+                    m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
                 }
             }
         }
@@ -520,15 +520,15 @@ void AnaSample::FillDataHist(bool stat_fluc)
 
         if (m_template)
         {
-            for (int i=1;i<=h_timetof_data->GetNbinsY();i++)
+            for (int i=1;i<=m_htimetof_data->GetNbinsY();i++)
             {
                 if (!m_template_combine) 
                 {
-                    h_timetof_data->Fill(reco_bin + 0.5,i-0.5,h_timetof_pmt_data->GetBinContent(pmtID+1,i));
+                    m_htimetof_data->Fill(reco_bin + 0.5,i-0.5,m_htimetof_pmt_data->GetBinContent(pmtID+1,i));
                 }
                 else
                 {
-                    h_timetof_data->Fill(0.5,i-0.5,h_timetof_pmt_data->GetBinContent(pmtID+1,i));
+                    m_htimetof_data->Fill(0.5,i-0.5,m_htimetof_pmt_data->GetBinContent(pmtID+1,i));
                 }
             }
         }
@@ -636,35 +636,35 @@ double AnaSample::CalcLLH() const
 
     if (m_template)
     {
-        // double* exp_timetof  = h_timetof_pred->GetArray();
-        // double* data_timetof   = h_timetof_data->GetArray();
-        // int start = h_timetof_pred->FindBin(m_timetof_lo);
-        // int end = h_timetof_pred->FindBin(m_timetof_hi);
-        // for(unsigned int i = std::max(1,start); i <= std::min(h_timetof_pred->GetNbinsX(),end); ++i)
+        // double* exp_timetof  = m_htimetof_pred->GetArray();
+        // double* data_timetof   = m_htimetof_data->GetArray();
+        // int start = m_htimetof_pred->FindBin(m_timetof_lo);
+        // int end = m_htimetof_pred->FindBin(m_timetof_hi);
+        // for(unsigned int i = std::max(1,start); i <= std::min(m_htimetof_pred->GetNbinsX(),end); ++i)
         // {
         //     chi2 += (*m_llh)(exp_timetof[i], 0, data_timetof[i]);
         // }
 
-        // for(unsigned int i=1;i<=h_timetof_pmt_pred->GetNbinsX();i++)
+        // for(unsigned int i=1;i<=m_htimetof_pmt_pred->GetNbinsX();i++)
         // {
-        //     for (unsigned int j=1;j<=h_timetof_pmt_pred->GetNbinsY();j++)
+        //     for (unsigned int j=1;j<=m_htimetof_pmt_pred->GetNbinsY();j++)
         //     {
-        //         chi2 += (*m_llh)(h_timetof_pmt_pred->GetBinContent(i,j), 0, h_timetof_pmt_data->GetBinContent(i,j));
+        //         chi2 += (*m_llh)(m_htimetof_pmt_pred->GetBinContent(i,j), 0, m_htimetof_pmt_data->GetBinContent(i,j));
         //     }
         // }
 
-        for(unsigned int i=1;i<=h_timetof_pred->GetNbinsX();i++)
+        for(unsigned int i=1;i<=m_htimetof_pred->GetNbinsX();i++)
         {
-            for (int j=1;j<=h_timetof_pred->GetNbinsY();j++)
+            for (int j=1;j<=m_htimetof_pred->GetNbinsY();j++)
             {
-                //chi2 += (*m_llh)(h_timetof_pmt_pred->GetBinContent(e.GetPMTID()+1,i), 0, h_timetof_pmt_data->GetBinContent(e.GetPMTID()+1,i));
-                //if (h_timetof_pmt_data->GetBinContent(e.GetPMTID()+1,i)<10)
-                    chi2 += (*m_llh)(h_timetof_pred->GetBinContent(i,j), h_timetof_pred_w2->GetBinContent(i,j), h_timetof_data->GetBinContent(i,j));
+                //chi2 += (*m_llh)(m_htimetof_pmt_pred->GetBinContent(e.GetPMTID()+1,i), 0, m_htimetof_pmt_data->GetBinContent(e.GetPMTID()+1,i));
+                //if (m_htimetof_pmt_data->GetBinContent(e.GetPMTID()+1,i)<10)
+                    chi2 += (*m_llh)(m_htimetof_pred->GetBinContent(i,j), m_htimetof_pred_w2->GetBinContent(i,j), m_htimetof_data->GetBinContent(i,j));
             }
         }
 
-        // for (int i=1;i<=h_timetof_pred->GetNbinsX();i++)
-        //     chi2 += (*m_llh)(h_timetof_pred->GetBinContent(i), 0, h_timetof_data->GetBinContent(i));
+        // for (int i=1;i<=m_htimetof_pred->GetNbinsX();i++)
+        //     chi2 += (*m_llh)(m_htimetof_pred->GetBinContent(i), 0, m_htimetof_data->GetBinContent(i));
 
     }
 
@@ -698,8 +698,8 @@ void AnaSample::WriteEventHist(TDirectory* dirout, const std::string& bsname)
 
     if (m_template)
     {
-        if (h_timetof_pred != nullptr)
-            h_timetof_pred->Write(Form("evhist_timetof_sam%d_pred%s", m_sample_id, bsname.c_str()));
+        if (m_htimetof_pred != nullptr)
+            m_htimetof_pred->Write(Form("evhist_timetof_sam%d_pred%s", m_sample_id, bsname.c_str()));
     }
 }
 
@@ -715,8 +715,8 @@ void AnaSample::WriteDataHist(TDirectory* dirout, const std::string& bsname)
 
     if (m_template)
     {
-        if (h_timetof_data != nullptr)
-            h_timetof_data->Write(Form("evhist_timetof_sam%d_data%s", m_sample_id, bsname.c_str()));
+        if (m_htimetof_data != nullptr)
+            m_htimetof_data->Write(Form("evhist_timetof_sam%d_data%s", m_sample_id, bsname.c_str()));
     }        
 }
 
@@ -733,28 +733,28 @@ void AnaSample::SetScatterMap(double time1, double time2, double time3, const TH
 void AnaSample::SetTemplate(const TH2D& hist, double offset, bool combine)
 {
     m_template = true;
-    if(h_timetof_pmt_pred != nullptr)
-        delete h_timetof_pmt_pred;
-    if(h_timetof_pmt_data != nullptr)
-        delete h_timetof_pmt_data;
-    h_timetof_pmt_pred = new TH2D(hist);
-    h_timetof_pmt_pred->SetDirectory(0);
-    h_timetof_pmt_data = (TH2D*)h_timetof_pmt_pred->Clone();
-    h_timetof_pmt_data->Reset();
-    h_timetof_pmt_data->SetDirectory(0);
+    if(m_htimetof_pmt_pred != nullptr)
+        delete m_htimetof_pmt_pred;
+    if(m_htimetof_pmt_data != nullptr)
+        delete m_htimetof_pmt_data;
+    m_htimetof_pmt_pred = new TH2D(hist);
+    m_htimetof_pmt_pred->SetDirectory(0);
+    m_htimetof_pmt_data = (TH2D*)m_htimetof_pmt_pred->Clone();
+    m_htimetof_pmt_data->Reset();
+    m_htimetof_pmt_data->SetDirectory(0);
 
     m_timetof_offset = offset;
     m_template_combine = combine;
 
     // if (m_template_combine)
     // {
-    //     if(h_timetof_pred != nullptr)
-    //         delete h_timetof_pred;
-    //     if(h_timetof_data != nullptr)
-    //         delete h_timetof_data;
-    //     h_timetof_pred = new TH1D("","",h_timetof_pmt_pred->GetNbinsY(),0,h_timetof_pmt_pred->GetNbinsY());
-    //     h_timetof_pred->SetDirectory(0);
-    //     h_timetof_data = new TH1D("","",h_timetof_pmt_pred->GetNbinsY(),0,h_timetof_pmt_pred->GetNbinsY());
-    //     h_timetof_data->SetDirectory(0);
+    //     if(m_htimetof_pred != nullptr)
+    //         delete m_htimetof_pred;
+    //     if(m_htimetof_data != nullptr)
+    //         delete m_htimetof_data;
+    //     m_htimetof_pred = new TH1D("","",m_htimetof_pmt_pred->GetNbinsY(),0,m_htimetof_pmt_pred->GetNbinsY());
+    //     m_htimetof_pred->SetDirectory(0);
+    //     m_htimetof_data = new TH1D("","",m_htimetof_pmt_pred->GetNbinsY(),0,m_htimetof_pmt_pred->GetNbinsY());
+    //     m_htimetof_data->SetDirectory(0);
     // }
 }
