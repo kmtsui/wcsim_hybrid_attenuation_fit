@@ -30,11 +30,6 @@ public:
     AnaSample(int sample_id, const std::string& name, const std::string& binning, int pmt_type);
     ~AnaSample();
 
-    inline int GetN() const { return m_events.size(); }
-    inline void ClearEvents() { m_events.clear(); }
-    inline void AddEvent(const AnaEvent& event) { m_events.push_back(event); }
-
-    AnaEvent* GetEvent(const unsigned int evnum);
     void InitEventMap();
 
     inline int GetNPMTs() const { return m_pmts.size(); }
@@ -130,7 +125,6 @@ protected:
 
     std::string m_name;
     std::string m_binning;
-    std::vector<AnaEvent> m_events; // not used anymore
     std::vector<AnaEvent> m_pmts;  // PMT geometry has the same kind of information as hits except T/Q
 
     BinManager m_bm;
