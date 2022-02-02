@@ -517,6 +517,7 @@ double AnaSample::CalcLLH() const
 
     if (m_template)
     {
+        if (m_template_only) chi2 = 0.0;
         for(unsigned int i=1;i<=m_htimetof_pred->GetNbinsX();i++)
         {
             for (int j=1;j<=m_htimetof_pred->GetNbinsY();j++)
@@ -576,7 +577,7 @@ void AnaSample::SetScatterMap(double time1, double time2, double time3, const TH
     m_h_scatter_map->SetDirectory(0);
 }
 
-void AnaSample::SetTemplate(const TH2D& hist, double offset, bool combine)
+void AnaSample::SetTemplate(const TH2D& hist, double offset, bool combine, bool template_only)
 {
     m_template = true;
     if(m_htimetof_pmt_pred != nullptr)
@@ -591,4 +592,5 @@ void AnaSample::SetTemplate(const TH2D& hist, double offset, bool combine)
 
     m_timetof_offset = offset;
     m_template_combine = combine;
+    m_template_only = template_only;
 }

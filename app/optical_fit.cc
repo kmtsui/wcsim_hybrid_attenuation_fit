@@ -211,10 +211,11 @@ int main(int argc, char** argv)
                     auto hname = toml_h::find<std::string>(opt,2);
                     auto offset = toml_h::find<double>(opt,3);
                     auto combine = toml_h::find<bool>(opt,4);
+                    auto template_only = toml_h::find<bool>(opt,5);
                     std::cout << TAG<<"Use timetof template "<< hname << " from "<< fname <<std::endl;
                     TFile fs(fname.c_str());
                     TH2D* hist = (TH2D*)fs.Get(hname.c_str());
-                    s->SetTemplate(*hist, offset, combine);
+                    s->SetTemplate(*hist, offset, combine, template_only);
                 }
             }
         }

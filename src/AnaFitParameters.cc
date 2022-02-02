@@ -297,8 +297,6 @@ void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int n
 #endif
         double wgt = (*m_func)(params[bin],*event);
 
-        // if (m_func_type==kScatter) event -> SetTailPE(wgt);
-        // else event -> AddEvWght(wgt);
         event -> AddEvWght(wgt);
     }
 }

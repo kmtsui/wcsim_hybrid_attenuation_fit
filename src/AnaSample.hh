@@ -77,7 +77,7 @@ public:
 
     void SetScatterMap(double time1, double time2, double time3, const TH1D& hist);
 
-    void SetTemplate(const TH2D& hist, double offset, bool combine);
+    void SetTemplate(const TH2D& hist, double offset, bool combine, bool template_only);
     inline bool UseTemplate() { return m_template; } 
     TH2D* GetTemplate() { return m_htimetof_pmt_pred;}
 
@@ -143,7 +143,7 @@ protected:
     TH2D* m_htimetof_data;
     TH2D* m_htimetof_pmt_pred; // timetof distribution for each PMT
     TH2D* m_htimetof_pmt_data;
-    bool m_template, m_template_combine;
+    bool m_template, m_template_combine, m_template_only;
     double m_timetof_offset;
 
     const std::string TAG = color::GREEN_STR + "[AnaSample]: " + color::RESET_STR;
