@@ -97,6 +97,10 @@ public:
         return eigen_decomp->GetOriginalParameters(param, start_idx);
     }
 
+    void SetSpline(const std::vector<std::string> file_name, const std::vector<std::string> spline_name);
+    void LoadSpline(std::vector<AnaSample*>& sample);
+    void ReWeightSpline(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
+
 
 protected:
     bool CheckDims(const std::vector<double>& params) const;
@@ -132,6 +136,12 @@ protected:
 
     std::vector<int> pol_orders; // order of polynomial in each piece 
     std::vector<double> pol_range; // applicable range for each polynomial
+
+    bool m_spline;
+    std::vector<std::string> m_spline_file_name;
+    std::vector<std::string> m_spline_name;
+    std::vector<std::vector<std::vector<TGraph*>>> spline;
+    //std::vector<TGraph> spline;
 
     const std::string TAG = color::GREEN_STR + "[AnaFitParameters]: " + color::RESET_STR;
     const std::string ERR = color::RED_STR + "[AnaFitParameters ERROR]: " + color::RESET_STR;

@@ -13,6 +13,7 @@ AnaFitParameters::AnaFitParameters(const std::string& par_name, const int pmttyp
     , covariance(nullptr)
     , covarianceI(nullptr)
     , original_cov(nullptr)
+    , m_spline(false)
 
 {
     m_func = new Identity;
@@ -78,12 +79,12 @@ void AnaFitParameters::SetParameterFunction(const std::string& func_name)
         m_func = new Attenuation;
         m_func_type = kAttenuation;
     }
-    // else if(func_name == "Scatter")
-    // {
-    //     std::cout << TAG << "Setting function to Scatter." << std::endl;
-    //     m_func = new Scatter;
-    //     m_func_type = kScatter;
-    // }
+    else if(func_name == "Scatter")
+    {
+        std::cout << TAG << "Setting function to Scatter." << std::endl;
+        m_func = new Scatter;
+        m_func_type = kScatter;
+    }
     else if(func_name == "PolynomialCosth")
     {
         std::cout << TAG << "Setting function to PolynomialCosth." << std::endl;
@@ -101,6 +102,12 @@ void AnaFitParameters::SetParameterFunction(const std::string& func_name)
         std::cout << TAG << "Setting function to SourcePhiVar." << std::endl;
         m_func = new SourcePhiVar;
         m_func_type = kSourcePhiVar;
+    }
+    else if(func_name == "Spline")
+    {
+        std::cout << TAG << "Setting function to Spline." << std::endl;
+        m_func = new Spline;
+        m_func_type = kSpline;
     }
     else
     {
@@ -224,7 +231,7 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
 
             const int bin = m_bm.GetBinIndex(binvar);
 
-            if (m_pmttype == -1 || sample[s]->GetPMTType() == m_pmttype)
+            if ((m_pmttype == -1 || sample[s]->GetPMTType() == m_pmttype) && bin!=-1)
             {
                 sample_map.push_back(bin);
                 params_used[bin]=true;
@@ -234,6 +241,9 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
         std::cout << TAG<<"InitEventMap: built event map for sample "<< sample[s]->GetName() << " of total "<< sample[s] -> GetNPMTs() << "PMTs"<<std::endl;
         m_evmap.push_back(sample_map);
     }
+
+    if (m_spline)
+        LoadSpline(sample);
 
     // Fixing the un-used parameters in fit for proper error calculation
     if (m_func_type != kPolynomialCosth && m_func_type != kAttenuationZ)
@@ -266,6 +276,11 @@ void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int n
 
     //if (m_pmttype >=0 && pmttype != m_pmttype) return;
 
+    if (m_spline)
+    {
+        ReWeightSpline(event, pmttype, nsample, nevent, params);
+    }
+
     const int bin = m_evmap[nsample][nevent];
     if(bin == PASSEVENT || bin == BADBIN)
         return;
@@ -282,8 +297,6 @@ void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int n
 #endif
         double wgt = (*m_func)(params[bin],*event);
 
-        // if (m_func_type==kScatter) event -> SetTailPE(wgt);
-        // else event -> AddEvWght(wgt);
         event -> AddEvWght(wgt);
     }
 }
@@ -389,5 +402,87 @@ double AnaFitParameters::GetChi2(const std::vector<double>& params) const
     }
 
     return chi2;
+}
+
+void AnaFitParameters::SetSpline(const std::vector<std::string> file_name, const std::vector<std::string> spline_name)
+{
+    m_spline = true;
+    m_spline_file_name = file_name;
+    m_spline_name = spline_name;
+}
+
+void AnaFitParameters::LoadSpline(std::vector<AnaSample*> &sample)
+{
+    // Load spline
+
+    spline.clear();
+
+    double x[] = {-100000,100000};
+    double y[] = {1,1};
+    TGraph* flatspline = new TGraph(2,x,y);
+
+    for(std::size_t s=0; s < sample.size(); s++)
+    {
+        int nbins = sample[s]->UseTemplate() ? sample[s]->GetTemplate()->GetNbinsY() : 0 ;
+
+        //std::vector<std::vector<TGraph>> sample_map(sample[s] -> GetNPMTs(), std::vector<TGraph>(nbins,flatspline) );
+        std::vector<std::vector<TGraph*>> sample_map;
+
+        TFile f(m_spline_file_name[s].c_str());
+        if (!f.IsOpen()){
+            std::cout << ERR << "Could not open input file: " << m_spline_file_name[s] << std::endl;
+            //spline.emplace_back(sample_map);
+            //continue;
+        }
+        
+        for(int i=0; i < sample[s] -> GetNPMTs(); i++)
+        {
+            AnaEvent* ev = sample[s] -> GetPMT(i);
+            int pmtID = ev->GetPMTID();
+
+            std::vector<TGraph*> pmt_map;
+
+            for (int j = 1; j <= nbins; j++ )
+            {
+                std::string graphname = Form("%s/PMT%i/Bin_%i",m_spline_name[s].c_str(),pmtID,j);
+                TGraph* graph = (TGraph*)f.Get(graphname.c_str());
+                if (graph)
+                {
+                    //graph->SetDirectory(0);
+                    pmt_map.push_back(graph);
+                    //std::cout << TAG << "Get graph: " << graphname << std::endl;
+                    // TGraph g(*graph);
+                    // sample_map[i][j-1] = g;
+                }
+                else
+                {
+                    std::cout << WAR << "Could not find "<< graphname <<std::endl;
+                    pmt_map.push_back(flatspline);
+                }
+            }
+
+            //std::cout << TAG << "Loaded spline for PMT "<< i <<std::endl;
+
+            sample_map.emplace_back(pmt_map);
+        }
+
+        std::cout << TAG << "Loaded spline for sample "<< sample[s]->GetName() << " of total "<< sample[s] -> GetNPMTs() << "PMTs"<<std::endl;
+        spline.emplace_back(sample_map);
+
+        f.Close();
+    }
+
+}
+
+void AnaFitParameters::ReWeightSpline(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params)
+{
+    std::vector<double> timetof_pred = event->GetTimetofPred();
+    for (int i=0;i<timetof_pred.size();i++)
+    {
+        double weight = spline[nsample][nevent][i]->Eval(params[0]);
+        timetof_pred[i] *= weight;
+    }
+
+    event->SetTimetofPred(timetof_pred);
 }
 

@@ -12,9 +12,11 @@
 
 #include <TDirectory.h>
 #include <TH1D.h>
+#include <TH2D.h>
 #include <TMath.h>
 #include <TRandom3.h>
 #include <TTree.h>
+#include <TGraph.h>
 
 #include "AnaEvent.hh"
 #include "AnaTree.hh"
@@ -28,11 +30,6 @@ public:
     AnaSample(int sample_id, const std::string& name, const std::string& binning, int pmt_type);
     ~AnaSample();
 
-    inline int GetN() const { return m_events.size(); }
-    inline void ClearEvents() { m_events.clear(); }
-    inline void AddEvent(const AnaEvent& event) { m_events.push_back(event); }
-
-    AnaEvent* GetEvent(const unsigned int evnum);
     void InitEventMap();
 
     inline int GetNPMTs() const { return m_pmts.size(); }
@@ -49,7 +46,6 @@ public:
 
     void SetLLHFunction(const std::string& func_name);
     double CalcLLH() const;
-    double CalcChi2() const;
 
     void FillEventHist(bool reset_weights = false);
     void FillDataHist(bool stat_fluc = false);
@@ -80,6 +76,10 @@ public:
     }
 
     void SetScatterMap(double time1, double time2, double time3, const TH1D& hist);
+
+    void SetTemplate(const TH2D& hist, double offset, bool combine, bool template_only);
+    inline bool UseTemplate() { return m_template; } 
+    TH2D* GetTemplate() { return m_htimetof_pmt_pred;}
 
     inline void UnsetScatter() { m_scatter = false; m_scatter_map = false; }
 
@@ -125,7 +125,6 @@ protected:
 
     std::string m_name;
     std::string m_binning;
-    std::vector<AnaEvent> m_events; // not used anymore
     std::vector<AnaEvent> m_pmts;  // PMT geometry has the same kind of information as hits except T/Q
 
     BinManager m_bm;
@@ -138,6 +137,14 @@ protected:
     TH1D* m_hdata_control; // data histogram in control region
     TH1D* m_hdata_pmt; // data histogram per PMT 
     TH1D* m_hdata_pmt_control; // data histogram in control region per PMT
+
+    TH2D* m_htimetof_pred; // timetof distribution for fit
+    TH2D* m_htimetof_pred_w2; 
+    TH2D* m_htimetof_data;
+    TH2D* m_htimetof_pmt_pred; // timetof distribution for each PMT
+    TH2D* m_htimetof_pmt_data;
+    bool m_template, m_template_combine, m_template_only;
+    double m_timetof_offset;
 
     const std::string TAG = color::GREEN_STR + "[AnaSample]: " + color::RESET_STR;
     const std::string ERR = color::RED_STR + "[AnaSample ERROR]: " + color::RESET_STR;

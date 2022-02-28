@@ -1,4 +1,4 @@
-double truth_alpha(double wavelength=400, double ABWFF=1.30, double RAYFF=0.75) {
+std::vector<double> truth_alpha(double wavelength=400, double ABWFF=1.30, double RAYFF=0.75) {
     const int NUMENTRIES_water=60;
     const double GeV=1.e9;
     const double cm=1;
@@ -55,9 +55,9 @@ double truth_alpha(double wavelength=400, double ABWFF=1.30, double RAYFF=0.75) 
     TGraph* gr_ray = new TGraph(NUMENTRIES_water,ENERGY_water,RAYLEIGH_water);
     double photoEnergy = 1239.84193/wavelength;
     double alpha = 1./(1./gr_abs->Eval(photoEnergy)+1./gr_ray->Eval(photoEnergy));
-    std::cout<<"Absorption length = "<<gr_abs->Eval(photoEnergy)<<" cm"<<std::endl;
-    std::cout<<"Scattering length = "<<gr_ray->Eval(photoEnergy)<<" cm"<<std::endl;
-    std::cout<<"Attenutation length = "<<alpha<<" cm"<<std::endl;
+    // std::cout<<"Absorption length = "<<gr_abs->Eval(photoEnergy)<<" cm"<<std::endl;
+    // std::cout<<"Scattering length = "<<gr_ray->Eval(photoEnergy)<<" cm"<<std::endl;
+    // std::cout<<"Attenutation length = "<<alpha<<" cm"<<std::endl;
 
-    return alpha;
+    return std::vector<double>{alpha,gr_abs->Eval(photoEnergy),gr_ray->Eval(photoEnergy)};
 }

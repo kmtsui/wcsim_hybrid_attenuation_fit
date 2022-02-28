@@ -195,6 +195,28 @@ int main(int argc, char** argv)
                     std::cout << TAG<<"Setting diffuser Z-position to "<< z0 <<std::endl;
                     s->SetZ0(z0);
                 }
+                else if (optname=="template")
+                {
+                    // auto fname = toml_h::find<std::string>(opt,1);
+                    // auto hname = toml_h::find<std::string>(opt,2);
+                    // auto offset = toml_h::find<double>(opt,3);
+                    // auto lo = toml_h::find<double>(opt,4);
+                    // auto hi = toml_h::find<double>(opt,5);
+                    // std::cout << TAG<<"Use timetof template "<< hname <<" from "<< fname <<std::endl;
+                    // TFile fs(fname.c_str());
+                    // TH1D* hs = (TH1D*)fs.Get(hname.c_str());
+                    // s->SetTemplate(*hs, offset, lo, hi);
+
+                    auto fname = toml_h::find<std::string>(opt,1);
+                    auto hname = toml_h::find<std::string>(opt,2);
+                    auto offset = toml_h::find<double>(opt,3);
+                    auto combine = toml_h::find<bool>(opt,4);
+                    auto template_only = toml_h::find<bool>(opt,5);
+                    std::cout << TAG<<"Use timetof template "<< hname << " from "<< fname <<std::endl;
+                    TFile fs(fname.c_str());
+                    TH2D* hist = (TH2D*)fs.Get(hname.c_str());
+                    s->SetTemplate(*hist, offset, combine, template_only);
+                }
             }
         }
 
@@ -294,6 +316,13 @@ int main(int argc, char** argv)
                     TH1D* hist = (TH1D*)f.Get(hname.c_str());
                     for (int j=0;j<npar;j++)
                         priors[j] = hist->GetBinContent(j+1);
+                } 
+                else if (optname=="spline") // set spline reweight
+                {
+                    auto fname = toml_h::find<std::vector<std::string>>(opt,1);
+                    auto sname = toml_h::find<std::vector<std::string>>(opt,2);
+                    //auto num = toml_h::find<int>(opt,3);
+                    fitpara->SetSpline(fname,sname);
                 } 
             }
         }
