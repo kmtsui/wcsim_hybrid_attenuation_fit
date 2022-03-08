@@ -28,6 +28,7 @@ class AnaEvent
             m_nPE_indirect = 0.0;
             m_nPE_indirect_err = 0.0;
             m_timetof   = -999.0;
+            m_eff = 1.0;
             m_wght     = 1.0;
             m_wghtMC   = 1.0;
         }
@@ -88,6 +89,9 @@ class AnaEvent
 
         inline void SetTimetof(double val){ m_timetof = val; }
         inline double GetTimetof() const { return m_timetof; }
+
+        inline void SetEff(double val){ m_eff = val; }
+        inline double GetEff() const { return m_eff; }
 
         inline void SetTimetofNom(std::vector<double> val){ m_timetof_nom = val; }
         inline std::vector<double> GetTimetofNom() const { return m_timetof_nom; }
@@ -161,6 +165,8 @@ class AnaEvent
                 return m_pmtid;
             else if(var == "mPMT_id")
                 return m_mpmtid;
+            else if(var == "Eff")
+                return m_eff;
             else
             {
                 std::cout<<" Error! Variable "<<var<<" not available in AnaEvent"<<std::endl;
@@ -196,6 +202,7 @@ class AnaEvent
         double m_nPE_indirect; //indirect PE prediction
         double m_nPE_indirect_err; //err^2
         double m_timetof;  //hittime-tof
+        double m_eff;
         double m_wght;     //event weight
         double m_wghtMC;   //event weight from original MC
         std::vector<double> m_timetof_nom;
