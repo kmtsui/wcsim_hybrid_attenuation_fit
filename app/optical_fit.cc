@@ -26,7 +26,8 @@ void HelpMessage()
                 << "-o : Output file\n"
                 << "-c : Config file\n"
                 << "-s : RNG seed \n"
-                << "-n : Number of threads\n";
+                << "-n : Number of threads\n"
+                << "-t : Number of toy fits \n";
 }
 
 int main(int argc, char** argv)
@@ -35,6 +36,7 @@ int main(int argc, char** argv)
     std::string config_file;
     int num_threads = 1;
     int seed = 0;
+    int toys = 0;
 
     char option;
     while((option = getopt(argc, argv, "j:f:o:c:n:s:t:h")) != -1)
@@ -55,6 +57,11 @@ int main(int argc, char** argv)
                 seed = std::stoi(optarg);
                 if (seed<0) seed = 0;
                 std::cout << TAG<<"Set seed = "<<seed<<std::endl;
+                break;
+            case 't':
+                toys = std::stoi(optarg);
+                if (toys<0) toys = 0;
+                std::cout << TAG<<"Number of toys = "<<toys<<std::endl;
                 break;
             case 'h':
                 HelpMessage();
@@ -216,6 +223,21 @@ int main(int argc, char** argv)
                     TFile fs(fname.c_str());
                     TH2D* hist = (TH2D*)fs.Get(hname.c_str());
                     s->SetTemplate(*hist, offset, combine, template_only);
+                }
+                else if (optname=="pmt_eff")
+                {
+                    auto fname = toml_h::find<std::string>(opt,1);
+                    auto hname = toml_h::find<std::string>(opt,2);
+                    std::cout << TAG << "Use PMT efficiency histogram "<< hname << " from " << fname << std::endl;
+                    TFile fs(fname.c_str());
+                    TH1D* hist = (TH1D*)fs.Get(hname.c_str());
+                    s->SetPMTEff(*hist);
+                }
+                else if (optname=="pmt_eff_var")
+                {
+                    auto sigma = toml_h::find<double>(opt,1);
+                    std::cout << TAG << "Apply PMT efficiency variation with 1-sigma =  "<< sigma << std::endl;
+                    s->SetPMTEffVar(sigma);
                 }
             }
         }
@@ -380,5 +402,30 @@ int main(int argc, char** argv)
 
     std::cout << TAG << "Output saved to " << fname_output << std::endl;
 
+    if (toys>0)
+    {
+        std::cout << TAG << "Running " << toys << " toy fits..." << std::endl;
+
+        for (int i=0;i<toys;i++)
+        {
+            std::cout << TAG << "Processing Toy Fit " << i << " :" << std::endl;
+
+            std::string toy_output = fname_output;
+            toy_output.insert(toy_output.size()-5,Form("_toy%i",i));
+            TFile* fout_toy = TFile::Open(toy_output.c_str(), "RECREATE");
+            fitter.SetDirectory(fout_toy);
+
+            for (int j=0;j<samples.size();j++)
+            {
+                samples[j]->InitToy();
+            }
+
+            bool toy_converge = fitter.Fit(samples);
+            if(!toy_converge)
+                std::cout << TAG << "Toy Fit " << i <<" did not coverge." << std::endl;
+
+            fout_toy->Close();
+        }
+    }
     return 0;
 }    
