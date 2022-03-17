@@ -137,6 +137,7 @@ protected:
     std::vector<int> pol_orders; // order of polynomial in each piece 
     std::vector<double> pol_range; // applicable range for each polynomial
 
+    // spline reweight for indirect photon
     bool m_spline;
     std::vector<std::string> m_spline_file_name;
     std::vector<std::string> m_spline_name;

@@ -202,12 +202,12 @@ class AnaEvent
         double m_nPE_indirect; //indirect PE prediction
         double m_nPE_indirect_err; //err^2
         double m_timetof;  //hittime-tof
-        double m_eff;
+        double m_eff;      // PMT relative efficiency
         double m_wght;     //event weight
         double m_wghtMC;   //event weight from original MC
-        std::vector<double> m_timetof_nom;
-        std::vector<double> m_timetof_nom_sig2;
-        std::vector<double> m_timetof_pred;
+        std::vector<double> m_timetof_nom;      // template nominal prediction
+        std::vector<double> m_timetof_nom_sig2; // template nominal prediction sigma^2
+        std::vector<double> m_timetof_pred;     // template prediction modified by parameter spline
         std::vector<int> par_list;
         std::vector<double> reco_var;
 

@@ -19,7 +19,7 @@ mkdir build; cd build; cmake ../
 make install
 ```
 
-To build with WCSIM support, setup `$WCSIMDIR` which contains the WCSIM `src/` and `include/` directory, and `libWCSimRoot.so`.
+To build with WCSIM support, setup environment variable `$WCSIMDIR` which contains the WCSIM `src/` and `include/` directory, and `libWCSimRoot.so`.
 
 ```
 cmake ../ -DUSE_WCSIM=1
@@ -38,7 +38,20 @@ The analysis is done in two steps. First use `WCSIM_TreeConvert` to perform data
 ```
 WCSIM_TreeConvert -f wcsim_output.root 
 ```
-See available arguments with `WCSIM_TreeConvert -h`.
+Available arguments are
+- `-f` : input file name
+- `-o` : output file name
+- `-l` : laser wavelength. For calculating speed of light in water
+- `-w` : apply diffuser angular profile reweight
+- `-z` : apply top-bottom-asymmetry reweight with input slope of attenuation length
+- `-p` : set water parameters ABWFF,RAWFF for -z reweight
+- `-b` : only read B&L PMTs data
+- `-d` : read raw Cherenkov hits and perform ad-hoc digitization
+- `-t` : use separated triggers for B&L and mPMTs
+- `-v` : turn on detailed verbose
+- `-s` : specify start event
+- `-e` : specify end event
+- `-r` : random seed value
 
 The program assumes a diffuser simulation and store the basic PMT hits and PMT geometry (relative to the source) information in `TTree` format. Modify the code if you want to store extra information.
 
@@ -56,6 +69,7 @@ The `pmt_typeX` tree contains the branches:
 - `mPMT_id/I` : ID of small PMT inside a mPMT module
 - `costhm/D` : photon incident costheta angle relative to central small PMT for mPMT
 - `phim/D` : photon incident phi angle relative to central small PMT for mPMT
+- `dz/D` : z-position relative to source
 
 The `hitRate_pmtTypeX` tree contains the branches:
 - `nPE/D` : number of PE
@@ -68,7 +82,12 @@ The fitter `optical_fit` imports the data samples produced by `WCSIM_TreeConvert
 ```
 optical_fit -o fitoutput.root -c $OPTICALFIT/var/OPTICALFIT/config/config.toml
 ```
-See available arguments with `optical_fit -h`.
+Available arguments are
+- `-o` : output file name
+- `-c` : input config file name
+- `-s` : random seed value
+- `-n` : number of threads 
+- `-t` : number of toy fits. Repeat the fits with tweaks in certain parameters
 
 The sample and fit configurations are defined in the toml file. See `$OPTICALFIT/var/OPTICALFIT/config/config.toml` for detailed explanation. You can copy the entire `config` folder to somewhere else and run the code there. The config and binning files are assumed to live in the same folder.
 

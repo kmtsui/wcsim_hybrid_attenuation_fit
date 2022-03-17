@@ -47,7 +47,7 @@ bool AnaFitParameters::CheckDims(const std::vector<double>& params) const
     else
     {
         std::cerr << ERR << "Dimension of parameter vector does not match priors.\n"
-                  << "Prams size is: " << params.size() << std::endl
+                  << "Params size is: " << params.size() << std::endl
                   << "Prior size is: " << pars_prior.size() << std::endl;
         vector_size = false;
     }

@@ -136,7 +136,7 @@ protected:
 
     std::string m_name;
     std::string m_binning;
-    std::vector<AnaEvent> m_pmts;  // PMT geometry has the same kind of information as hits except T/Q
+    std::vector<AnaEvent> m_pmts;  // Geometry info etc. for each PMT
 
     BinManager m_bm;
     CalcLLHFunc* m_llh;
@@ -150,6 +150,7 @@ protected:
     TH1D* m_hdata_pmt_control; // data histogram in control region per PMT
     TH1D* m_pmt_eff;
 
+    // template fit of timetof distribution for indirect PE
     TH2D* m_htimetof_pred; // timetof distribution for fit
     TH2D* m_htimetof_pred_w2; 
     TH2D* m_htimetof_data;

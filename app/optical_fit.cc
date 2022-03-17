@@ -371,9 +371,10 @@ int main(int argc, char** argv)
     fitter.SetMinSettings(min_settings);
     fitter.InitFitter(fitparas);
 
+    bool stat_fluc = toml_h::find<bool>(minimizer_config, "stat_fluc");
     bool did_converge = false;
 
-    did_converge = fitter.Fit(samples);
+    did_converge = fitter.Fit(samples, stat_fluc);
     if(!did_converge)
         std::cout << TAG << "Fit did not coverge." << std::endl;
 
@@ -420,7 +421,7 @@ int main(int argc, char** argv)
                 samples[j]->InitToy();
             }
 
-            bool toy_converge = fitter.Fit(samples);
+            bool toy_converge = fitter.Fit(samples, stat_fluc);
             if(!toy_converge)
                 std::cout << TAG << "Toy Fit " << i <<" did not coverge." << std::endl;
 

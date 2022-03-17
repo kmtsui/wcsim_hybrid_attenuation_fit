@@ -115,16 +115,17 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
             }
         }
         pmt_vec[i].SetSampleType(m_sample_id);
+
         double eff = 1.0;
         if (m_use_eff) eff = m_pmt_eff->GetBinContent(pmt_vec[i].GetPMTID()+1);
         if (m_eff_var) eff *= gRandom->Gaus(1,m_eff_sig);
         pmt_vec[i].SetEff(eff);
 
         pmt_vec[i].SetZ0(m_z0);
+        
         if (!skip) AddPMT(pmt_vec[i]);
     }
 
-    double timetof, nPE;
     selTree->SetDataBranches();
 
     unsigned long nDataEntries = selTree->GetDataEntries();
@@ -164,6 +165,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         m_hdata_pmt_control = new TH1D("","",nPMTs,0,nPMTs);
     }
 
+    double timetof, nPE;
     int pmtID;
 
     std::cout << TAG<<"Reading PMT hit data..."<<std::endl;
