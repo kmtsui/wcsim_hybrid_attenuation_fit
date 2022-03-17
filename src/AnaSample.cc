@@ -26,7 +26,12 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_htimetof_pred_w2(nullptr)
     , m_htimetof_pmt_pred(nullptr)
     , m_htimetof_pmt_data(nullptr)
+    , m_pmt_eff(nullptr)
+    , m_use_eff(false)
+    , m_eff_var(false)
+    , m_eff_sig(0.0)
     , m_template(false)
+    , selTree(nullptr)
 {
     TH1::SetDefaultSumw2(true);
 
@@ -81,18 +86,21 @@ AnaSample::~AnaSample()
     if(m_htimetof_pmt_pred != nullptr)
         delete m_htimetof_pmt_pred;
 
+    if(m_pmt_eff != nullptr)
+        delete m_pmt_eff;
+
 }
 
 void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name)
 {
-    AnaTree selTree(file_name, tree_name, pmt_tree_name);
-    if (m_pmttype==1 && m_mPMTmask.size()>0) selTree.MaskmPMT(m_mPMTmask, m_nPMTpermPMT);
-    if (m_pmtmask>0) selTree.MaskPMT(m_pmtmask, m_pmttype, m_nPMTpermPMT);
+    selTree = new AnaTree(file_name, tree_name, pmt_tree_name);
+    if (m_pmttype==1 && m_mPMTmask.size()>0) selTree->MaskmPMT(m_mPMTmask, m_nPMTpermPMT);
+    if (m_pmtmask>0) selTree->MaskPMT(m_pmtmask, m_pmttype, m_nPMTpermPMT);
 
     std::cout << TAG  << "Reading events for from "<<file_name<<"...\n";
 
     std::cout << TAG  << "Reading PMT geometry...\n";
-    std::vector<AnaEvent> pmt_vec = selTree.GetPMTs();
+    std::vector<AnaEvent> pmt_vec = selTree->GetPMTs();
 
     m_pmts.clear();
     // Add PMT geometry
@@ -107,18 +115,25 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
             }
         }
         pmt_vec[i].SetSampleType(m_sample_id);
+
+        double eff = 1.0;
+        if (m_use_eff) eff = m_pmt_eff->GetBinContent(pmt_vec[i].GetPMTID()+1);
+        if (m_eff_var) eff *= gRandom->Gaus(1,m_eff_sig);
+        pmt_vec[i].SetEff(eff);
+
+        pmt_vec[i].SetZ0(m_z0);
+        
         if (!skip) AddPMT(pmt_vec[i]);
     }
 
-    double timetof, nPE;
-    selTree.SetDataBranches();
+    selTree->SetDataBranches();
 
-    unsigned long nDataEntries = selTree.GetDataEntries();
+    unsigned long nDataEntries = selTree->GetDataEntries();
 
     if(m_hdata_pmt != nullptr)
         delete m_hdata_pmt;
 
-    int nPMTs = selTree.GetPMTEntries();
+    int nPMTs = selTree->GetPMTEntries();
     m_hdata_pmt = new TH1D("","",nPMTs,0,nPMTs);
 
     // determine the random offset for each PMT
@@ -150,12 +165,13 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         m_hdata_pmt_control = new TH1D("","",nPMTs,0,nPMTs);
     }
 
+    double timetof, nPE;
     int pmtID;
 
     std::cout << TAG<<"Reading PMT hit data..."<<std::endl;
     for (unsigned long i=0;i<nDataEntries;i++)
     {
-        if (!selTree.GetDataEntry(i,timetof,nPE,pmtID)) continue;
+        if (!selTree->GetDataEntry(i,timetof,nPE,pmtID)) continue;
 
         if (m_time_offset) timetof += timetof_shift[pmtID];
         if (m_time_smear) timetof += gRandom->Gaus(0,time_resolution[pmtID]);
@@ -260,8 +276,6 @@ void AnaSample::InitEventMap()
         {
             e.SetSampleBin(count);
             count++;
-
-            e.SetZ0(m_z0);
         }
     }
     else for(auto& e : m_pmts)
@@ -281,8 +295,6 @@ void AnaSample::InitEventMap()
         }
 #endif
         e.SetSampleBin(b);
-
-        e.SetZ0(m_z0);
     }
 
     if (m_template)
@@ -593,4 +605,96 @@ void AnaSample::SetTemplate(const TH2D& hist, double offset, bool combine, bool 
     m_timetof_offset = offset;
     m_template_combine = combine;
     m_template_only = template_only;
+}
+
+void AnaSample::SetPMTEff(const TH1D& hist)
+{
+    m_use_eff = true;
+
+    if(m_pmt_eff != nullptr)
+        delete m_pmt_eff;
+    m_pmt_eff = new TH1D(hist);
+    m_pmt_eff->SetDirectory(0);
+}
+
+void AnaSample::InitToy()
+{
+    for(auto& e : m_pmts)
+    {
+        double eff = 1.0;
+        if (m_use_eff) eff = m_pmt_eff->GetBinContent(e.GetPMTID()+1);
+        if (m_eff_var) eff *= gRandom->Gaus(1,m_eff_sig);
+        e.SetEff(eff);
+    }
+
+    if ( m_time_offset || m_time_smear ) 
+    {
+        int nPMTs = selTree->GetPMTEntries();
+        // determine the random offset for each PMT
+        std::vector<double> timetof_shift;
+        if (m_time_offset)
+        {
+            for (int i=0;i<nPMTs;i++)
+                timetof_shift.push_back( gRandom->Gaus(0,m_time_offset_width) );
+        }
+
+        // determine the random smearing for each PMT
+        std::vector<double> time_resolution;
+        if (m_time_smear)
+        {
+            for (int i=0;i<nPMTs;i++)
+            {
+                double resol = -1;
+                while (resol<0)
+                    resol = gRandom->Gaus(m_time_smear_mean,m_time_smear_width);
+                time_resolution.push_back(resol);   
+            }
+        }
+
+        unsigned long nDataEntries = selTree->GetDataEntries();
+        double timetof, nPE;
+        int pmtID;
+        if (m_template) m_htimetof_pmt_data->Reset();
+        m_hdata_pmt->Reset();
+        m_hdata_pmt_control->Reset();
+        for (unsigned long i=0;i<nDataEntries;i++)
+        {
+            if (!selTree->GetDataEntry(i,timetof,nPE,pmtID)) continue;
+
+            if (m_time_offset) timetof += timetof_shift[pmtID];
+            if (m_time_smear) timetof += gRandom->Gaus(0,time_resolution[pmtID]);
+
+            bool skip = false;
+
+            for (int j=0;j<m_cutvar.size();j++) {
+                if (m_cutvar[j]=="timetof")
+                {
+                    if (timetof<m_cutlow[j] || timetof>m_cuthigh[j]) {
+                        skip = true;   
+                        break;
+                    }
+                }
+                else if (m_cutvar[j]=="nPE")
+                {
+                    if (nPE<m_cutlow[j] || nPE>m_cuthigh[j]) {
+                        skip = true;   
+                        break;
+                    }
+                }
+            }
+
+            if (m_template)
+            {
+                m_htimetof_pmt_data->Fill(pmtID+0.5,timetof+m_timetof_offset,nPE);
+            }
+
+            if (skip) continue;
+            if (m_scatter || m_scatter_map)
+            {
+                if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_pmt->Fill(pmtID+0.5, nPE);
+                else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_pmt_control->Fill(pmtID+0.5, nPE);
+            }
+            else m_hdata_pmt->Fill(pmtID+0.5, nPE);
+        }
+    }
 }

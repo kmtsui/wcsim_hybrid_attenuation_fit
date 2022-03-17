@@ -12,3 +12,6 @@ Calculate the true light attenuation length as a function of photon wavelength a
 
 ## PlotGui.c
 A not so useful ROOT GUI for plotting post-fit parameters. Either supply the fitouput root file as function argument, or open the file with GUI `Open File` button. 
+
+## build_template_and_spline.c
+Build the indirect photon template for the each PMT, and genearate the spline of Latt and Lsct parameters

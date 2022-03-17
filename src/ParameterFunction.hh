@@ -51,7 +51,8 @@ public:
     {
         double R = ev.GetR();
         double omega = ev.GetOmega();
-        double val = TMath::Exp(-R/par)*omega;
+        double eff = ev.GetEff();
+        double val = TMath::Exp(-R/par)*omega*eff;
 
         return val;
     }
@@ -67,15 +68,16 @@ public:
         double dz = ev.GetDz();
         double z0 = ev.GetZ0();
         double alpha_z0 = alpha0 + slopeA*z0;
+        double eff = ev.GetEff();
         double val;
         double da = slopeA*dz;
         if (fabs(da)>1.e-9)
         {
-            val = TMath::Power(1+da/alpha_z0,-R/da)*omega;
+            val = TMath::Power(1+da/alpha_z0,-R/da)*omega*eff;
         }
         else
         {
-            val = TMath::Exp(-R/alpha_z0)*omega;
+            val = TMath::Exp(-R/alpha_z0)*omega*eff;
         }
 
         return val;

@@ -81,6 +81,9 @@ public:
     inline bool UseTemplate() { return m_template; } 
     TH2D* GetTemplate() { return m_htimetof_pmt_pred;}
 
+    void SetPMTEff(const TH1D& hist);
+    inline void SetPMTEffVar(double val) { m_eff_var  = true; m_eff_sig = val; }
+
     inline void UnsetScatter() { m_scatter = false; m_scatter_map = false; }
 
     inline void SetTimeOffset(bool offset, double width) { m_time_offset = offset; m_time_offset_width = width; }
@@ -88,6 +91,8 @@ public:
     inline void SetTimeSmear(bool smear, double mean, double width) { m_time_smear = smear; m_time_smear_mean = mean; m_time_smear_width = width; }
 
     inline void SetZ0(double val) { m_z0 = val; }
+
+    void InitToy();
 
 protected:
     int m_sample_id;
@@ -117,6 +122,12 @@ protected:
 
     double m_z0;
 
+    bool m_use_eff;
+    bool m_eff_var;
+    double m_eff_sig;
+
+    AnaTree* selTree;
+
     std::vector<std::string> m_binvar;
 
     std::vector<std::string> m_cutvar;
@@ -125,7 +136,7 @@ protected:
 
     std::string m_name;
     std::string m_binning;
-    std::vector<AnaEvent> m_pmts;  // PMT geometry has the same kind of information as hits except T/Q
+    std::vector<AnaEvent> m_pmts;  // Geometry info etc. for each PMT
 
     BinManager m_bm;
     CalcLLHFunc* m_llh;
@@ -137,7 +148,9 @@ protected:
     TH1D* m_hdata_control; // data histogram in control region
     TH1D* m_hdata_pmt; // data histogram per PMT 
     TH1D* m_hdata_pmt_control; // data histogram in control region per PMT
+    TH1D* m_pmt_eff;
 
+    // template fit of timetof distribution for indirect PE
     TH2D* m_htimetof_pred; // timetof distribution for fit
     TH2D* m_htimetof_pred_w2; 
     TH2D* m_htimetof_data;

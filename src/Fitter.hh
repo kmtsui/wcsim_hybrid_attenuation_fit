@@ -51,6 +51,7 @@ public:
     Fitter(TDirectory* dirout, const int seed);
     Fitter(TDirectory* dirout, const int seed, const int num_threads);
     ~Fitter();
+    void SetDirectory(TDirectory* dirout) { m_dir = dirout; }
     double CalcLikelihood(const double* par);
     void InitFitter(std::vector<AnaFitParameters*>& fitpara);
 
