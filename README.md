@@ -53,7 +53,7 @@ Available arguments are
 - `-e` : specify end event
 - `-r` : random seed value
 
-The program assumes a diffuser simulation and store the basic PMT hits and PMT geometry (relative to the source) information in `TTree` format. Modify the code if you want to store extra information.
+The program assumes a light injector simulation with fixed source position and store the basic PMT hits and PMT geometry (relative to the source) information in `TTree` format. Modify the code if you want to store extra information.
 
 In WCSIM hybridPMT branch, there are the mPMTs in addition to the ordinary PMTs. The two types of PMT hits and geometries are stored in separate trees.
 
@@ -75,6 +75,8 @@ The `hitRate_pmtTypeX` tree contains the branches:
 - `nPE/D` : number of PE
 - `timetof/D` : time-to-flight subtracted hit time
 - `PMT_id/I` : PMT id that the hit belongs to
+
+The `-d` option stores addition truth information of photon hit time/charge, and photon reflection/scattering history.
 
 ## optical_fit
 
