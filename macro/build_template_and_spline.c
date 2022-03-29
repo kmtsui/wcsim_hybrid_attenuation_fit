@@ -2,7 +2,7 @@
 #include "truth_alpha.hh"
 
 // Input: Processed files from WCSIM_TreeConvert  with -d option
-// Output: template of indirect light for each PMT
+// Output: template of indirect light for each PMT, and splines for attenuation length and scattering length
 Use with WCSIM_TreeConvert output with -d options to template a maping of indirect light
 void build_template_and_spline(
     int pmttype = 0, double wavelength = 400,
@@ -13,7 +13,7 @@ void build_template_and_spline(
     )
 {
     // Define output according to PMT type
-    std::string outname = pmttype == 0 ? "template_spline_BnL_collimator32_400nm.root" : "template2d_mPMT_diffuser4_400nm.root";
+    std::string outname = pmttype == 0 ? "template_spline_BnL_collimator32_400nm.root" : "template_spline_mPMT_collimator32_400nm.root";
     std::string chainname = pmttype == 0 ? "hitRate_pmtType0" : "hitRate_pmtType1";
     std::string treename = pmttype == 0 ? "pmt_type0" : "pmt_type1";
     double timetof_indirect = pmttype == 0 ? 0.0 : 0.6 ;
@@ -126,7 +126,7 @@ void build_template_and_spline(
     TFile* fout = new TFile(outname.c_str(),"RECREATE");
     hist_att_template[nomIdx_att]->Write("timetof_template");
     TDirectory *spline_att_dir = fout->mkdir("Spline_Att");
-    spline_att_dir->cd();    // make the "tof" directory the current directory
+    spline_att_dir->cd();    // make the "Spline_Att" directory the current directory
     for (int p=0;p<nPMTs;p++)
     {
         TDirectory *pmt_dir = spline_att_dir->mkdir(Form("PMT%i",p));
@@ -157,7 +157,7 @@ void build_template_and_spline(
     sortSct.push_back(RAYFF);
     std::sort(sortSct.begin(),sortSct.end());
     TDirectory *spline_sct_dir = fout->mkdir("Spline_Sct");
-    spline_sct_dir->cd();    // make the "tof" directory the current directory
+    spline_sct_dir->cd();    // make the "Spline_Sct" directory the current directory
     for (int p=0;p<nPMTs;p++)
     {
         TDirectory *pmt_dir = spline_sct_dir->mkdir(Form("PMT%i",p));
