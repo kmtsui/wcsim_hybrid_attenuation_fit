@@ -2,6 +2,8 @@
 
 Analysis framework to extract detector parameters from WCSIM hybridPMT MC.
 
+WCSIM_TreeConvert modified to compile with WCTE WCSIM in https://github.com/laurenanthony2/WCSim
+
 ## Installation
 
 Requirements:

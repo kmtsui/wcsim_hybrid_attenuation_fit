@@ -168,6 +168,9 @@ int main(int argc, char **argv){
     }
   }
   
+  // Enforce no hybrid geometry as there is only one type of PMT (mPMT)
+  hybrid = false;
+
   // Open the file
   if (filename==NULL){
     std::cout << "Error, no input file: " << std::endl;
@@ -223,7 +226,7 @@ int main(int argc, char **argv){
   }
   geotree->GetEntry(0);
   PMTradius[0]=geo->GetWCPMTRadius();
-  PMTradius[1]=geo->GetWCPMTRadius(true);
+  PMTradius[1]=geo->GetWCPMTRadius();
   //std::cout<<"geo->GetWCCylLength() = "<<geo->GetWCCylLength()<<std::endl;
 
   // Options tree - only need 1 "event"
@@ -367,7 +370,7 @@ int main(int argc, char **argv){
   }
 
   int nPMTs_type0=geo->GetWCNumPMT();
-  int nPMTs_type1=0; if (hybrid) nPMTs_type1=geo->GetWCNumPMT(true);
+  int nPMTs_type1=0; if (hybrid) nPMTs_type1=geo->GetWCNumPMT();
   // reweight factor per PMT
   std::vector<double> ledweight_type0(nPMTs_type0,-1);
   std::vector<double> ledweight_type1(nPMTs_type1,-1);
@@ -379,11 +382,12 @@ int main(int argc, char **argv){
     for (int i=0;i<nPMTs_type;i++) 
     {
       WCSimRootPMT pmt;
-      if (pmtType==0) pmt = geo->GetPMT(i,false);
-      else pmt = geo->GetPMT(i,true);
+      if (pmtType==0) pmt = geo->GetPMT(i);
+      else pmt = geo->GetPMT(i);
       PMT_id = i;
-      if (pmtType == 0) mPMT_id = 0;
-      else mPMT_id = PMT_id%nPMTpermPMT; // assume the PMT_id is ordered properly for mPMT
+      // if (pmtType == 0) mPMT_id = 0;
+      // else mPMT_id = PMT_id%nPMTpermPMT; // assume the PMT_id is ordered properly for mPMT
+      mPMT_id = PMT_id%nPMTpermPMT;
       double PMTpos[3];
       double PMTdir[3];                   
       for(int j=0;j<3;j++){
@@ -422,12 +426,12 @@ int main(int argc, char **argv){
       costhm = costh;
       phim = 0;
       // mPMT specific
-      if (pmtType==1 && mPMT_id!=nPMTpermPMT-1)
+      if (mPMT_id!=nPMTpermPMT-1)
       { 
         // Calculate photon incident cos(theta) and phi angle relative to central PMT 
         int idx_centralpmt = int(PMT_id/nPMTpermPMT)*nPMTpermPMT + nPMTpermPMT-1; // locate the central PMT
         double PMTpos_central[3], PMTdir_central[3];
-        WCSimRootPMT pmt_central = geo->GetPMT(idx_centralpmt,true);
+        WCSimRootPMT pmt_central = geo->GetPMT(idx_centralpmt);
         for(int j=0;j<3;j++){
           PMTpos_central[j] = pmt_central.GetPosition(j)-PMTpos[j]; // central PMT position relative to current PMT
           PMTdir_central[j] = pmt_central.GetOrientation(j);
@@ -490,11 +494,11 @@ int main(int argc, char **argv){
       printf("Ntrack %d\n", wcsimrootevent->GetNtrack());
     }
 
-    std::vector<double> triggerInfo;
+    std::vector<float> triggerInfo;
     triggerInfo.clear();
     triggerInfo = wcsimrootevent->GetTriggerInfo();
 
-    std::vector<double> triggerInfo2;
+    std::vector<float> triggerInfo2;
     triggerInfo2.clear();
     if(hybrid) triggerInfo2 = wcsimrootevent2->GetTriggerInfo();
 
@@ -581,8 +585,8 @@ int main(int argc, char **argv){
         int peForTube      = wcsimrootcherenkovhit->GetTotalPe(1);
 
         WCSimRootPMT pmt;
-        if(pmtType == 0) pmt = geo->GetPMT(tubeNumber-1,false);
-        else pmt  = geo->GetPMT(tubeNumber-1,true);
+        if(pmtType == 0) pmt = geo->GetPMT(tubeNumber-1);
+        else pmt  = geo->GetPMT(tubeNumber-1);
 
         PMT_id = tubeNumber-1;
 
@@ -631,9 +635,9 @@ int main(int argc, char **argv){
 
           // only works well for peForTube = 1
           // if peForTube > 1, you don't know whether reflection and scattering happens at the same time for a single photon
-          if (cht->GetReflection()>0) nReflec++;
-          if (cht->GetRayScattering()>0) nRaySct++;
-          if (cht->GetMieScattering()>0) nMieSct++;
+          // if (cht->GetReflection()>0) nReflec++;
+          // if (cht->GetRayScattering()>0) nRaySct++;
+          // if (cht->GetMieScattering()>0) nMieSct++;
         }
         ////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////
@@ -645,8 +649,9 @@ int main(int argc, char **argv){
         // A simple way to mimic the digitization procedure, but triggering is not taken into account
         nPE_digi = nPE;
         timetof_digi = timetof;
-        if (pmtType==0) BnLDigitizer->Digitize(nPE_digi,timetof_digi);
-        if (pmtType==1) mPMTDigitizer->Digitize(nPE_digi,timetof_digi);
+        // if (pmtType==0) BnLDigitizer->Digitize(nPE_digi,timetof_digi);
+        // if (pmtType==1) mPMTDigitizer->Digitize(nPE_digi,timetof_digi);
+        mPMTDigitizer->Digitize(nPE_digi,timetof_digi);
 
         weight = 1;
         if (diffuserProfile) 
@@ -710,8 +715,8 @@ int main(int argc, char **argv){
         //int timeArrayIndex = wcsimrootcherenkovhit->GetTotalPe(0);
         //int peForTube      = wcsimrootcherenkovhit->GetTotalPe(1);
         WCSimRootPMT pmt;
-        if(pmtType == 0) pmt = geo->GetPMT(tubeNumber-1,false);
-        else pmt  = geo->GetPMT(tubeNumber-1,true); 
+        if(pmtType == 0) pmt = geo->GetPMT(tubeNumber-1);
+        else pmt  = geo->GetPMT(tubeNumber-1); 
 
         PMT_id = (tubeNumber-1.);
         
