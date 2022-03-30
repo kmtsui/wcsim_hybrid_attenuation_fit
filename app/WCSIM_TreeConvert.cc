@@ -184,8 +184,11 @@ int main(int argc, char **argv){
   }
   
   double vg = CalcGroupVelocity(wavelength);
-  std::cout<<"Using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
+  std::cout<<"Now using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
   vg /= 1.e9; // convert to m/ns
+  
+  //test from acraplet
+  std::cout<<"Test 1"<<std::endl;
 
   rng = new TRandom3(seed);
   gRandom = rng;
