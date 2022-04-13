@@ -14,6 +14,7 @@ AnaFitParameters::AnaFitParameters(const std::string& par_name, const int pmttyp
     , covarianceI(nullptr)
     , original_cov(nullptr)
     , m_spline(false)
+    , m_pars_throw(false)
 
 {
     m_func = new Identity;
@@ -486,3 +487,28 @@ void AnaFitParameters::ReWeightSpline(AnaEvent* event, int pmttype, int nsample,
     event->SetTimetofPred(timetof_pred);
 }
 
+void AnaFitParameters::ThrowPars()
+{
+
+    if(covariance != nullptr && m_pars_throw)
+    {
+        std::cout << TAG << "Throwing priors for  "<< m_name <<std::endl;
+
+        std::vector<double> toy(Npar, 0);
+        ToyThrower toy_thrower(*original_cov, true, 1E-48);
+        toy_thrower.Throw(toy);
+
+        for (int i=0; i<Npar; i++)
+        {
+            pars_prior[i] = pars_original[i] + toy[i];
+        }
+
+        if(m_decompose) pars_prior = eigen_decomp -> GetDecompParameters(pars_prior);
+    }
+    else
+    {
+        pars_prior = pars_original;
+        if(m_decompose) pars_prior = eigen_decomp -> GetDecompParameters(pars_prior);
+    }
+
+}

@@ -346,6 +346,10 @@ int main(int argc, char** argv)
                     //auto num = toml_h::find<int>(opt,3);
                     fitpara->SetSpline(fname,sname);
                 } 
+                else if (optname=="throw") // throw priors for chi2 calculation
+                {
+                    fitpara->SetThrowPars(true);
+                } 
             }
         }
         fitpara->SetParameterFunction(functype);

@@ -16,6 +16,7 @@ using TMatrixDSym = TMatrixTSym<double>;
 #include "ParameterFunction.hh"
 #include "EigenDecomp.hh"
 #include "ColorOutput.hh"
+#include "ToyThrower.hh"
 
 // some error codes
 const int PASSEVENT = -1;
@@ -65,6 +66,8 @@ public:
     bool DoRNGstart() const { return m_rng_start; }
     void SetRNGstart(bool flag = true) { m_rng_start = flag; }
     void SetWeightCap(double cap, bool flag = true) { m_do_cap_weights = flag; m_weight_cap = cap; }
+    void SetThrowPars(bool flag = true) { m_pars_throw = flag; }
+    void ThrowPars();
 
     inline void SetBinning(const std::string& binning) { m_bm.SetBinning(binning); }
 
@@ -120,6 +123,7 @@ protected:
     bool m_do_cap_weights;
     double m_weight_cap;
     double m_info_frac;
+    bool m_pars_throw;
 
     int m_pmttype;
     std::vector<std::string> m_binvar;
