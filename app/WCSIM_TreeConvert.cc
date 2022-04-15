@@ -31,6 +31,8 @@
 #include "OPTICALFIT/utils/LEDProfile.hh"
 #include "OPTICALFIT/utils/AttenuationZ.hh"
 
+#include "OPTICALFIT/BinManager.hh"
+
 using namespace std;
 
 TRandom3* rng;
@@ -58,11 +60,12 @@ void HelpMessage()
             << "-o : Output file\n"
             << "-l : Laser wavelength\n"
             << "-w : Apply diffuser profile reweight\n"
-            << "-z : Reweighing attenuation factor with input slope\n"
+            << "-z : Reweigh attenuation factor with input slope\n"
             << "-p : Set water parameters for attenuation factor reweight (ABWFF,RAYFF)\n"
             << "-b : Use only B&L PMTs\n"
             << "-d : Run with raw Cherenkov hits and perform ad-hoc digitization\n"
             << "-t : Use separated triggers\n"
+            << "-c : Produce photon hit histogram\n"
             << "-v : Verbose\n"
             << "-s : Start event\n"
             << "-e : End event\n"
@@ -84,6 +87,8 @@ int main(int argc, char **argv){
   double slopeA = 0;
   double abwff = 1.3;
   double rayff = 0.75;
+  bool hitHisto = false;
+  BinManager bm;
 
   double wavelength = 400; //wavelength in nm
 
@@ -93,7 +98,7 @@ int main(int argc, char **argv){
   int endEvent=0;
   int seed = 0;
   char c;
-  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:z:p:hdtvw")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
+  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:z:p:c:hdtvw")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
     switch(c){
       case 'f':
         filename = optarg;
@@ -159,6 +164,14 @@ int main(int argc, char **argv){
             count++;
           }
           std::cout<<"Setting new water paramters, ABWFF = "<<abwff<<", RAYFF = "<<rayff<<std::endl;
+          break;
+        }
+      case 'c':
+        {
+          hitHisto = true;
+          std::string binning = optarg;
+          std::cout<<"Produce PMT hit histogram with timetof binning from "<<binning<<std::endl;
+          bm = BinManager(binning);
           break;
         }
       case 'h':
@@ -456,7 +469,29 @@ int main(int argc, char **argv){
   }
   outfile->cd();
   pmt_type0->Write();
-  pmt_type1->Write();
+  if (hybrid) pmt_type1->Write();
+
+  // int nBins_timetof = 255;
+  // double timetof_min = -955, timetof_max = -750;
+  TH2F* hitRateHist_pmtType0;
+  TH2F* hitRateHist_pmtType1;
+  if (hitHisto)
+  {
+    //const double* bin_edges = bm.GetBinVector(0).data();
+    std::vector<double> bin_edges = bm.GetBinVector(0);
+    // for (int i=0;i<bin_edges.size();i++)
+    //   std::cout<<bin_edges[i]<<std::endl;
+    hitRateHist_pmtType0 = new TH2F("hitRateHist_pmtType0","hitRateHist_pmtType0",
+                                    nPMTs_type0,0,nPMTs_type0, bm.GetNbins(), bin_edges.data());
+    if (hybrid)
+      hitRateHist_pmtType1 = new TH2F("hitRateHist_pmtType1","hitRateHist_pmtType1",
+                                      nPMTs_type1,0,nPMTs_type1, bm.GetNbins(), bin_edges.data());
+  }
+  // hitRateHist_pmtType0 = new TH2D("hitRateHist_pmtType0","hitRateHist_pmtType0",
+  //                                 nPMTs_type0,0,nPMTs_type0, nBins_timetof, timetof_min, timetof_max);
+  // if (hybrid)
+  //   hitRateHist_pmtType1 = new TH2F("hitRateHist_pmtType1","hitRateHist_pmtType1",
+  //                                 nPMTs_type1,0,nPMTs_type1, nBins_timetof, timetof_min, timetof_max);
 
   // Ad-hoc digitizer, PMT specific 
   BoxandLine20inchHQE_Digitizer* BnLDigitizer = new BoxandLine20inchHQE_Digitizer();
@@ -555,7 +590,7 @@ int main(int argc, char **argv){
       
       TClonesArray *timeArray;//An array of pointers on CherenkovHitsTimes.
       if(pmtType==0) timeArray = wcsimrootevent->GetCherenkovHitTimes();
-      else timeArray = wcsimrootevent2->GetCherenkovHitTimes();
+      else if (hybrid) timeArray = wcsimrootevent2->GetCherenkovHitTimes();
       
       //double particleRelativePMTpos[3];
       double totalPe = 0;
@@ -766,8 +801,16 @@ int main(int argc, char **argv){
           weight *= pmtType==0 ? atten_weight0[PMT_id] : atten_weight1[PMT_id];   
         }
         nPE *= weight;  
-        if (pmtType==0) hitRate_pmtType0->Fill();
-        if (pmtType==1) hitRate_pmtType1->Fill();
+        if (pmtType==0) 
+        {
+          hitRate_pmtType0->Fill();
+          if (hitHisto) hitRateHist_pmtType0->Fill(PMT_id+0.5,timetof,nPE);
+        }
+        if (pmtType==1) 
+        {
+          hitRate_pmtType1->Fill();
+          if (hitHisto) hitRateHist_pmtType1->Fill(PMT_id+0.5,timetof,nPE);
+        }
 
 
       } // End of loop over Cherenkov hits
@@ -782,7 +825,12 @@ int main(int argc, char **argv){
 
   outfile->cd();
   hitRate_pmtType0->Write();
-  hitRate_pmtType1->Write();
+  if (hybrid) hitRate_pmtType1->Write();
+  if (hitHisto) 
+  {
+    hitRateHist_pmtType0->Write();
+    if (hybrid) hitRateHist_pmtType1->Write();
+  }
 
   outfile->Close();
   
