@@ -7,6 +7,7 @@
 #include <TApplication.h>
 #include <TStyle.h>
 #include <TFile.h>
+#include <TChain.h>
 #include <TTree.h>
 #include <TCanvas.h>
 #include <TChain.h>
@@ -187,7 +188,10 @@ int main(int argc, char **argv){
     HelpMessage();
     return -1;
   }
-  TFile *file = TFile::Open(filename);
+  TChain *tree = new TChain("wcsimT");
+  tree->Add(filename);
+  std::string single_file_name = tree->GetFile()->GetName();
+  TFile *file = TFile::Open(single_file_name.c_str());
   if (!file->IsOpen()){
     std::cout << "Error, could not open input file: " << filename << std::endl;
     return -1;
@@ -201,7 +205,7 @@ int main(int argc, char **argv){
   gRandom = rng;
 
   // Get the a pointer to the tree from the file
-  TTree *tree = (TTree*)file->Get("wcsimT");
+  //TTree *tree = (TTree*)file->Get("wcsimT");
 
   // Get the number of events
   int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
