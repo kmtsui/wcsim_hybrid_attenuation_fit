@@ -95,8 +95,8 @@ int main(int argc, char **argv){
 
   int nPMTpermPMT=19;
 
-  int startEvent=0;
-  int endEvent=0;
+  long int startEvent=0;
+  long int endEvent=0;
   int seed = 0;
   char c;
   while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:z:p:c:hdtvw")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
@@ -120,11 +120,11 @@ int main(int argc, char **argv){
 	      outfilename = optarg;
 	      break;
       case 's':
-	      startEvent = std::stoi(optarg);
+	      startEvent = std::stol(optarg);
         if (startEvent<0) startEvent = 0; 
 	      break;
       case 'e':
-	      endEvent = std::stoi(optarg);
+	      endEvent = std::stol(optarg);
 	      break;
       case 'r':
 	      seed = std::stoi(optarg);
@@ -208,9 +208,9 @@ int main(int argc, char **argv){
   //TTree *tree = (TTree*)file->Get("wcsimT");
 
   // Get the number of events
-  int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
+  long int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
   if(endEvent>0 && endEvent<=nevent) nevent = endEvent;
-  if(verbose) printf("nevent %d\n",nevent);
+  if(verbose) printf("nevent %ld\n",nevent);
   
   // Create a WCSimRootEvent to put stuff from the tree in
 
@@ -219,14 +219,16 @@ int main(int argc, char **argv){
 
   // Set the branch address for reading from the tree
   TBranch *branch = tree->GetBranch("wcsimrootevent");
-  branch->SetAddress(&wcsimrootsuperevent);
+  //branch->SetAddress(&wcsimrootsuperevent);
+  tree->SetBranchAddress("wcsimrootevent",&wcsimrootsuperevent);
   // Force deletion to prevent memory leak 
   tree->GetBranch("wcsimrootevent")->SetAutoDelete(kTRUE);
 
   TBranch *branch2;
   if(hybrid){
     branch2 = tree->GetBranch("wcsimrootevent2");
-    branch2->SetAddress(&wcsimrootsuperevent2);
+    //branch2->SetAddress(&wcsimrootsuperevent2);
+    tree->SetBranchAddress("wcsimrootevent2",&wcsimrootsuperevent2);
   // Force deletion to prevent memory leak 
     tree->GetBranch("wcsimrootevent2")->SetAutoDelete(kTRUE);
   }
@@ -502,7 +504,7 @@ int main(int argc, char **argv){
   PMT3inchR14374_Digitizer* mPMTDigitizer = new PMT3inchR14374_Digitizer();
 
   // Now loop over events
-  for (int ev=startEvent; ev<nevent; ev++)
+  for (long int ev=startEvent; ev<nevent; ev++)
   {
     // Read the event from the tree into the WCSimRootEvent instance
     tree->GetEntry(ev);
@@ -575,7 +577,7 @@ int main(int argc, char **argv){
     int ncherenkovdigihits2 = 0;if(hybrid) ncherenkovdigihits2 = wcsimrootevent2->GetNcherenkovdigihits(); 
     
     if(verbose){
-      printf("node id: %i\n", ev);
+      printf("node id: %li\n", ev);
       printf("Ncherenkovhits %d\n",     ncherenkovhits);
       printf("Ncherenkovdigihits %d\n", ncherenkovdigihits);
       printf("Ncherenkovhits2 %d\n",     ncherenkovhits2);
