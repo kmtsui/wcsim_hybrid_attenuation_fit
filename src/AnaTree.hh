@@ -14,6 +14,7 @@
 #include <TROOT.h>
 #include <TTree.h>
 #include <TLeaf.h>
+#include <TH2F.h>
 
 #include "AnaEvent.hh"
 #include "ColorOutput.hh"
@@ -46,12 +47,16 @@ private:
     int mPMT_id;
     double weight;
 
+    // histogram that stores all the hits, to speed-up loading process
+    TH2F* data_hist;
+    bool use_hist;
+
     const std::string TAG = color::GREEN_STR + "[AnaTree]: " + color::RESET_STR;
     const std::string ERR = color::RED_STR + "[AnaTree ERROR]: " + color::RESET_STR;
     const std::string WAR = color::RED_STR + "[AnaTree WARNING]: " + color::RESET_STR;
 
 public:
-    AnaTree(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name);
+    AnaTree(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name, const std::string& hist_name="");
     ~AnaTree();
 
     void MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT = 19);
@@ -64,6 +69,9 @@ public:
     bool GetDataEntry(unsigned long entry, double& time, double& charge, int& pmtID);
     unsigned long GetDataEntries() const { return fChain->GetEntries(); }
     int GetPMTEntries() const { return t_pmt->GetEntries(); }
+
+    inline bool UseDataHist() const { return use_hist; }
+    TH2F* GetDataHist() { return data_hist; }
 
     double GetEventVar(const std::string& var) const
     {

@@ -39,6 +39,10 @@ public:
     AnaEvent* GetPMT(const unsigned int evnum);
 
     void LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name);
+    void LoadPMTDataEntries();
+    void LoadPMTDataHist();
+    void ResetPMTDataHist();
+    inline void SetDataHistName(const std::string& val) { m_data_hist_name = val; }
 
     void PrintStats() const;
     void MakeHistos();
@@ -90,6 +94,8 @@ public:
 
     inline void SetTimeSmear(bool smear, double mean, double width) { m_time_smear = smear; m_time_smear_mean = mean; m_time_smear_width = width; }
 
+    void ThrowPMTTimeConstants();
+
     inline void SetZ0(double val) { m_z0 = val; }
 
     void InitToy();
@@ -115,10 +121,12 @@ protected:
 
     bool m_time_offset;
     double m_time_offset_width;
+    std::vector<double> timetof_shift;
 
     bool m_time_smear;
     double m_time_smear_mean;
     double m_time_smear_width;
+    std::vector<double> time_resolution;
 
     double m_z0;
 
@@ -127,6 +135,7 @@ protected:
     double m_eff_sig;
 
     AnaTree* selTree;
+    std::string m_data_hist_name;
 
     std::vector<std::string> m_binvar;
 

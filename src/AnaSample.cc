@@ -32,6 +32,7 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_eff_sig(0.0)
     , m_template(false)
     , selTree(nullptr)
+    , m_data_hist_name("")
 {
     TH1::SetDefaultSumw2(true);
 
@@ -93,7 +94,7 @@ AnaSample::~AnaSample()
 
 void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name)
 {
-    selTree = new AnaTree(file_name, tree_name, pmt_tree_name);
+    selTree = new AnaTree(file_name, tree_name, pmt_tree_name, m_data_hist_name);
     if (m_pmttype==1 && m_mPMTmask.size()>0) selTree->MaskmPMT(m_mPMTmask, m_nPMTpermPMT);
     if (m_pmtmask>0) selTree->MaskPMT(m_pmtmask, m_pmttype, m_nPMTpermPMT);
 
@@ -126,18 +127,22 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         if (!skip) AddPMT(pmt_vec[i]);
     }
 
-    selTree->SetDataBranches();
+    ThrowPMTTimeConstants();
 
-    unsigned long nDataEntries = selTree->GetDataEntries();
+    ResetPMTDataHist();
 
-    if(m_hdata_pmt != nullptr)
-        delete m_hdata_pmt;
+    if (selTree->UseDataHist()) LoadPMTDataHist();
+    else LoadPMTDataEntries();
 
+    PrintStats();
+}
+
+void AnaSample::ThrowPMTTimeConstants()
+{
     int nPMTs = selTree->GetPMTEntries();
-    m_hdata_pmt = new TH1D("","",nPMTs,0,nPMTs);
 
     // determine the random offset for each PMT
-    std::vector<double> timetof_shift;
+    timetof_shift.clear();
     if (m_time_offset)
     {
         for (int i=0;i<nPMTs;i++)
@@ -145,7 +150,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     }
 
     // determine the random smearing for each PMT
-    std::vector<double> time_resolution;
+    time_resolution.clear();
     if (m_time_smear)
     {
         for (int i=0;i<nPMTs;i++)
@@ -156,6 +161,17 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
             time_resolution.push_back(resol);   
         }
     }
+}
+
+void AnaSample::ResetPMTDataHist()
+{
+    int nPMTs = selTree->GetPMTEntries();
+
+    if(m_hdata_pmt != nullptr)
+        delete m_hdata_pmt;
+    m_hdata_pmt = new TH1D("","",nPMTs,0,nPMTs);
+
+    if (m_template) m_htimetof_pmt_data->Reset();
 
     // Setup control region if the scattering option is on
     if (m_scatter || m_scatter_map)
@@ -164,11 +180,34 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
             delete m_hdata_pmt_control;
         m_hdata_pmt_control = new TH1D("","",nPMTs,0,nPMTs);
     }
+}
+
+void AnaSample::LoadPMTDataEntries()
+{
+    selTree->SetDataBranches();
+
+    unsigned long nDataEntries = selTree->GetDataEntries();
 
     double timetof, nPE;
     int pmtID;
 
-    std::cout << TAG<<"Reading PMT hit data..."<<std::endl;
+    double t_min = -DBL_MAX, t_max = DBL_MAX;
+    double pe_min = -DBL_MAX, pe_max = DBL_MAX;
+    for (int j=0;j<m_cutvar.size();j++) 
+    {
+        if (m_cutvar[j]=="timetof")
+        {
+            t_min = m_cutlow[j];
+            t_max = m_cuthigh[j];
+        }
+        else if (m_cutvar[j]=="nPE")
+        {
+            pe_min = m_cutlow[j];
+            pe_max = m_cuthigh[j];
+        }
+    }
+
+    std::cout << TAG << "Reading PMT hit data..." << std::endl;
     for (unsigned long i=0;i<nDataEntries;i++)
     {
         if (!selTree->GetDataEntry(i,timetof,nPE,pmtID)) continue;
@@ -176,31 +215,15 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         if (m_time_offset) timetof += timetof_shift[pmtID];
         if (m_time_smear) timetof += gRandom->Gaus(0,time_resolution[pmtID]);
 
-        bool skip = false;
-
-        for (int j=0;j<m_cutvar.size();j++) {
-            if (m_cutvar[j]=="timetof")
-            {
-                if (timetof<m_cutlow[j] || timetof>m_cuthigh[j]) {
-                    skip = true;   
-                    break;
-                }
-            }
-            else if (m_cutvar[j]=="nPE")
-            {
-                if (nPE<m_cutlow[j] || nPE>m_cuthigh[j]) {
-                    skip = true;   
-                    break;
-                }
-            }
-        }
-
         if (m_template)
         {
             m_htimetof_pmt_data->Fill(pmtID+0.5,timetof+m_timetof_offset,nPE);
         }
 
-        if (skip) continue;
+
+        if ( timetof < t_min || timetof > t_max ) continue;
+        if ( nPE < pe_min || nPE > pe_max ) continue;
+
         if (m_scatter || m_scatter_map)
         {
             if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_pmt->Fill(pmtID+0.5, nPE);
@@ -208,8 +231,62 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         }
         else m_hdata_pmt->Fill(pmtID+0.5, nPE);
     }
+}
 
-    PrintStats();
+void AnaSample::LoadPMTDataHist()
+{
+    std::cout << TAG<<"Reading PMT hit histogram..."<<std::endl;
+
+    TH2F* hist = selTree->GetDataHist();
+    int nTBins = hist->GetNbinsY();
+    double t_min = -DBL_MAX, t_max = DBL_MAX;
+    for (int j=0;j<m_cutvar.size();j++) 
+    {
+        if (m_cutvar[j]=="timetof")
+        {
+            t_min = m_cutlow[j];
+            t_max = m_cuthigh[j];
+            break;
+        }
+    }
+
+    for(auto& e : m_pmts)
+    {
+        int pmtID = e.GetPMTID();
+        for (int i=1; i<=nTBins; i++)
+        {
+            double timetof = hist->GetYaxis()->GetBinCenter(i);
+            double nPE = hist->GetBinContent(pmtID+1,i);
+
+            if (m_time_offset) timetof += timetof_shift[pmtID];
+            if (m_time_smear)
+            {
+                nPE = 0;
+                for (int j=1; j<=nTBins; j++)
+                {
+                    // convolution to smear timetof
+                    double t = hist->GetYaxis()->GetBinCenter(t);
+                    double val = hist->GetBinContent(pmtID+1,j);
+                    double fac = TMath::Gaus(timetof, t, time_resolution[pmtID], true);
+                    nPE += val*fac;
+                }
+            }
+
+            if (m_template)
+            {
+                m_htimetof_pmt_data->Fill(pmtID+0.5,timetof+m_timetof_offset,nPE);
+            }
+
+            if ( timetof < t_min || timetof > t_max ) continue;
+
+            if (m_scatter || m_scatter_map)
+            {
+                if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_pmt->Fill(pmtID+0.5, nPE);
+                else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_pmt_control->Fill(pmtID+0.5, nPE);
+            }
+            else m_hdata_pmt->Fill(pmtID+0.5, nPE);
+        }
+    }
 }
 
 AnaEvent* AnaSample::GetPMT(const unsigned int evnum)
@@ -629,72 +706,11 @@ void AnaSample::InitToy()
 
     if ( m_time_offset || m_time_smear ) 
     {
-        int nPMTs = selTree->GetPMTEntries();
-        // determine the random offset for each PMT
-        std::vector<double> timetof_shift;
-        if (m_time_offset)
-        {
-            for (int i=0;i<nPMTs;i++)
-                timetof_shift.push_back( gRandom->Gaus(0,m_time_offset_width) );
-        }
+        ThrowPMTTimeConstants();
 
-        // determine the random smearing for each PMT
-        std::vector<double> time_resolution;
-        if (m_time_smear)
-        {
-            for (int i=0;i<nPMTs;i++)
-            {
-                double resol = -1;
-                while (resol<0)
-                    resol = gRandom->Gaus(m_time_smear_mean,m_time_smear_width);
-                time_resolution.push_back(resol);   
-            }
-        }
+        ResetPMTDataHist();
 
-        unsigned long nDataEntries = selTree->GetDataEntries();
-        double timetof, nPE;
-        int pmtID;
-        if (m_template) m_htimetof_pmt_data->Reset();
-        m_hdata_pmt->Reset();
-        m_hdata_pmt_control->Reset();
-        for (unsigned long i=0;i<nDataEntries;i++)
-        {
-            if (!selTree->GetDataEntry(i,timetof,nPE,pmtID)) continue;
-
-            if (m_time_offset) timetof += timetof_shift[pmtID];
-            if (m_time_smear) timetof += gRandom->Gaus(0,time_resolution[pmtID]);
-
-            bool skip = false;
-
-            for (int j=0;j<m_cutvar.size();j++) {
-                if (m_cutvar[j]=="timetof")
-                {
-                    if (timetof<m_cutlow[j] || timetof>m_cuthigh[j]) {
-                        skip = true;   
-                        break;
-                    }
-                }
-                else if (m_cutvar[j]=="nPE")
-                {
-                    if (nPE<m_cutlow[j] || nPE>m_cuthigh[j]) {
-                        skip = true;   
-                        break;
-                    }
-                }
-            }
-
-            if (m_template)
-            {
-                m_htimetof_pmt_data->Fill(pmtID+0.5,timetof+m_timetof_offset,nPE);
-            }
-
-            if (skip) continue;
-            if (m_scatter || m_scatter_map)
-            {
-                if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_pmt->Fill(pmtID+0.5, nPE);
-                else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_pmt_control->Fill(pmtID+0.5, nPE);
-            }
-            else m_hdata_pmt->Fill(pmtID+0.5, nPE);
-        }
+        if (selTree->UseDataHist()) LoadPMTDataHist();
+        else LoadPMTDataEntries();
     }
 }
