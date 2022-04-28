@@ -322,6 +322,7 @@ int main(int argc, char **argv){
   // Save the PMT geometry information relative to source
   double dist, costh, cosths, phis, omega, phim, costhm, dz;
   int mPMT_id;
+  double xpos, ypos, zpos;
   TTree* pmt_type0 = new TTree("pmt_type0","pmt_type0");
   pmt_type0->Branch("R",&dist);          // distance to source
   pmt_type0->Branch("costh",&costh);     // photon incident angle relative to PMT
@@ -333,6 +334,9 @@ int main(int argc, char **argv){
   pmt_type0->Branch("dz",&dz);           // z-pos relative to source
   pmt_type0->Branch("PMT_id",&PMT_id);   // unique PMT id
   pmt_type0->Branch("mPMT_id",&mPMT_id); // dummy 
+  pmt_type0->Branch("xpos",&xpos);       // PMT position in the detector
+  pmt_type0->Branch("ypos",&ypos);
+  pmt_type0->Branch("zpos",&zpos);
   pmt_type0->Branch("weight",&weight);   // weight from e.g. LED profile
   TTree* pmt_type1 = new TTree("pmt_type1","pmt_type1");
   pmt_type1->Branch("R",&dist);
@@ -344,6 +348,9 @@ int main(int argc, char **argv){
   pmt_type1->Branch("omega",&omega);
   pmt_type1->Branch("dz",&dz);
   pmt_type1->Branch("PMT_id",&PMT_id);
+  pmt_type1->Branch("xpos",&xpos);
+  pmt_type1->Branch("ypos",&ypos);
+  pmt_type1->Branch("zpos",&zpos);
   pmt_type1->Branch("mPMT_id",&mPMT_id); //sub-ID of PMT inside a mPMT module
                                          // 0 -11 : outermost ring
                                          // 12 - 17: middle ring
@@ -409,6 +416,7 @@ int main(int argc, char **argv){
         PMTpos[j] = pmt.GetPosition(j);
         PMTdir[j] = pmt.GetOrientation(j);
       }
+      xpos = PMTpos[0]; ypos = PMTpos[1]; zpos = PMTpos[2];
       double particleRelativePMTpos[3];
       for(int j=0;j<3;j++) particleRelativePMTpos[j] = PMTpos[j] - vtxpos[j];
       double vDir[3];double vOrientation[3];
