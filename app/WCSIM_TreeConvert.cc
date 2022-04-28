@@ -34,6 +34,12 @@
 
 #include "OPTICALFIT/BinManager.hh"
 
+#include "OPTICALFIT/ColorOutput.hh"
+
+const std::string TAG = color::GREEN_STR + "[WCSIM_TreeConvert]: " + color::RESET_STR;
+const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
+const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
+
 using namespace std;
 
 TRandom3* rng;
@@ -101,7 +107,7 @@ int main(int argc, char **argv){
   long int endEvent=0;
   int seed = 0;
   char c;
-  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:z:p:c:hdtvw")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
+  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:z:p:c:w:hdtv")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
     switch(c){
       case 'f':
         filename = optarg;
@@ -131,12 +137,12 @@ int main(int argc, char **argv){
       case 'r':
 	      seed = std::stoi(optarg);
         if (seed<0) seed=0;
-        std::cout<<"Set RNG seed = "<<seed<<std::endl;
+        std::cout<<TAG<<"Set RNG seed = "<<seed<<std::endl;
 	      break;
       case 'l':
         wavelength = std::stod(optarg);
         if (wavelength<0) {
-          std::cout<<"Wavelength < 0, using default = 400 nm"<<std::endl;
+          std::cout<<TAG<<"Wavelength < 0, using default = 400 nm"<<std::endl;
           wavelength = 400;
         }
 	      break;
@@ -150,7 +156,7 @@ int main(int argc, char **argv){
             if (s=="led")
             {
               diffuserProfile = true;
-              std::cout<<"Reweigh PMT hits by diffuser profile"<<std::endl;
+              std::cout<<TAG<<"Reweigh PMT hits by diffuser profile"<<std::endl;
             }
             else if (s=="attenz")
             {
@@ -159,7 +165,7 @@ int main(int argc, char **argv){
               if (fabs(slopeA)>1.e-9)
               {
                 zreweight = true;
-                std::cout<<"Reweighing attenuation factor with linear z-dependence, slope = "<<slopeA<<std::endl;
+                std::cout<<TAG<<"Reweigh attenuation factor with linear z-dependence, slope = "<<slopeA<<std::endl;
               }
             }
             else if (s=="linz")
@@ -169,7 +175,7 @@ int main(int argc, char **argv){
               if (fabs(lzslope)>1.e-9)
               {
                 lzreweight = true;
-                std::cout<<"Reweighing PMT efficiency with linear z-dependence, slope = "<<lzslope<<std::endl;
+                std::cout<<TAG<<"Reweigh PMT efficiency with linear z-dependence, slope = "<<lzslope<<std::endl;
               }
             }
           }
@@ -180,7 +186,7 @@ int main(int argc, char **argv){
         if (fabs(slopeA)>1.e-9)
         {
           zreweight = true;
-          std::cout<<"Reweighing attenuation factor with linear z-dependence, slope = "<<slopeA<<std::endl;
+          std::cout<<TAG<<"Reweighing attenuation factor with linear z-dependence, slope = "<<slopeA<<std::endl;
         }
         break;
       case 'p':
@@ -198,14 +204,14 @@ int main(int argc, char **argv){
             }
             count++;
           }
-          std::cout<<"Setting new water paramters, ABWFF = "<<abwff<<", RAYFF = "<<rayff<<std::endl;
+          std::cout<<TAG<<"Setting new water paramters, ABWFF = "<<abwff<<", RAYFF = "<<rayff<<std::endl;
           break;
         }
       case 'c':
         {
           hitHisto = true;
           std::string binning = optarg;
-          std::cout<<"Produce PMT hit histogram with timetof binning from "<<binning<<std::endl;
+          std::cout<<TAG<<"Produce PMT hit histogram with timetof binning from "<<binning<<std::endl;
           bm = BinManager(binning);
           break;
         }
@@ -218,7 +224,7 @@ int main(int argc, char **argv){
   
   // Open the file
   if (filename==NULL){
-    std::cout << "Error, no input file: " << std::endl;
+    std::cout << ERR << "Error, no input file: " << std::endl;
     HelpMessage();
     return -1;
   }
@@ -227,12 +233,12 @@ int main(int argc, char **argv){
   std::string single_file_name = tree->GetFile()->GetName();
   TFile *file = TFile::Open(single_file_name.c_str());
   if (!file->IsOpen()){
-    std::cout << "Error, could not open input file: " << filename << std::endl;
+    std::cout << ERR << "Error, could not open input file: " << filename << std::endl;
     return -1;
   }
   
   double vg = CalcGroupVelocity(wavelength);
-  std::cout<<"Using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
+  std::cout<<TAG<<"Using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
   vg /= 1.e9; // convert to m/ns
 
   rng = new TRandom3(seed);
@@ -270,7 +276,7 @@ int main(int argc, char **argv){
   // Geometry tree - only need 1 "event"
   TTree *geotree = (TTree*)file->Get("wcsimGeoT");
   geotree->SetBranchAddress("wcsimrootgeom", &geo);
-  if(verbose) std::cout << "Geotree has " << geotree->GetEntries() << " entries" << std::endl;
+  if(verbose) std::cout <<TAG << "Geotree has " << geotree->GetEntries() << " entries" << std::endl;
   if (geotree->GetEntries() == 0) {
       exit(9);
   }
@@ -283,7 +289,7 @@ int main(int argc, char **argv){
   TTree *opttree = (TTree*)file->Get("wcsimRootOptionsT");
   WCSimRootOptions *opt = 0; 
   opttree->SetBranchAddress("wcsimrootoptions", &opt);
-  if(verbose) std::cout << "Optree has " << opttree->GetEntries() << " entries" << std::endl;
+  if(verbose) std::cout << TAG << "Optree has " << opttree->GetEntries() << " entries" << std::endl;
   if (opttree->GetEntries() == 0) {
     exit(9);
   }
@@ -298,7 +304,7 @@ int main(int argc, char **argv){
   if(outfilename==NULL) outfilename = (char*)"out.root";
   
   TFile * outfile = new TFile(outfilename,"RECREATE");
-  std::cout<<"File "<<outfilename<<" is open for writing"<<std::endl;
+  std::cout<<TAG<<"File "<<outfilename<<" is open for writing"<<std::endl;
 
   double nHits, nPE, timetof;
   double weight;
