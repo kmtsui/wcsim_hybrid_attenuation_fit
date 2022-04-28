@@ -66,9 +66,6 @@ void HelpMessage()
             << "-f : Input file\n"
             << "-o : Output file\n"
             << "-l : Laser wavelength\n"
-            << "-w : Apply diffuser profile reweight\n"
-            << "-z : Reweigh attenuation factor with input slope\n"
-            << "-p : Set water parameters for attenuation factor reweight (ABWFF,RAYFF)\n"
             << "-b : Use only B&L PMTs\n"
             << "-d : Run with raw Cherenkov hits and perform ad-hoc digitization\n"
             << "-t : Use separated triggers\n"
@@ -76,7 +73,13 @@ void HelpMessage()
             << "-v : Verbose\n"
             << "-s : Start event\n"
             << "-e : End event\n"
-            << "-r : RNG seed\n";
+            << "-r : RNG seed\n"
+            << "-w : Reweight options (multiple can be applied)\n"
+            << "     led : diffuser profile\n"
+            << "     attenz,slope : linear z-dependence of attenuation length with input slope\n"
+            << "     linz,slope : linear z-dependence of PMT efficiency with input slope\n"
+            << "-p : Set water parameters for attenuation factor reweight (ABWFF,RAYFF)\n"
+            ;
 }
 
 int main(int argc, char **argv){
@@ -107,7 +110,7 @@ int main(int argc, char **argv){
   long int endEvent=0;
   int seed = 0;
   char c;
-  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:z:p:c:w:hdtv")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
+  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:p:c:w:hdtv")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
     switch(c){
       case 'f':
         filename = optarg;
@@ -181,14 +184,6 @@ int main(int argc, char **argv){
           }
           break;
         }
-      case 'z':
-        slopeA = std::stod(optarg);
-        if (fabs(slopeA)>1.e-9)
-        {
-          zreweight = true;
-          std::cout<<TAG<<"Reweighing attenuation factor with linear z-dependence, slope = "<<slopeA<<std::endl;
-        }
-        break;
       case 'p':
         {
           std::string wp = optarg;
