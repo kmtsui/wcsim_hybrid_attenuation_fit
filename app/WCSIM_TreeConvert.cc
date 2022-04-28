@@ -430,10 +430,9 @@ int main(int argc, char **argv){
   int nPMTs_type0=geo->GetWCNumPMT();
   int nPMTs_type1=0; if (hybrid) nPMTs_type1=geo->GetWCNumPMT(true);
   // reweight factor per PMT
-  std::vector<double> ledweight_type0(nPMTs_type0,-1);
-  std::vector<double> ledweight_type1(nPMTs_type1,-1);
-  std::vector<double> atten_weight0(nPMTs_type0,-1);
-  std::vector<double> atten_weight1(nPMTs_type1,-1);
+  std::vector<double> reweight_type0(nPMTs_type0,1);
+  std::vector<double> reweight_type1(nPMTs_type1,1);
+
   for (int pmtType=0;pmtType<nPMTtypes;pmtType++) 
   {
     int nPMTs_type = pmtType==0 ? nPMTs_type0 : nPMTs_type1;
@@ -476,8 +475,8 @@ int main(int argc, char **argv){
       {
         double wgt = led->GetLEDWeight(cosths,phis);
         weight *= wgt;
-        if (pmtType==0) ledweight_type0[i]=wgt;
-        if (pmtType==1) ledweight_type1[i]=wgt;
+        if (pmtType==0) reweight_type0[i] *= wgt;
+        if (pmtType==1) reweight_type1[i] *= wgt;
       }
       double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
       omega = CalcSolidAngle(pmtradius,dist,costh);
@@ -509,8 +508,15 @@ int main(int argc, char **argv){
       {
         double wgt = attenZ->GetAttenuationZWeight(dist,dz);
         weight *= wgt;
-        if (pmtType==0) atten_weight0[i]=wgt;
-        if (pmtType==1) atten_weight1[i]=wgt;
+        if (pmtType==0) reweight_type0[i] *= wgt;
+        if (pmtType==1) reweight_type1[i] *= wgt;
+      }
+      if (lzreweight)
+      {
+        double wgt = 1 + lzslope*zpos;
+        weight *= wgt;
+        if (pmtType==0) reweight_type0[i] *= wgt;
+        if (pmtType==1) reweight_type1[i] *= wgt;
       }
       if (pmtType==0) pmt_type0->Fill();
       if (pmtType==1) pmt_type1->Fill();
@@ -741,14 +747,8 @@ int main(int argc, char **argv){
         if (pmtType==1) mPMTDigitizer->Digitize(nPE_digi,timetof_digi);
 
         weight = 1;
-        if (diffuserProfile) 
-        {
-          weight *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
-        }
-        if (zreweight)
-        {
-          weight *= pmtType==0 ? atten_weight0[PMT_id] : atten_weight1[PMT_id];   
-        }
+        weight *= pmtType==0 ? reweight_type0[PMT_id] : reweight_type1[PMT_id];
+
         nPE *= weight;  
         nPE_digi *= weight;  
 
@@ -849,14 +849,8 @@ int main(int argc, char **argv){
 
         nHits = 1; nPE = peForTube; 
         weight = 1;
-        if (diffuserProfile) 
-        {
-          weight *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
-        }
-        if (zreweight)
-        {
-          weight *= pmtType==0 ? atten_weight0[PMT_id] : atten_weight1[PMT_id];   
-        }
+        weight *= pmtType==0 ? reweight_type0[PMT_id] : reweight_type1[PMT_id];   
+
         nPE *= weight;  
         if (pmtType==0) 
         {
