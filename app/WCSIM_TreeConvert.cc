@@ -66,7 +66,7 @@ void HelpMessage()
             << "-b : Use only B&L PMTs\n"
             << "-d : Run with raw Cherenkov hits and perform ad-hoc digitization\n"
             << "-t : Use separated triggers\n"
-            << "-c : Produce photon hit histogram\n"
+            << "-c : Produce photon hit histogram with specified binning\n"
             << "-v : Verbose\n"
             << "-s : Start event\n"
             << "-e : End event\n"
@@ -506,6 +506,14 @@ int main(int argc, char **argv){
   // Now loop over events
   for (long int ev=startEvent; ev<nevent; ev++)
   {
+    delete wcsimrootsuperevent;
+    wcsimrootsuperevent = 0;  // EXTREMELY IMPORTANT
+    if(hybrid)
+    {
+      delete wcsimrootsuperevent2;
+      wcsimrootsuperevent2 = 0;  // EXTREMELY IMPORTANT
+    }
+    
     // Read the event from the tree into the WCSimRootEvent instance
     tree->GetEntry(ev);
 
