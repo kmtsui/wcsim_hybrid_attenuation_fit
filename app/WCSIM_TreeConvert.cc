@@ -85,9 +85,11 @@ int main(int argc, char **argv){
   bool separatedTriggers=false; //Assume two independent triggers, one for mPMT, one for B&L
   bool diffuserProfile = false; //Reweigh PMT hits by source angle
   bool zreweight = false; //Reweigh PMT hits by a z-dependence in attenuation length
+  bool lzreweight = false; // Reweigh PMT hits by a linear function in z
   double slopeA = 0;
   double abwff = 1.3;
   double rayff = 0.75;
+  double lzslope = 0;
   bool hitHisto = false;
   BinManager bm;
 
@@ -139,8 +141,40 @@ int main(int argc, char **argv){
         }
 	      break;
       case 'w':
-        diffuserProfile = true;
-        break;
+        {
+          std::string wp = optarg;
+          std::stringstream ss(wp);
+          int count = 0;
+          for(std::string s; std::getline(ss, s, ',');)
+          {
+            if (s=="led")
+            {
+              diffuserProfile = true;
+              std::cout<<"Reweigh PMT hits by diffuser profile"<<std::endl;
+            }
+            else if (s=="attenz")
+            {
+              std::getline(ss, s, ',');
+              slopeA = std::stod(s);
+              if (fabs(slopeA)>1.e-9)
+              {
+                zreweight = true;
+                std::cout<<"Reweighing attenuation factor with linear z-dependence, slope = "<<slopeA<<std::endl;
+              }
+            }
+            else if (s=="linz")
+            {
+              std::getline(ss, s, ',');
+              lzslope = std::stod(s);
+              if (fabs(lzslope)>1.e-9)
+              {
+                lzreweight = true;
+                std::cout<<"Reweighing PMT efficiency with linear z-dependence, slope = "<<lzslope<<std::endl;
+              }
+            }
+          }
+          break;
+        }
       case 'z':
         slopeA = std::stod(optarg);
         if (fabs(slopeA)>1.e-9)
@@ -218,19 +252,19 @@ int main(int argc, char **argv){
   WCSimRootEvent* wcsimrootsuperevent2 = new WCSimRootEvent();
 
   // Set the branch address for reading from the tree
-  TBranch *branch = tree->GetBranch("wcsimrootevent");
+  //TBranch *branch = tree->GetBranch("wcsimrootevent");
   //branch->SetAddress(&wcsimrootsuperevent);
   tree->SetBranchAddress("wcsimrootevent",&wcsimrootsuperevent);
   // Force deletion to prevent memory leak 
-  tree->GetBranch("wcsimrootevent")->SetAutoDelete(kTRUE);
+  //tree->GetBranch("wcsimrootevent")->SetAutoDelete(kTRUE);
 
   TBranch *branch2;
   if(hybrid){
-    branch2 = tree->GetBranch("wcsimrootevent2");
+    //branch2 = tree->GetBranch("wcsimrootevent2");
     //branch2->SetAddress(&wcsimrootsuperevent2);
     tree->SetBranchAddress("wcsimrootevent2",&wcsimrootsuperevent2);
   // Force deletion to prevent memory leak 
-    tree->GetBranch("wcsimrootevent2")->SetAutoDelete(kTRUE);
+    //tree->GetBranch("wcsimrootevent2")->SetAutoDelete(kTRUE);
   }
 
   // Geometry tree - only need 1 "event"
