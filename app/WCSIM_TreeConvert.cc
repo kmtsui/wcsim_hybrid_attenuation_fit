@@ -7,6 +7,7 @@
 #include <TApplication.h>
 #include <TStyle.h>
 #include <TFile.h>
+#include <TChain.h>
 #include <TTree.h>
 #include <TCanvas.h>
 #include <TChain.h>
@@ -30,6 +31,8 @@
 #include "OPTICALFIT/utils/CalcGroupVelocity.hh"
 #include "OPTICALFIT/utils/LEDProfile.hh"
 #include "OPTICALFIT/utils/AttenuationZ.hh"
+
+#include "OPTICALFIT/BinManager.hh"
 
 using namespace std;
 
@@ -58,11 +61,12 @@ void HelpMessage()
             << "-o : Output file\n"
             << "-l : Laser wavelength\n"
             << "-w : Apply diffuser profile reweight\n"
-            << "-z : Reweighing attenuation factor with input slope\n"
+            << "-z : Reweigh attenuation factor with input slope\n"
             << "-p : Set water parameters for attenuation factor reweight (ABWFF,RAYFF)\n"
             << "-b : Use only B&L PMTs\n"
             << "-d : Run with raw Cherenkov hits and perform ad-hoc digitization\n"
             << "-t : Use separated triggers\n"
+            << "-c : Produce photon hit histogram with specified binning\n"
             << "-v : Verbose\n"
             << "-s : Start event\n"
             << "-e : End event\n"
@@ -84,16 +88,18 @@ int main(int argc, char **argv){
   double slopeA = 0;
   double abwff = 1.3;
   double rayff = 0.75;
+  bool hitHisto = false;
+  BinManager bm;
 
   double wavelength = 400; //wavelength in nm
 
   int nPMTpermPMT=19;
 
-  int startEvent=0;
-  int endEvent=0;
+  long int startEvent=0;
+  long int endEvent=0;
   int seed = 0;
   char c;
-  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:z:p:hdtvw")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
+  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:z:p:c:hdtvw")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
     switch(c){
       case 'f':
         filename = optarg;
@@ -114,11 +120,11 @@ int main(int argc, char **argv){
 	      outfilename = optarg;
 	      break;
       case 's':
-	      startEvent = std::stoi(optarg);
+	      startEvent = std::stol(optarg);
         if (startEvent<0) startEvent = 0; 
 	      break;
       case 'e':
-	      endEvent = std::stoi(optarg);
+	      endEvent = std::stol(optarg);
 	      break;
       case 'r':
 	      seed = std::stoi(optarg);
@@ -161,6 +167,14 @@ int main(int argc, char **argv){
           std::cout<<"Setting new water paramters, ABWFF = "<<abwff<<", RAYFF = "<<rayff<<std::endl;
           break;
         }
+      case 'c':
+        {
+          hitHisto = true;
+          std::string binning = optarg;
+          std::cout<<"Produce PMT hit histogram with timetof binning from "<<binning<<std::endl;
+          bm = BinManager(binning);
+          break;
+        }
       case 'h':
         HelpMessage();
       default:
@@ -174,7 +188,10 @@ int main(int argc, char **argv){
     HelpMessage();
     return -1;
   }
-  TFile *file = TFile::Open(filename);
+  TChain *tree = new TChain("wcsimT");
+  tree->Add(filename);
+  std::string single_file_name = tree->GetFile()->GetName();
+  TFile *file = TFile::Open(single_file_name.c_str());
   if (!file->IsOpen()){
     std::cout << "Error, could not open input file: " << filename << std::endl;
     return -1;
@@ -188,12 +205,12 @@ int main(int argc, char **argv){
   gRandom = rng;
 
   // Get the a pointer to the tree from the file
-  TTree *tree = (TTree*)file->Get("wcsimT");
+  //TTree *tree = (TTree*)file->Get("wcsimT");
 
   // Get the number of events
-  int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
+  long int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
   if(endEvent>0 && endEvent<=nevent) nevent = endEvent;
-  if(verbose) printf("nevent %d\n",nevent);
+  if(verbose) printf("nevent %ld\n",nevent);
   
   // Create a WCSimRootEvent to put stuff from the tree in
 
@@ -202,14 +219,16 @@ int main(int argc, char **argv){
 
   // Set the branch address for reading from the tree
   TBranch *branch = tree->GetBranch("wcsimrootevent");
-  branch->SetAddress(&wcsimrootsuperevent);
+  //branch->SetAddress(&wcsimrootsuperevent);
+  tree->SetBranchAddress("wcsimrootevent",&wcsimrootsuperevent);
   // Force deletion to prevent memory leak 
   tree->GetBranch("wcsimrootevent")->SetAutoDelete(kTRUE);
 
   TBranch *branch2;
   if(hybrid){
     branch2 = tree->GetBranch("wcsimrootevent2");
-    branch2->SetAddress(&wcsimrootsuperevent2);
+    //branch2->SetAddress(&wcsimrootsuperevent2);
+    tree->SetBranchAddress("wcsimrootevent2",&wcsimrootsuperevent2);
   // Force deletion to prevent memory leak 
     tree->GetBranch("wcsimrootevent2")->SetAutoDelete(kTRUE);
   }
@@ -456,15 +475,45 @@ int main(int argc, char **argv){
   }
   outfile->cd();
   pmt_type0->Write();
-  pmt_type1->Write();
+  if (hybrid) pmt_type1->Write();
+
+  // int nBins_timetof = 255;
+  // double timetof_min = -955, timetof_max = -750;
+  TH2F* hitRateHist_pmtType0;
+  TH2F* hitRateHist_pmtType1;
+  if (hitHisto)
+  {
+    //const double* bin_edges = bm.GetBinVector(0).data();
+    std::vector<double> bin_edges = bm.GetBinVector(0);
+    // for (int i=0;i<bin_edges.size();i++)
+    //   std::cout<<bin_edges[i]<<std::endl;
+    hitRateHist_pmtType0 = new TH2F("hitRateHist_pmtType0","hitRateHist_pmtType0",
+                                    nPMTs_type0,0,nPMTs_type0, bm.GetNbins(), bin_edges.data());
+    if (hybrid)
+      hitRateHist_pmtType1 = new TH2F("hitRateHist_pmtType1","hitRateHist_pmtType1",
+                                      nPMTs_type1,0,nPMTs_type1, bm.GetNbins(), bin_edges.data());
+  }
+  // hitRateHist_pmtType0 = new TH2D("hitRateHist_pmtType0","hitRateHist_pmtType0",
+  //                                 nPMTs_type0,0,nPMTs_type0, nBins_timetof, timetof_min, timetof_max);
+  // if (hybrid)
+  //   hitRateHist_pmtType1 = new TH2F("hitRateHist_pmtType1","hitRateHist_pmtType1",
+  //                                 nPMTs_type1,0,nPMTs_type1, nBins_timetof, timetof_min, timetof_max);
 
   // Ad-hoc digitizer, PMT specific 
   BoxandLine20inchHQE_Digitizer* BnLDigitizer = new BoxandLine20inchHQE_Digitizer();
   PMT3inchR14374_Digitizer* mPMTDigitizer = new PMT3inchR14374_Digitizer();
 
   // Now loop over events
-  for (int ev=startEvent; ev<nevent; ev++)
+  for (long int ev=startEvent; ev<nevent; ev++)
   {
+    delete wcsimrootsuperevent;
+    wcsimrootsuperevent = 0;  // EXTREMELY IMPORTANT
+    if(hybrid)
+    {
+      delete wcsimrootsuperevent2;
+      wcsimrootsuperevent2 = 0;  // EXTREMELY IMPORTANT
+    }
+    
     // Read the event from the tree into the WCSimRootEvent instance
     tree->GetEntry(ev);
 
@@ -536,7 +585,7 @@ int main(int argc, char **argv){
     int ncherenkovdigihits2 = 0;if(hybrid) ncherenkovdigihits2 = wcsimrootevent2->GetNcherenkovdigihits(); 
     
     if(verbose){
-      printf("node id: %i\n", ev);
+      printf("node id: %li\n", ev);
       printf("Ncherenkovhits %d\n",     ncherenkovhits);
       printf("Ncherenkovdigihits %d\n", ncherenkovdigihits);
       printf("Ncherenkovhits2 %d\n",     ncherenkovhits2);
@@ -555,7 +604,7 @@ int main(int argc, char **argv){
       
       TClonesArray *timeArray;//An array of pointers on CherenkovHitsTimes.
       if(pmtType==0) timeArray = wcsimrootevent->GetCherenkovHitTimes();
-      else timeArray = wcsimrootevent2->GetCherenkovHitTimes();
+      else if (hybrid) timeArray = wcsimrootevent2->GetCherenkovHitTimes();
       
       //double particleRelativePMTpos[3];
       double totalPe = 0;
@@ -766,8 +815,16 @@ int main(int argc, char **argv){
           weight *= pmtType==0 ? atten_weight0[PMT_id] : atten_weight1[PMT_id];   
         }
         nPE *= weight;  
-        if (pmtType==0) hitRate_pmtType0->Fill();
-        if (pmtType==1) hitRate_pmtType1->Fill();
+        if (pmtType==0) 
+        {
+          hitRate_pmtType0->Fill();
+          if (hitHisto) hitRateHist_pmtType0->Fill(PMT_id+0.5,timetof,nPE);
+        }
+        if (pmtType==1) 
+        {
+          hitRate_pmtType1->Fill();
+          if (hitHisto) hitRateHist_pmtType1->Fill(PMT_id+0.5,timetof,nPE);
+        }
 
 
       } // End of loop over Cherenkov hits
@@ -782,7 +839,12 @@ int main(int argc, char **argv){
 
   outfile->cd();
   hitRate_pmtType0->Write();
-  hitRate_pmtType1->Write();
+  if (hybrid) hitRate_pmtType1->Write();
+  if (hitHisto) 
+  {
+    hitRateHist_pmtType0->Write();
+    if (hybrid) hitRateHist_pmtType1->Write();
+  }
 
   outfile->Close();
   

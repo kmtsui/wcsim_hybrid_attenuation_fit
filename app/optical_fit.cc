@@ -239,6 +239,12 @@ int main(int argc, char** argv)
                     std::cout << TAG << "Apply PMT efficiency variation with 1-sigma =  "<< sigma << std::endl;
                     s->SetPMTEffVar(sigma);
                 }
+                else if (optname=="data_hist")
+                {
+                    auto hname =  toml_h::find<std::string>(opt,1);
+                    s->SetDataHistName(hname);
+                    std::cout << TAG << "Use PMT data histogram:  "<< hname << std::endl;
+                }
             }
         }
 
@@ -345,6 +351,10 @@ int main(int argc, char** argv)
                     auto sname = toml_h::find<std::vector<std::string>>(opt,2);
                     //auto num = toml_h::find<int>(opt,3);
                     fitpara->SetSpline(fname,sname);
+                } 
+                else if (optname=="throw") // throw priors for chi2 calculation
+                {
+                    fitpara->SetThrowPars(true);
                 } 
             }
         }

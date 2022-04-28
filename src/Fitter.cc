@@ -216,6 +216,12 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 
     SaveEventHist();
 
+    for(const auto& fitpar : m_fitpara)
+    {
+        fitpar -> ThrowPars();
+    }
+
+
     bool did_converge = false;
     std::cout << TAG << "Fit prepared." << std::endl;
     std::cout << TAG << "Calling Minimize, running " << min_settings.algorithm << std::endl;

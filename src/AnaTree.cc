@@ -1,6 +1,7 @@
 #include "AnaTree.hh"
 
-AnaTree::AnaTree(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name)
+AnaTree::AnaTree(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name, const std::string& hist_name)
+    : data_hist(nullptr)
 {
     fChain = new TChain(tree_name.c_str());
     fChain->Add(file_name.c_str());
@@ -18,6 +19,32 @@ AnaTree::AnaTree(const std::string& file_name, const std::string& tree_name, con
     m_maskpmt = false;
     m_maskmpmt = false;
 
+    use_hist = false;
+    if(data_hist != nullptr)
+        delete data_hist;
+    if (hist_name.size()>0)
+    {
+        TH2F* hist = (TH2F*)f_pmt->Get(hist_name.c_str());
+        if (!hist) return;
+
+        data_hist = (TH2F*)hist->Clone();
+        data_hist->SetDirectory(0);
+        use_hist = true;
+
+        for (int i=1; i<fChain->GetListOfFiles()->GetEntries(); i++ )
+        {
+            TFile* f = new TFile(fChain->GetListOfFiles()->At(i)->GetTitle());
+            if (f && f->Get(hist_name.c_str()))
+            {
+                TH2F* h = (TH2F*)f->Get(hist_name.c_str());
+                if (h) data_hist->Add(h);
+            }
+            else std::cout << WAR << "Cannot find TH2F " << hist_name.c_str() << " in " << f->GetName() << std::endl;
+            f->Close();
+        }
+
+        std::cout << TAG << "Loaded " << hist_name << " as data histogram " << std::endl;
+    }
 }
 
 AnaTree::~AnaTree()
@@ -25,6 +52,8 @@ AnaTree::~AnaTree()
     if(fChain != nullptr)
         delete fChain->GetCurrentFile();
 
+    if(data_hist != nullptr)
+        delete data_hist;
 }
 
 void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
