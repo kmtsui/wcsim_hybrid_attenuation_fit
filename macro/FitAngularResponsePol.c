@@ -88,12 +88,17 @@ double CalcLikelihood(const double* par)
 
 void FitAngularResponsePol()
 {
-    TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_400nm_nominal_BnLPMT.root");
+    
+    //TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_400nm_nominal_BnLPMT.root");
+    //acrapet
+    TFile f("/home/hep/ac4317/WCTE/wcsim_hybrid_attenuation_fit/build/fitoutput_wcsim_1kphot_3eV_16cShort_pos0.root");
     //TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_400nm_nominal_mPMT.root");
     TVectorD* res_vector = (TVectorD*)f.Get("res_vector");
     TMatrixDSym* res_cov_matrix = (TMatrixDSym*)f.Get("res_cov_matrix");
     int startingIndex = 2;
-    int nParameters = 20;
+//acraplet changed from 20 to 7
+    int nParameters = 7;
+    std::cout << "made it here" <<std::endl;
     double costh_min = 0.5;
     double costh_max = 1.0;
     TH1D* hist_postfit = new TH1D("","",nParameters,costh_min,costh_max);
@@ -119,6 +124,7 @@ void FitAngularResponsePol()
         int idx = i+startingIndex;
         double val = (*res_vector)[idx];
         double err = sqrt((*res_cov_matrix)[idx][idx]);
+        std::cout << "made it here" <<std::endl;
         if (err>0) // remove the fixed variable
         {
             if (ndof==0) hist_postfit->SetMinimum(val*0.9);
@@ -133,7 +139,7 @@ void FitAngularResponsePol()
         }
     }
 
-
+    std::cout << "made it there" <<std::endl;
     cov_mat.ResizeTo(ndof, ndof);
     cov_mat.Zero();
 
@@ -141,7 +147,8 @@ void FitAngularResponsePol()
     {
             for (int j=0;j<ndof;j++)
             {
-                cov_mat(i,j) = (*res_cov_matrix)[index_array[i]][index_array[j]];
+               std::cout << "made it: "<< i << ", " << j <<std::endl; 
+               cov_mat(i,j) = (*res_cov_matrix)[index_array[i]][index_array[j]];
             }
     }
     // for (int i=0;i<cov_mat.GetNrows();i++) for (int j=0;j<cov_mat.GetNrows();j++) {
@@ -151,6 +158,7 @@ void FitAngularResponsePol()
     double det = 0;
     double total_add = 0;
     TDecompLU inv_test;
+    std::cout << "made it there" <<std::endl;
     TMatrixD inv_matrix(cov_mat);
     while (!inv_test.InvertLU(inv_matrix, 1E-48, &det))
     {

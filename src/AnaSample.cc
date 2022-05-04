@@ -265,6 +265,7 @@ void AnaSample::MakeHistos()
 
 void AnaSample::InitEventMap()
 {
+    int count_fails=0;
     if (m_binvar[0]=="unbinned")
     {
         m_nbins = m_pmts.size();
@@ -281,17 +282,22 @@ void AnaSample::InitEventMap()
     else for(auto& e : m_pmts)
     {
         std::vector<double> binvar;
-        for (auto t : m_binvar)
+        //std::cout << TAG << m_binvar << std::endl;
+	for (auto t : m_binvar)
+            //std::cout << TAG << t << std::endl;
             binvar.push_back(e.GetEventVar(t));
         const int b = m_bm.GetBinIndex(binvar);
 #ifndef NDEBUG
+        //int count_fails=0;
         if(b < 0)
         {
-            std::cout << TAG << "In InitEventMap()\n"
-                      << "No bin for current PMT." << std::endl;
-            std::cout << TAG << "PMT Var: " << std::endl;
-            for(const auto val : e.GetRecoVar())
-                std::cout << TAG << "\t" << val << std::endl;
+//acraplet -> need to see what I am doung rmove the warnings
+            std::cout << TAG << "In InitEventMap() - "
+                      << "No bin for current PMT: b=" << b << "count_fails=" << count_fails<< std::endl;
+            //std::cout << TAG << "PMT Var: " << std::endl;
+            //for(const auto val : e.GetRecoVar())
+                //std::cout << TAG << val << std::endl;i
+            count_fails = count_fails+1;
         }
 #endif
         e.SetSampleBin(b);

@@ -85,7 +85,8 @@ int main(int argc, char **argv){
   double abwff = 1.3;
   double rayff = 0.75;
 
-  double wavelength = 400; //wavelength in nm
+//acraplet, with 3.505eV photons need to modify the wavelength
+  double wavelength = 353.7; //wavelength in nm
 
   int nPMTpermPMT=19;
 
@@ -188,13 +189,16 @@ int main(int argc, char **argv){
   vg /= 1.e9; // convert to m/ns
   
   //test from acraplet
-  std::cout<<"Test 1"<<std::endl;
+  std::cout<<"Test 3"<<std::endl;
 
   rng = new TRandom3(seed);
   gRandom = rng;
 
   // Get the a pointer to the tree from the file
   TTree *tree = (TTree*)file->Get("wcsimT");
+  //acraplet
+  //TTree *tree = (TTree*)file->Get("wcsimGeoT");
+
 
   // Get the number of events
   int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
@@ -353,6 +357,13 @@ int main(int argc, char **argv){
     vDirSource[2]=0;
     vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
     vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
+  }
+  //acraplet: for WCTE light diffuser the source always points downwards
+  bool isWCTE = true;
+  if (isWCTE) {
+  vDirSource[0] = 0;
+  vDirSource[1] = 0;
+  vDirSource[2] = 1;
   } 
   else // endcap injector
   {
@@ -789,6 +800,8 @@ int main(int argc, char **argv){
   } // End of loop over events
 
   outfile->cd();
+  //acraplet -> can probably remove the following line 
+  ////it is empty for our non-hybrid geometry anyways
   hitRate_pmtType0->Write();
   hitRate_pmtType1->Write();
 
