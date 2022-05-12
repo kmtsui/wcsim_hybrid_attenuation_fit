@@ -54,6 +54,36 @@ ENDIF()
 IF(USE_WCSIM)
   include(${CMAKE_SOURCE_DIR}/cmake/WCSIMSetup.cmake)
 ENDIF()
+
+##################################  CUDA  ######################################
+IF(NOT DEFINED USE_CUDA OR NOT USE_CUDA)
+	SET(USE_CUDA 0)
+ELSE()
+	SET(USE_CUDA 1)
+ENDIF()
+
+IF(USE_CUDA)
+    include(CheckLanguage)
+    check_language(CUDA)
+    if(CMAKE_CUDA_COMPILER)
+        cmessage(STATUS "CUDA support enabled")
+        enable_language(CUDA)
+        if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+            # The default is taken from the CUDAARCHS environment
+            # variable.  If it isn't set, then set it to the earliest
+            # non-deprecated architecture.
+            #   2022: architectures before 52 are deprecated.
+            if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.23)
+                # After cmake 3.23, this can be set to all or all-major
+                set(CMAKE_CUDA_ARCHITECTURES all)
+            else()
+                set(CMAKE_CUDA_ARCHITECTURES 52)
+            endif()
+        endif()
+        cmessage(STATUS "CUDA compilation architectures: \"${CMAKE_CUDA_ARCHITECTURES}\"")
+    endif(CMAKE_CUDA_COMPILER)
+ENDIF()
+
 ##################################  ####  ######################################
 
 add_subdirectory(src)
