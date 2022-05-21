@@ -63,7 +63,7 @@ ELSE()
 ENDIF()
 
 if (${CMAKE_VERSION} VERSION_LESS 3.8)
-  cmessage(STATUS "cmake too old to support cuda. Try version >=3.8")
+  cmessage(WARNING "cmake too old to support cuda compilation. Try version >=3.8")
   SET(USE_CUDA 0)
 endif()
 
@@ -88,13 +88,14 @@ IF(USE_CUDA)
       cmessage(STATUS "CUDA compilation architectures: \"${CMAKE_CUDA_ARCHITECTURES}\"")
       add_definitions( -DUSING_CUDA )
   else()
-    cmessage(STATUS "CUDA compiler not found. GPU threading not available")
+    cmessage(WARNING "CUDA compiler not found. GPU threading not available")
     SET(USE_CUDA 0)
   endif(CMAKE_CUDA_COMPILER)
 ENDIF()
 
 ##################################  ####  ######################################
 
+add_subdirectory(src/CacheManager)
 add_subdirectory(src)
 add_subdirectory(app)
 

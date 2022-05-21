@@ -254,6 +254,8 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
 
 void AnaFitParameters::ApplyParameters(std::vector<double>& params)
 {
+    SetParValues(params);
+
     // Update parameters before reweight
     if (m_func_type == kPolynomialCosth)
         ((PolynomialCosth*)m_func)->SetPolynomial(params);

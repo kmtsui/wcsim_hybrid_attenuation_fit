@@ -1,5 +1,9 @@
 #include "Fitter.hh"
 
+#ifdef USING_CUDA
+#include "CacheManager.h"
+#endif
+
 Fitter::Fitter(TDirectory* dirout, const int seed, const int num_threads)
     : rng(new TRandom3(seed))
     , m_fitter(nullptr)
@@ -221,6 +225,9 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
         fitpar -> ThrowPars();
     }
 
+#ifdef USING_CUDA
+    Cache::Manager::Build(m_samples,m_fitpara);
+#endif
 
     bool did_converge = false;
     std::cout << TAG << "Fit prepared." << std::endl;
@@ -363,6 +370,22 @@ double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
         m_fitpara[i]->ApplyParameters(new_pars[i]);
     }
 
+#ifdef USING_CUDA
+    Cache::Manager::Fill();
+    for(int s = 0; s < m_samples.size(); ++s)
+    {
+        m_samples[s]->FillEventHistCuda();
+
+        double sample_chi2 = m_samples[s]->CalcLLH(m_threads);
+        chi2 += sample_chi2;
+
+        if(output_chi2)
+        {
+            std::cout << TAG << "Chi2 for sample " << m_samples[s]->GetName() << " is "
+                      << sample_chi2 << std::endl;
+        }
+    }
+#else
     for(int s = 0; s < m_samples.size(); ++s)
     {
         const unsigned int num_pmts = m_samples[s]->GetNPMTs();
@@ -380,7 +403,7 @@ double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
         }
 
         m_samples[s]->FillEventHist();
-        double sample_chi2 = m_samples[s]->CalcLLH();
+        double sample_chi2 = m_samples[s]->CalcLLH(m_threads);
         chi2 += sample_chi2;
 
         if(output_chi2)
@@ -389,7 +412,7 @@ double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
                       << sample_chi2 << std::endl;
         }
     }
-
+#endif
     return chi2;
 }
 

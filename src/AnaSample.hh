@@ -24,6 +24,10 @@
 #include "Likelihoods.hh"
 #include "ColorOutput.hh"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 class AnaSample
 {
 public:
@@ -49,8 +53,9 @@ public:
     void SetNorm(const double val) { m_norm = val; }
 
     void SetLLHFunction(const std::string& func_name);
-    double CalcLLH() const;
+    double CalcLLH(int nthreads = 1) const;
 
+    inline int GetNBins() const { return m_nbins; }
     void FillEventHist(bool reset_weights = false);
     void FillDataHist(bool stat_fluc = false);
 
@@ -171,6 +176,26 @@ protected:
     const std::string TAG = color::GREEN_STR + "[AnaSample]: " + color::RESET_STR;
     const std::string ERR = color::RED_STR + "[AnaSample ERROR]: " + color::RESET_STR;
     const std::string WAR = color::RED_STR + "[AnaSample WARNING]: " + color::RESET_STR;
+
+/// GPU threading
+#ifdef USING_CUDA
+    public:
+        void setCacheManagerIndex(int i) {_CacheManagerIndex_ = i;}
+        int  getCacheManagerIndex() {return _CacheManagerIndex_;}
+        void setCacheManagerValuePointer(const double* v) {_CacheManagerValue_ = v;}
+        void setCacheManagerValidPointer(const bool* v) {_CacheManagerValid_ = v;}
+        void setCacheManagerUpdatePointer(void (*p)()) {_CacheManagerUpdate_ = p;}
+	    void FillEventHistCuda();
+    private:
+        // An "opaque" index into the cache that is used to simplify bookkeeping.
+        int _CacheManagerIndex_{-1};
+        // A pointer to the cached result.
+        const double* _CacheManagerValue_{nullptr};
+        // A pointer to the cache validity flag.
+        const bool* _CacheManagerValid_{nullptr};
+        // A pointer to a callback to force the cache to be updated.
+        void (*_CacheManagerUpdate_)(){nullptr};
+#endif
 
 };
 

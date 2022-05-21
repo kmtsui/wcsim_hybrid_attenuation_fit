@@ -34,14 +34,17 @@ public:
     void ApplyParameters(std::vector<double>& params);
     void ReWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
     double GetWeight(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
+    int GetParBin(int nsample, int nevent) const { return m_evmap[nsample][nevent]; }
 
     std::string GetName() const { return m_name; }
 
     void GetParNames(std::vector<std::string>& vec) const { vec = pars_name; }
     void GetParPriors(std::vector<double>& vec) const { vec = pars_prior; }
+    void GetParValues(std::vector<double>& vec) const { vec = pars_value; }
     void GetParOriginal(std::vector<double>& vec) const { vec = pars_original; }
     double GetParOriginal(int i) const { return pars_original.at(i); }
     double GetParPrior(int i) const { return pars_prior.at(i); }
+    double GetParValue(int i) const { return pars_value.at(i); }
     void GetParSteps(std::vector<double>& vec) const { vec = pars_step; }
     void GetParFixed(std::vector<bool>& vec) const { vec = pars_fixed; }
     void GetParLimits(std::vector<double>& vec1, std::vector<double>& vec2) const
@@ -52,6 +55,7 @@ public:
 
     void SetParNames(std::vector<std::string>& vec) { pars_name = vec; }
     void SetParPriors(std::vector<double>& vec) { pars_prior = vec; }
+    void SetParValues(std::vector<double>& vec) { pars_value = vec; }
     void SetParSteps(std::vector<double>& vec) { pars_step = vec; }
     void SetParLimits(std::vector<double>& vec1, std::vector<double>& vec2)
     {
@@ -75,6 +79,8 @@ public:
     inline void SetBinVar(std::vector<std::string> vec) { m_binvar = vec; }
 
     void SetParameterFunction(const std::string& func_name);
+    inline int GetParameterFunctionType() const { return m_func_type; }
+    ParameterFunction* GetParameterFunction() const { return m_func ; }
 
     inline void SetPMTType(const int val) { m_pmttype = val; }
     inline int GetPMTType() const { return m_pmttype; }
@@ -113,6 +119,7 @@ protected:
     std::vector<std::string> pars_name;
     std::vector<double> pars_original;
     std::vector<double> pars_prior;
+    std::vector<double> pars_value;
     std::vector<double> pars_step;
     std::vector<double> pars_limlow;
     std::vector<double> pars_limhigh;

@@ -464,6 +464,32 @@ void AnaSample::FillEventHist(bool reset_weights)
     return;
 }
 
+#ifdef USING_CUDA
+void AnaSample::FillEventHistCuda()
+{
+    if (_CacheManagerValue_) {
+        if (_CacheManagerValid_ && !(*_CacheManagerValid_)) {
+            // This is slowish, but will make sure that the cached result is
+            // updated when the cache has changed.  The values pointed to by
+            // _CacheManagerResult_ and _CacheManagerValid_ are inside
+            // of the weights cache (a bit of evil coding here), and are
+            // updated by the cache.  The update is triggered by
+            // _CacheManagerUpdate().
+            if (_CacheManagerUpdate_) (*_CacheManagerUpdate_)();
+        }
+    }
+
+    if (_CacheManagerValue_ && 0 <= _CacheManagerIndex_)
+    {
+	for (int i = 0; i < m_nbins ; i++)
+	{
+	    double val = _CacheManagerValue_[_CacheManagerIndex_+i];
+	    m_hpred->SetBinContent(i+1,val);
+	}
+    }
+}
+#endif
+
 void AnaSample::FillDataHist(bool stat_fluc)
 {
 #ifndef NDEBUG
@@ -592,7 +618,7 @@ void AnaSample::SetLLHFunction(const std::string& func_name)
     }
 }
 
-double AnaSample::CalcLLH() const
+double AnaSample::CalcLLH(int nthreads) const
 {
     const unsigned int nbins = m_hpred->GetNbinsX();
     double* exp_w  = m_hpred->GetArray();
@@ -601,18 +627,24 @@ double AnaSample::CalcLLH() const
     double* data   = m_hdata->GetArray();
 
     double chi2 = 0.0;
+#pragma omp parallel for reduction(+:chi2) num_threads(nthreads)
     for(unsigned int i = 1; i <= nbins; ++i)
-        chi2 += (*m_llh)(exp_w[i], exp_w2[i], data[i]);
+    {
+        chi2 = chi2 + (*m_llh)(exp_w[i], exp_w2[i], data[i]);
+    }
 
     if (m_template)
     {
         if (m_template_only) chi2 = 0.0;
+#pragma omp parallel for reduction(+:chi2) num_threads(nthreads)
         for(unsigned int i=1;i<=m_htimetof_pred->GetNbinsX();i++)
         {
+            double sum = 0;
             for (int j=1;j<=m_htimetof_pred->GetNbinsY();j++)
             {
-                chi2 += (*m_llh)(m_htimetof_pred->GetBinContent(i,j), m_htimetof_pred_w2->GetBinContent(i,j), m_htimetof_data->GetBinContent(i,j));
+                sum += (*m_llh)(m_htimetof_pred->GetBinContent(i,j), m_htimetof_pred_w2->GetBinContent(i,j), m_htimetof_data->GetBinContent(i,j));
             }
+            chi2 = chi2 + sum ;
         }
     }
 
