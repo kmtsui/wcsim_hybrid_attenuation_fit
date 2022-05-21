@@ -421,7 +421,7 @@ void AnaSample::FillEventHist(bool reset_weights)
     }
 #endif
     m_hpred->Reset();
-    if (m_scatter||m_scatter_map) m_hpred_err2->Reset();
+    //if (m_scatter||m_scatter_map) m_hpred_err2->Reset();
 
     if (m_template) 
     {
@@ -438,7 +438,7 @@ void AnaSample::FillEventHist(bool reset_weights)
         if (m_scatter||m_scatter_map)
         {
             m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
-            m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr()); // MC stat error of indirect PE prediction
+            //m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr()); // MC stat error of indirect PE prediction
         }
 
         if (m_template)
@@ -481,11 +481,20 @@ void AnaSample::FillEventHistCuda()
 
     if (_CacheManagerValue_ && 0 <= _CacheManagerIndex_)
     {
-	for (int i = 0; i < m_nbins ; i++)
-	{
-	    double val = _CacheManagerValue_[_CacheManagerIndex_+i];
-	    m_hpred->SetBinContent(i+1,val);
-	}
+        for (int i = 0; i < m_nbins ; i++)
+        {
+            double val = _CacheManagerValue_[_CacheManagerIndex_+i];
+            m_hpred->SetBinContent(i+1,val);
+        }
+
+        if (m_scatter||m_scatter_map)
+        {
+            for(const auto& e : m_pmts)
+            {
+                const int reco_bin  = e.GetSampleBin();
+                m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
+            }
+        }
     }
 }
 #endif
@@ -501,7 +510,11 @@ void AnaSample::FillDataHist(bool stat_fluc)
     }
 #endif
     m_hdata->Reset();
-    if (m_scatter || m_scatter_map) m_hdata_control->Reset();
+    if (m_scatter || m_scatter_map) 
+    {
+        m_hdata_control->Reset();
+        m_hpred_err2->Reset();
+    }
 
     if(stat_fluc) 
         std::cout << TAG << "Applying statistical fluctuations..." << std::endl;
@@ -562,6 +575,8 @@ void AnaSample::FillDataHist(bool stat_fluc)
 
                 e.SetPEIndirect(indirect_pred);
                 e.SetPEIndirectErr(indirect_err2);
+
+                m_hpred_err2->Fill(reco_bin + 0.5, indirect_err2); // MC stat error of indirect PE prediction
             }
 
             m_hdata_control->Fill(reco_bin + 0.5, weight_control);
