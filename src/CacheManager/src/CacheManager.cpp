@@ -1,60 +1,16 @@
 #include "CacheManager.h"
 
-// #include "FitParameterSet.h"
-// #include "Dial.h"
-// #include "SplineDial.h"
-// #include "GraphDial.h"
-// #include "NormalizationDial.h"
-// #include "GlobalVariables.h"
-
-// #include "GenericToolbox.h"
-// #include "GenericToolbox.Root.h"
-
 #include <vector>
 #include <set>
 
-// #include "Logger.h"
-// LoggerInit([](){
-//   Logger::setUserHeaderStr("[Cache]");
-// })
 
 Cache::Manager* Cache::Manager::fSingleton = nullptr;
 std::map<const AnaFitParameters*, int> Cache::Manager::ParameterMap;
 
-// std::string Cache::Manager::SplineType(const SplineDial* dial) {
-//     const TSpline3* s = dial->getSplinePtr();
-//     if (!s) throw std::runtime_error("Null spline pointer");
-//     const int points = s->GetNp();
-
-//     // Check if the spline has uniformly spaced knots.  There is a flag for
-//     // this is TSpline3, but it's not uniformly (or ever) filled correctly.
-//     bool uniform = true;
-//     for (int i = 1; i < points-1; ++i) {
-//         double x;
-//         double y;
-//         s->GetKnot(i-1,x,y);
-//         double d1 = x;
-//         s->GetKnot(i,x,y);
-//         d1 = x - d1;
-//         double d2 = x;
-//         s->GetKnot(i+1,x,y);
-//         d2 = x - d2;
-//         if (std::abs((d1-d2)/(d1+d2)) > 1E-6) {
-//             uniform = false;
-//             break;
-//         }
-//     }
-
-//     std::string subType = dial->getOwner()->getDialSubType();
-
-//     if (!uniform) return std::string("generalSpline");
-//     if (subType == "compact") return std::string("compactSpline");
-//     return std::string("uniformSpline");
-// }
-
 Cache::Manager::Manager(int events, int parameters,
                         int norms,
                         int attens,
+                        int attenzs,
                         int polys,
                         int histBins) {
     std::cout << "Creating cache manager" << std::endl;
@@ -84,6 +40,13 @@ Cache::Manager::Manager(int events, int parameters,
                                 attens));
         fWeightsCache->AddWeightCalculator(fAttenuations.get());
         fTotalBytes += fAttenuations->GetResidentMemory();
+
+        fAttenuationzs.reset(new Cache::Weight::AttenuationZ(
+                                fWeightsCache->GetWeights(),
+                                fParameterCache->GetParameters(),
+                                attenzs));
+        fWeightsCache->AddWeightCalculator(fAttenuationzs.get());
+        fTotalBytes += fAttenuationzs->GetResidentMemory();
 
         fPolynomialCosth.reset(new Cache::Weight::PolynomialCosth(
                                    fWeightsCache->GetWeights(),
@@ -141,16 +104,9 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
     std::cout << "Build the cache for Cache::Manager" << std::endl;
 
     int events = 0;
-    int compactSplines = 0;
-    int compactPoints = 0;
-    int uniformSplines = 0;
-    int uniformPoints = 0;
-    int generalSplines = 0;
-    int generalPoints = 0;
-    int graphs = 0;
-    int graphPoints = 0;
     int norms = 0;
     int attens = 0;
+    int attenzs = 0;
     int polys = 0;
     Cache::Manager::ParameterMap.clear();
 
@@ -176,6 +132,12 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                     int bin = fitpara->GetParBin(event->GetSampleType(), i);
                     if(bin == PASSEVENT || bin == BADBIN) continue;
                     attens++;
+                }
+                else if ( fitpara->GetParameterFunctionType() == kAttenuationZ )
+                {
+                    int bin = fitpara->GetParBin(event->GetSampleType(), i);
+                    if(bin == PASSEVENT || bin == BADBIN) continue;
+                    attenzs++;
                 }
                 else if ( fitpara->GetParameterFunctionType() == kPolynomialCosth )
                 {
@@ -222,6 +184,7 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
         fSingleton = new Manager(events,parameters,
                                  norms,
                                  attens,
+                                 attenzs,
                                  polys,
                                  histCells);
     }
@@ -249,12 +212,6 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
         }
         else
             parCount += fitpara->GetNpar();
-
-	    // if ( fitpara->GetParameterFunctionType() == kPolynomialCosth )
-        // {
-	    //     std::vector<int>    poly_orders = ((PolynomialCosth*)fitpara->GetParameterFunction())->pol_orders;
-        //     std::vector<double> poly_ranges = ((PolynomialCosth*)fitpara->GetParameterFunction())->pol_range;
-        // }
     }
     for(auto& sample : samples) {
         std::cout << "Fill cache for " << sample->GetName()
@@ -295,6 +252,12 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                     Cache::Manager::Get()
                         ->fAttenuations
                         ->ReserveAtten(resultIndex,parIndex+bin,event->GetR(),event->GetOmega()*event->GetEff());
+                }
+                else if ( fitpara->GetParameterFunctionType() == kAttenuationZ )
+                {
+                    Cache::Manager::Get()
+                        ->fAttenuationzs
+                        ->ReserveAttenz(resultIndex,parIndex+bin,event->GetR(),event->GetOmega()*event->GetEff(),event->GetZ0(),event->GetDz());
                 }
                 else if ( fitpara->GetParameterFunctionType() == kPolynomialCosth )
                 {

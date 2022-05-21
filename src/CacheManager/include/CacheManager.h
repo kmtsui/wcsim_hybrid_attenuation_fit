@@ -6,6 +6,7 @@
 #include "CacheWeights.h"
 #include "WeightNormalization.h"
 #include "WeightAttenuation.h"
+#include "WeightAttenuationZ.h"
 #include "WeightPolynomialCosth.h"
 // #include "WeightCompactSpline.h"
 // #include "WeightUniformSpline.h"
@@ -55,6 +56,7 @@ private:
     Manager(int results, int parameters,
             int norms,
             int attens,
+            int attenzs,
             int polys,
             int histBins);
 
@@ -84,6 +86,9 @@ private:
 
     /// The cache for the attenuations
     std::unique_ptr<Cache::Weight::Attenuation> fAttenuations;
+
+    /// The cache for the attenuationzs
+    std::unique_ptr<Cache::Weight::AttenuationZ> fAttenuationzs;
 
     /// The cache for the polynomainCosth
     std::unique_ptr<Cache::Weight::PolynomialCosth> fPolynomialCosth;

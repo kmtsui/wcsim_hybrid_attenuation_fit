@@ -50,7 +50,7 @@ private:
     /// NOT owned by this array (they are owned by a unique_ptr's elsewyr in
     /// the code), but pointers are needed for efficiency.
     int fWeightCalculators{0};
-    std::array<Cache::Weight::Base*,3> fWeightCalculator;
+    std::array<Cache::Weight::Base*,4> fWeightCalculator;
 
 public:
     // Construct the class.  This should allocate all the memory on the host

@@ -8,6 +8,7 @@ if( USE_CUDA )
           include/CacheWeights.h
           include/WeightNormalization.h
           include/WeightAttenuation.h
+          include/WeightAttenuationZ.h
           include/WeightPolynomialCosth.h
           include/WeightBase.h
           include/CacheIndexedSums.h
@@ -17,6 +18,7 @@ if( USE_CUDA )
     cmessage(STATUS "CUDA utilities being compiled")
     set(SRCFILES ${SRCFILES} src/WeightNormalization.cu)
     set(SRCFILES ${SRCFILES} src/WeightAttenuation.cu)
+    set(SRCFILES ${SRCFILES} src/WeightAttenuationZ.cu)
     set(SRCFILES ${SRCFILES} src/WeightPolynomialCosth.cu)
     set(SRCFILES ${SRCFILES} src/CacheParameters.cu)
     set(SRCFILES ${SRCFILES} src/CacheWeights.cu)
@@ -25,6 +27,7 @@ if( USE_CUDA )
     cmessage(STATUS "CUDA utilities are not being compiled")
     set(SRCFILES ${SRCFILES} src/WeightNormalization.cpp)
     set(SRCFILES ${SRCFILES} src/WeightAttenuation.cpp)
+    set(SRCFILES ${SRCFILES} src/WeightAttenuationZ.cpp)
     set(SRCFILES ${SRCFILES} src/WeightPolynomialCosth.cpp)
     set(SRCFILES ${SRCFILES} src/CacheParameters.cpp)
     set(SRCFILES ${SRCFILES} src/CacheWeights.cpp)
