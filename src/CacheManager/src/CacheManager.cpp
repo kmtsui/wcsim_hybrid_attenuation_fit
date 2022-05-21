@@ -12,6 +12,7 @@ Cache::Manager::Manager(int events, int parameters,
                         int attens,
                         int attenzs,
                         int polys,
+                        int sphis,
                         int histBins) {
     std::cout << "Creating cache manager" << std::endl;
 
@@ -55,32 +56,12 @@ Cache::Manager::Manager(int events, int parameters,
         fWeightsCache->AddWeightCalculator(fPolynomialCosth.get());
         fTotalBytes += fPolynomialCosth->GetResidentMemory();
 
-        // fCompactSplines.reset(new Cache::Weight::CompactSpline(
-        //                           fWeightsCache->GetWeights(),
-        //                           fParameterCache->GetParameters(),
-        //                           fParameterCache->GetLowerClamps(),
-        //                           fParameterCache->GetUpperClamps(),
-        //                           compactSplines, compactPoints));
-        // fWeightsCache->AddWeightCalculator(fCompactSplines.get());
-        // fTotalBytes += fCompactSplines->GetResidentMemory();
-
-        // fUniformSplines.reset(new Cache::Weight::UniformSpline(
-        //                           fWeightsCache->GetWeights(),
-        //                           fParameterCache->GetParameters(),
-        //                           fParameterCache->GetLowerClamps(),
-        //                           fParameterCache->GetUpperClamps(),
-        //                           uniformSplines, uniformPoints));
-        // fWeightsCache->AddWeightCalculator(fUniformSplines.get());
-        // fTotalBytes += fUniformSplines->GetResidentMemory();
-
-        // fGeneralSplines.reset(new Cache::Weight::GeneralSpline(
-        //                           fWeightsCache->GetWeights(),
-        //                           fParameterCache->GetParameters(),
-        //                           fParameterCache->GetLowerClamps(),
-        //                           fParameterCache->GetUpperClamps(),
-        //                           generalSplines, generalPoints));
-        // fWeightsCache->AddWeightCalculator(fGeneralSplines.get());
-        // fTotalBytes += fGeneralSplines->GetResidentMemory();
+        fSourcePhiVar.reset(new Cache::Weight::SourcePhiVar(
+                                   fWeightsCache->GetWeights(),
+                                   fParameterCache->GetParameters(),
+                                   sphis));
+        fWeightsCache->AddWeightCalculator(fSourcePhiVar.get());
+        fTotalBytes += fSourcePhiVar->GetResidentMemory();
 
         fHistogramsCache.reset(new Cache::IndexedSums(
                                   fWeightsCache->GetWeights(),
@@ -108,6 +89,7 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
     int attens = 0;
     int attenzs = 0;
     int polys = 0;
+    int sphis = 0;
     Cache::Manager::ParameterMap.clear();
 
     std::set<const AnaFitParameters*> usedParameters;
@@ -144,6 +126,12 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                     int bin = fitpara->GetParBin(event->GetSampleType(), i);
                     if(bin == PASSEVENT || bin == BADBIN) continue;
                     polys++;
+                }
+                else if ( fitpara->GetParameterFunctionType() == kSourcePhiVar )
+                {
+                    int bin = fitpara->GetParBin(event->GetSampleType(), i);
+                    if(bin == PASSEVENT || bin == BADBIN) continue;
+                    sphis++;
                 }
             }
         }
@@ -186,6 +174,7 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                                  attens,
                                  attenzs,
                                  polys,
+                                 sphis,
                                  histCells);
     }
 
@@ -282,6 +271,12 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                     Cache::Manager::Get()
                         ->fPolynomialCosth
                         ->ReservePoly(resultIndex,parIndex,polyOrd,polyArg);
+                }
+                else if ( fitpara->GetParameterFunctionType() == kSourcePhiVar )
+                {
+                    Cache::Manager::Get()
+                        ->fSourcePhiVar
+                        ->ReserveSPhi(resultIndex,parIndex+bin,cos(event->GetPhis()));
                 }
             }
         }

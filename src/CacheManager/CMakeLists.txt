@@ -10,6 +10,7 @@ if( USE_CUDA )
           include/WeightAttenuation.h
           include/WeightAttenuationZ.h
           include/WeightPolynomialCosth.h
+          include/WeightSourcePhiVar.h
           include/WeightBase.h
           include/CacheIndexedSums.h
           )
@@ -20,6 +21,7 @@ if( USE_CUDA )
     set(SRCFILES ${SRCFILES} src/WeightAttenuation.cu)
     set(SRCFILES ${SRCFILES} src/WeightAttenuationZ.cu)
     set(SRCFILES ${SRCFILES} src/WeightPolynomialCosth.cu)
+    set(SRCFILES ${SRCFILES} src/WeightSourcePhiVar.cu)
     set(SRCFILES ${SRCFILES} src/CacheParameters.cu)
     set(SRCFILES ${SRCFILES} src/CacheWeights.cu)
     set(SRCFILES ${SRCFILES} src/CacheIndexedSums.cu)
@@ -29,6 +31,7 @@ if( USE_CUDA )
     set(SRCFILES ${SRCFILES} src/WeightAttenuation.cpp)
     set(SRCFILES ${SRCFILES} src/WeightAttenuationZ.cpp)
     set(SRCFILES ${SRCFILES} src/WeightPolynomialCosth.cpp)
+    set(SRCFILES ${SRCFILES} src/WeightSourcePhiVar.cpp)
     set(SRCFILES ${SRCFILES} src/CacheParameters.cpp)
     set(SRCFILES ${SRCFILES} src/CacheWeights.cpp)
     set(SRCFILES ${SRCFILES} src/CacheIndexedSums.cpp)

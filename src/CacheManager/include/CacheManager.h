@@ -8,9 +8,7 @@
 #include "WeightAttenuation.h"
 #include "WeightAttenuationZ.h"
 #include "WeightPolynomialCosth.h"
-// #include "WeightCompactSpline.h"
-// #include "WeightUniformSpline.h"
-// #include "WeightGeneralSpline.h"
+#include "WeightSourcePhiVar.h"
 
 #include "CacheIndexedSums.h"
 
@@ -58,6 +56,7 @@ private:
             int attens,
             int attenzs,
             int polys,
+            int sphis,
             int histBins);
 
     static Manager* fSingleton;  // You get one guess...
@@ -92,6 +91,9 @@ private:
 
     /// The cache for the polynomainCosth
     std::unique_ptr<Cache::Weight::PolynomialCosth> fPolynomialCosth;
+
+    /// The cache for the SourcePhiVar
+    std::unique_ptr<Cache::Weight::SourcePhiVar> fSourcePhiVar;
 
     // /// The cache for the compact splines
     // std::unique_ptr<Cache::Weight::CompactSpline> fCompactSplines;
