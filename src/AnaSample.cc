@@ -495,6 +495,40 @@ void AnaSample::FillEventHistCuda()
                 m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
             }
         }
+
+        if (m_template)
+        {
+            m_htimetof_pred_w2->Reset();
+
+            int counter =  _CacheManagerIndex_ + m_nbins ;
+            for (int j=0;j<m_htimetof_pred->GetNbinsY();j++)
+            {
+                for (int i=0;i<m_htimetof_pred->GetNbinsX();i++)
+                {
+                    m_htimetof_pred->SetBinContent(i+1,j+1,_CacheManagerValue_[counter++]);
+                }
+            }
+
+            for(const auto& e : m_pmts)
+            {
+                const int reco_bin  = e.GetSampleBin();
+                std::vector<double> timetof_nom_sig2 = e.GetTimetofNomSig2();
+                const double* cacheValues = e.GetCacheMangerValue();
+                for (int i=1;i<=m_htimetof_pred->GetNbinsY();i++)
+                {
+                    //const double val = e.GetCacheMangerValue(i);
+                    const double val = *(cacheValues+i);
+                    if (!m_template_combine) 
+                    {
+                        m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*val*val);
+                    }
+                    else
+                    {
+                        m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*val*val);
+                    }
+                }
+            }
+        }
     }
 }
 #endif

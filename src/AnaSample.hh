@@ -89,6 +89,8 @@ public:
     void SetTemplate(const TH2D& hist, double offset, bool combine, bool template_only);
     inline bool UseTemplate() { return m_template; } 
     TH2D* GetTemplate() { return m_htimetof_pmt_pred;}
+    inline bool CombineTemplate() const { return m_template_combine; }
+    inline int GetNTemplateBins() const { return m_template ? m_htimetof_pred->GetNbinsX()*m_htimetof_pred->GetNbinsY() : 0 ;}
 
     void SetPMTEff(const TH1D& hist);
     inline void SetPMTEffVar(double val) { m_eff_var  = true; m_eff_sig = val; }

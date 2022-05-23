@@ -219,6 +219,43 @@ class AnaEvent
         void setCacheManagerValuePointer(const double* v) {_CacheManagerValue_ = v;}
         void setCacheManagerValidPointer(const bool* v) {_CacheManagerValid_ = v;}
         void setCacheManagerUpdatePointer(void (*p)()) {_CacheManagerUpdate_ = p;}
+        const double* GetCacheMangerValue() const
+        {
+            if (_CacheManagerValue_) 
+            {
+                if (_CacheManagerValid_ && !(*_CacheManagerValid_)) {
+                    // This is slowish, but will make sure that the cached result is
+                    // updated when the cache has changed.  The values pointed to by
+                    // _CacheManagerResult_ and _CacheManagerValid_ are inside
+                    // of the weights cache (a bit of evil coding here), and are
+                    // updated by the cache.  The update is triggered by
+                    // _CacheManagerUpdate().
+                    if (_CacheManagerUpdate_) (*_CacheManagerUpdate_)();
+                }
+            }
+            return _CacheManagerValue_;
+        }
+        double GetCacheMangerValue(int i) const
+        {
+            if (_CacheManagerValue_) 
+            {
+                if (_CacheManagerValid_ && !(*_CacheManagerValid_)) {
+                    // This is slowish, but will make sure that the cached result is
+                    // updated when the cache has changed.  The values pointed to by
+                    // _CacheManagerResult_ and _CacheManagerValid_ are inside
+                    // of the weights cache (a bit of evil coding here), and are
+                    // updated by the cache.  The update is triggered by
+                    // _CacheManagerUpdate().
+                    if (_CacheManagerUpdate_) (*_CacheManagerUpdate_)();
+                }
+            }
+            if (_CacheManagerValue_ && 0 <= _CacheManagerIndex_)
+            {
+                //return _CacheManagerValue_[_CacheManagerIndex_+i];
+                return *(_CacheManagerValue_+i);
+            }
+            return m_wght;
+        }
     private:
         // An "opaque" index into the cache that is used to simplify bookkeeping.
         int _CacheManagerIndex_{-1};

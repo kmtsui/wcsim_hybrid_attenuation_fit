@@ -13,6 +13,7 @@ Cache::Manager::Manager(int events, int parameters,
                         int attenzs,
                         int polys,
                         int sphis,
+                        int splines, int splinePoints,
                         int histBins) {
     std::cout << "Creating cache manager" << std::endl;
 
@@ -56,12 +57,21 @@ Cache::Manager::Manager(int events, int parameters,
         fWeightsCache->AddWeightCalculator(fPolynomialCosth.get());
         fTotalBytes += fPolynomialCosth->GetResidentMemory();
 
-        fSourcePhiVar.reset(new Cache::Weight::SourcePhiVar(
+        fSourcePhiVars.reset(new Cache::Weight::SourcePhiVar(
                                    fWeightsCache->GetWeights(),
                                    fParameterCache->GetParameters(),
                                    sphis));
-        fWeightsCache->AddWeightCalculator(fSourcePhiVar.get());
-        fTotalBytes += fSourcePhiVar->GetResidentMemory();
+        fWeightsCache->AddWeightCalculator(fSourcePhiVars.get());
+        fTotalBytes += fSourcePhiVars->GetResidentMemory();
+
+        fSplines.reset(new Cache::Weight::Spline(
+                                  fWeightsCache->GetWeights(),
+                                  fParameterCache->GetParameters(),
+                                  fParameterCache->GetLowerClamps(),
+                                  fParameterCache->GetUpperClamps(),
+                                  splines, splinePoints));
+        fWeightsCache->AddWeightCalculator(fSplines.get());
+        fTotalBytes += fSplines->GetResidentMemory();
 
         fHistogramsCache.reset(new Cache::IndexedSums(
                                   fWeightsCache->GetWeights(),
@@ -90,6 +100,8 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
     int attenzs = 0;
     int polys = 0;
     int sphis = 0;
+    int splines = 0;
+    int splinePoints = 0;
     Cache::Manager::ParameterMap.clear();
 
     std::set<const AnaFitParameters*> usedParameters;
@@ -101,6 +113,7 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
         for (int i=0; i<sample->GetNPMTs(); i++){
             // The reduce index to save the result for this event.
             AnaEvent* event = sample->GetPMT(i);
+            if (sample->UseTemplate()) events += event->GetTimetofNom().size();
             for(auto& fitpara : fitparas)
             {
                 if ( fitpara->GetParameterFunctionType() == kIdentity )
@@ -133,6 +146,16 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                     if(bin == PASSEVENT || bin == BADBIN) continue;
                     sphis++;
                 }
+
+                if ( fitpara->UseSpline() && sample->UseTemplate())
+                {
+                    std::vector<TGraph*> graphs = fitpara->GetSplineGraph(event->GetSampleType(), i);
+                    for(auto& graph : graphs)
+                    {
+                        splines++;
+                        splinePoints += graph->GetN();
+                    }
+                }
             }
         }
     }
@@ -145,6 +168,15 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                 << " with " << cells
                 << " cells" << std::endl;
         histCells += cells;
+
+        if (sample->UseTemplate())
+        {
+            int ntcells = sample->GetNTemplateBins();
+            std::cout << "Add template histogram for " << sample->GetName()
+                    << " with " << ntcells
+                    << " cells" << std::endl;
+            histCells += ntcells;
+        }
     }
 
     //int parameters = fitparas.size();
@@ -175,6 +207,7 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                                  attenzs,
                                  polys,
                                  sphis,
+                                 splines, splinePoints,
                                  histCells);
     }
 
@@ -223,6 +256,17 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
             Cache::Manager::Get()
                 ->GetWeightsCache()
                 .SetInitialValue(resultIndex,event->GetEvWghtMC());
+            if (sample->UseTemplate()) 
+            {
+                std::vector<double> timetofNom = event->GetTimetofNom();
+                usedResults += timetofNom.size();
+                for (int j=0;j<timetofNom.size();j++)
+                {
+                    Cache::Manager::Get()
+                        ->GetWeightsCache()
+                        .SetInitialValue(resultIndex+j+1,timetofNom[j]);
+                }
+            }
             for(auto& fitpara : fitparas)
             {
                 int parIndex = Cache::Manager::ParameterMap[fitpara];
@@ -275,8 +319,19 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                 else if ( fitpara->GetParameterFunctionType() == kSourcePhiVar )
                 {
                     Cache::Manager::Get()
-                        ->fSourcePhiVar
+                        ->fSourcePhiVars
                         ->ReserveSPhi(resultIndex,parIndex+bin,cos(event->GetPhis()));
+                }
+
+                if ( fitpara->UseSpline() && sample->UseTemplate())
+                {
+                    std::vector<TGraph*> graphs = fitpara->GetSplineGraph(event->GetSampleType(), i);
+                    for(int j=0;j<graphs.size();j++)
+                    {
+                        Cache::Manager::Get()
+                        ->fSplines
+                        ->AddSpline(resultIndex+j+1,parIndex+bin,graphs[j]);
+                    }
                 }
             }
         }
@@ -321,6 +376,28 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
             int theEntry = thisHist + cellIndex;
             Cache::Manager::Get()->GetHistogramsCache()
                 .SetEventIndex(eventIndex,theEntry);
+        }
+
+        if (sample->UseTemplate())
+        {
+            thisHist = nextHist;
+            int ntcells = sample->GetNTemplateBins();
+            nextHist += ntcells;
+            for (int i=0; i<sample->GetNPMTs(); i++)
+            {
+                AnaEvent* event = sample->GetPMT(i);
+                int eventIndex = event->getCacheManagerIndex();
+                for (int j=0;j<sample->GetTemplate()->GetNbinsY();j++)
+                {
+                    int cellIndex =  sample->CombineTemplate() ? j : cells*j + event->GetSampleBin();
+                    if (cellIndex < 0 || ntcells <= cellIndex) {
+                        throw std::runtime_error("Histogram bin out of range");
+                    }
+                    int theEntry = thisHist + cellIndex;
+                    Cache::Manager::Get()->GetHistogramsCache()
+                    .SetEventIndex(eventIndex+j+1,theEntry);
+                }
+            }
         }
     }
 

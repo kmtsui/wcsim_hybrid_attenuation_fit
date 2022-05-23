@@ -109,6 +109,8 @@ public:
     void SetSpline(const std::vector<std::string> file_name, const std::vector<std::string> spline_name);
     void LoadSpline(std::vector<AnaSample*>& sample);
     void ReWeightSpline(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
+    bool UseSpline() const { return m_spline; }
+    std::vector<TGraph*> GetSplineGraph(int nsample, int nevent) const { return spline[nsample][nevent]; }
 
 
 protected:
