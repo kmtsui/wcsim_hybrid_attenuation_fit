@@ -72,6 +72,9 @@ class AnaEvent
         inline void SetZ0(double val){ m_z0 = val; }
         inline double GetZ0() const { return m_z0; }
 
+        inline void SetPos(std::vector<double> val){ m_pos = val; }
+        inline std::vector<double> GetPos() const { return m_pos; }
+
         inline void SetR(double val){ m_R = val; }
         inline double GetR() const { return m_R; }
 
@@ -161,6 +164,12 @@ class AnaEvent
                 return m_dz;
             else if(var == "z0")
                 return m_z0;
+            else if(var == "xpos")
+                return m_pos[0];
+            else if(var == "ypos")
+                return m_pos[1];
+            else if(var == "zpos")
+                return m_pos[2];
             else if(var == "PMT_id")
                 return m_pmtid;
             else if(var == "mPMT_id")
@@ -196,6 +205,7 @@ class AnaEvent
         double m_omega;    //solid angle subtended by PMT
         double m_dz;       // z-pos relative to source
         double m_z0;       // diffuser z-pos
+        std::vector<double> m_pos; // PMT position in the detector
         double m_R;        //distance to source
         double m_nPE;      //number of PE
         //double m_nPE_tail; //number of PE at the tail

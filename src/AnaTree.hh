@@ -42,6 +42,7 @@ private:
     double phim;
     double omega;
     double dz;
+    double xpos, ypos, zpos;
     double timetof;
     int PMT_id;
     int mPMT_id;
