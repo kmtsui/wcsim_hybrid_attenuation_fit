@@ -429,15 +429,21 @@ void AnaSample::FillEventHist(bool reset_weights)
         m_htimetof_pred_w2->Reset();
     }
 
+    double* m_hpred_array  = m_hpred->GetArray();
+    double* m_htimetof_pred_array  = m_template ? m_htimetof_pred->GetArray() : 0;
+    double* m_htimetof_pred_w2_array  = m_template ? m_htimetof_pred_w2->GetArray() : 0;
+
     for(const auto& e : m_pmts)
     {
         const double weight = reset_weights ? e.GetEvWghtMC() : e.GetEvWght();
         const int reco_bin  = e.GetSampleBin();
-        m_hpred->Fill(reco_bin + 0.5, weight); // direct PE prediction
+        //m_hpred->Fill(reco_bin + 0.5, weight); // direct PE prediction
+        m_hpred_array[reco_bin+1] += weight;
 
         if (m_scatter||m_scatter_map)
         {
-            m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
+            //m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
+            m_hpred_array[reco_bin+1] += e.GetPEIndirect();
             //m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr()); // MC stat error of indirect PE prediction
         }
 
@@ -447,16 +453,21 @@ void AnaSample::FillEventHist(bool reset_weights)
             std::vector<double> timetof_nom_sig2 = e.GetTimetofNomSig2();
             for (int i=1;i<=m_htimetof_pred->GetNbinsY();i++)
             {
-                if (!m_template_combine) 
-                {
-                    m_htimetof_pred->Fill(reco_bin + 0.5,i-0.5,timetof_pred[i-1]);
-                    m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
-                }
-                else
-                {
-                    m_htimetof_pred->Fill(0.5,i-0.5,timetof_pred[i-1]);
-                    m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
-                }
+                int bin = (m_htimetof_pred->GetNbinsX()+2)*i;
+                if (!m_template_combine) bin += reco_bin+1;
+                else bin += 1;
+                m_htimetof_pred_array[bin] += timetof_pred[i-1];
+                m_htimetof_pred_w2_array[bin] += timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1];
+                // if (!m_template_combine) 
+                // {
+                //     m_htimetof_pred->Fill(reco_bin + 0.5,i-0.5,timetof_pred[i-1]);
+                //     m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
+                // }
+                // else
+                // {
+                //     m_htimetof_pred->Fill(0.5,i-0.5,timetof_pred[i-1]);
+                //     m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
+                // }
             }
         }
     }
@@ -481,10 +492,13 @@ void AnaSample::FillEventHistCuda()
 
     if (_CacheManagerValue_ && 0 <= _CacheManagerIndex_)
     {
+        double* m_hpred_array  = m_hpred->GetArray();
+
         for (int i = 0; i < m_nbins ; i++)
         {
             double val = _CacheManagerValue_[_CacheManagerIndex_+i];
-            m_hpred->SetBinContent(i+1,val);
+            //m_hpred->SetBinContent(i+1,val);
+            m_hpred_array[i+1] = val;
         }
 
         if (m_scatter||m_scatter_map)
@@ -492,7 +506,8 @@ void AnaSample::FillEventHistCuda()
             for(const auto& e : m_pmts)
             {
                 const int reco_bin  = e.GetSampleBin();
-                m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
+                //m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
+                m_hpred_array[reco_bin+1] += e.GetPEIndirect();
             }
         }
 
@@ -500,12 +515,20 @@ void AnaSample::FillEventHistCuda()
         {
             m_htimetof_pred_w2->Reset();
 
+            double* m_htimetof_pred_array  = m_htimetof_pred->GetArray();
+            double* m_htimetof_pred_w2_array  = m_htimetof_pred_w2->GetArray();
+
+            const int nx = m_htimetof_pred->GetNbinsX();
+            const int ny = m_htimetof_pred->GetNbinsY();
+
             int counter =  _CacheManagerIndex_ + m_nbins ;
-            for (int j=0;j<m_htimetof_pred->GetNbinsY();j++)
+            for (int j=1;j<=ny;j++)
             {
-                for (int i=0;i<m_htimetof_pred->GetNbinsX();i++)
+                int bin = (nx+2)*j;
+                for (int i=1;i<=nx;i++)
                 {
-                    m_htimetof_pred->SetBinContent(i+1,j+1,_CacheManagerValue_[counter++]);
+                    m_htimetof_pred_array[++bin] = _CacheManagerValue_[counter++];
+                    //m_htimetof_pred->SetBinContent(i,j,_CacheManagerValue_[counter++]);
                 }
             }
 
@@ -514,18 +537,22 @@ void AnaSample::FillEventHistCuda()
                 const int reco_bin  = e.GetSampleBin();
                 std::vector<double> timetof_nom_sig2 = e.GetTimetofNomSig2();
                 const double* cacheValues = e.GetCacheMangerValue();
-                for (int i=1;i<=m_htimetof_pred->GetNbinsY();i++)
+                for (int i=1;i<=ny;i++)
                 {
                     //const double val = e.GetCacheMangerValue(i);
                     const double val = *(cacheValues+i);
-                    if (!m_template_combine) 
-                    {
-                        m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*val*val);
-                    }
-                    else
-                    {
-                        m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*val*val);
-                    }
+                    int bin = (nx+2)*i;
+                    if (!m_template_combine) bin += reco_bin+1;
+                    else bin += 1;
+                    m_htimetof_pred_w2_array[bin] += timetof_nom_sig2[i-1]*val*val;
+                    // if (!m_template_combine) 
+                    // {
+                    //     m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*val*val);
+                    // }
+                    // else
+                    // {
+                    //     m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*val*val);
+                    // }
                 }
             }
         }
@@ -684,12 +711,15 @@ double AnaSample::CalcLLH(int nthreads) const
 
     if (m_template)
     {
+        const int nx = m_htimetof_pred->GetNbinsX();
+        const int ny = m_htimetof_pred->GetNbinsY();
+
         if (m_template_only) chi2 = 0.0;
 #pragma omp parallel for reduction(+:chi2) num_threads(nthreads)
-        for(unsigned int i=1;i<=m_htimetof_pred->GetNbinsX();i++)
+        for(unsigned int i=1;i<=nx;i++)
         {
             double sum = 0;
-            for (int j=1;j<=m_htimetof_pred->GetNbinsY();j++)
+            for (int j=1;j<=ny;j++)
             {
                 sum += (*m_llh)(m_htimetof_pred->GetBinContent(i,j), m_htimetof_pred_w2->GetBinContent(i,j), m_htimetof_data->GetBinContent(i,j));
             }
