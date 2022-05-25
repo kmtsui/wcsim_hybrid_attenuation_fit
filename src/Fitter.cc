@@ -654,14 +654,16 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
         for(int i = 0; i < num_pmts; i++)
         {
             AnaEvent* ev = m_samples[s]->GetPMT(i);
+            double wgt = 1.0;
             for(size_t j = 0; j < m_fitpara.size(); j++)
             {
                 if (m_fitpara[j]->GetPMTType()>=0 && m_fitpara[j]->GetPMTType() != pmttype) weight[j] = 1.;
                 else weight[j] = m_fitpara[j]->GetWeight(ev, pmttype, s, i, res_params[j]);
+                wgt *= weight[j];
             }
 
             nPE_data= ev->GetPE();
-            nPE_pred= ev->GetEvWght();
+            nPE_pred= wgt; //ev->GetEvWght();
             R       = ev->GetR();
             costh   = ev->GetCosth();
             cosths  = ev->GetCosths();
@@ -669,6 +671,9 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
             costhm  = ev->GetCosthm();
             phim    = ev->GetPhim();
             omega   = ev->GetOmega();
+            xpos    = ev->GetPos()[0];
+            ypos    = ev->GetPos()[1];
+            zpos    = ev->GetPos()[2];
             PMT_id  = ev->GetPMTID();
             mPMT_id = ev->GetmPMTID();
             indirectPE = ev->GetPEIndirect();

@@ -81,6 +81,7 @@ public:
     double costhm;
     double phim;
     double omega;
+    double xpos, ypos, zpos;
     int PMT_id;
     int mPMT_id;
     std::vector<double> weight;
@@ -99,6 +100,9 @@ public:
         m_outtree->Branch("costhm", &costhm, "costhm/D");
         m_outtree->Branch("phim", &phim, "phim/D");
         m_outtree->Branch("omega", &omega, "omega/D");
+        m_outtree->Branch("xpos", &xpos, "xpos/D");
+        m_outtree->Branch("ypos", &ypos, "ypos/D");
+        m_outtree->Branch("zpos", &zpos, "zpos/D");
         m_outtree->Branch("PMT_id", &PMT_id, "PMT_id/I");
         m_outtree->Branch("mPMT_id", &mPMT_id, "mPMT_id/I");
         m_outtree->Branch("weight", &weight);
