@@ -421,7 +421,7 @@ void AnaSample::FillEventHist(bool reset_weights)
     }
 #endif
     m_hpred->Reset();
-    if (m_scatter||m_scatter_map) m_hpred_err2->Reset();
+    //if (m_scatter||m_scatter_map) m_hpred_err2->Reset();
 
     if (m_template) 
     {
@@ -429,16 +429,22 @@ void AnaSample::FillEventHist(bool reset_weights)
         m_htimetof_pred_w2->Reset();
     }
 
+    double* m_hpred_array  = m_hpred->GetArray();
+    double* m_htimetof_pred_array  = m_template ? m_htimetof_pred->GetArray() : 0;
+    double* m_htimetof_pred_w2_array  = m_template ? m_htimetof_pred_w2->GetArray() : 0;
+
     for(const auto& e : m_pmts)
     {
         const double weight = reset_weights ? e.GetEvWghtMC() : e.GetEvWght();
         const int reco_bin  = e.GetSampleBin();
-        m_hpred->Fill(reco_bin + 0.5, weight); // direct PE prediction
+        //m_hpred->Fill(reco_bin + 0.5, weight); // direct PE prediction
+        m_hpred_array[reco_bin+1] += weight;
 
         if (m_scatter||m_scatter_map)
         {
-            m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
-            m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr()); // MC stat error of indirect PE prediction
+            //m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
+            m_hpred_array[reco_bin+1] += e.GetPEIndirect();
+            //m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr()); // MC stat error of indirect PE prediction
         }
 
         if (m_template)
@@ -447,22 +453,112 @@ void AnaSample::FillEventHist(bool reset_weights)
             std::vector<double> timetof_nom_sig2 = e.GetTimetofNomSig2();
             for (int i=1;i<=m_htimetof_pred->GetNbinsY();i++)
             {
-                if (!m_template_combine) 
-                {
-                    m_htimetof_pred->Fill(reco_bin + 0.5,i-0.5,timetof_pred[i-1]);
-                    m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
-                }
-                else
-                {
-                    m_htimetof_pred->Fill(0.5,i-0.5,timetof_pred[i-1]);
-                    m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
-                }
+                int bin = (m_htimetof_pred->GetNbinsX()+2)*i;
+                if (!m_template_combine) bin += reco_bin+1;
+                else bin += 1;
+                m_htimetof_pred_array[bin] += timetof_pred[i-1];
+                m_htimetof_pred_w2_array[bin] += timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1];
+                // if (!m_template_combine) 
+                // {
+                //     m_htimetof_pred->Fill(reco_bin + 0.5,i-0.5,timetof_pred[i-1]);
+                //     m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
+                // }
+                // else
+                // {
+                //     m_htimetof_pred->Fill(0.5,i-0.5,timetof_pred[i-1]);
+                //     m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
+                // }
             }
         }
     }
 
     return;
 }
+
+#ifdef USING_CUDA
+void AnaSample::FillEventHistCuda()
+{
+    if (_CacheManagerValue_) {
+        if (_CacheManagerValid_ && !(*_CacheManagerValid_)) {
+            // This is slowish, but will make sure that the cached result is
+            // updated when the cache has changed.  The values pointed to by
+            // _CacheManagerResult_ and _CacheManagerValid_ are inside
+            // of the weights cache (a bit of evil coding here), and are
+            // updated by the cache.  The update is triggered by
+            // _CacheManagerUpdate().
+            if (_CacheManagerUpdate_) (*_CacheManagerUpdate_)();
+        }
+    }
+
+    if (_CacheManagerValue_ && 0 <= _CacheManagerIndex_)
+    {
+        double* m_hpred_array  = m_hpred->GetArray();
+
+        for (int i = 0; i < m_nbins ; i++)
+        {
+            double val = _CacheManagerValue_[_CacheManagerIndex_+i];
+            //m_hpred->SetBinContent(i+1,val);
+            m_hpred_array[i+1] = val;
+        }
+
+        if (m_scatter||m_scatter_map)
+        {
+            for(const auto& e : m_pmts)
+            {
+                const int reco_bin  = e.GetSampleBin();
+                //m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
+                m_hpred_array[reco_bin+1] += e.GetPEIndirect();
+            }
+        }
+
+        if (m_template)
+        {
+            m_htimetof_pred_w2->Reset();
+
+            double* m_htimetof_pred_array  = m_htimetof_pred->GetArray();
+            double* m_htimetof_pred_w2_array  = m_htimetof_pred_w2->GetArray();
+
+            const int nx = m_htimetof_pred->GetNbinsX();
+            const int ny = m_htimetof_pred->GetNbinsY();
+
+            int counter =  _CacheManagerIndex_ + m_nbins ;
+            for (int j=1;j<=ny;j++)
+            {
+                int bin = (nx+2)*j;
+                for (int i=1;i<=nx;i++)
+                {
+                    m_htimetof_pred_array[++bin] = _CacheManagerValue_[counter++];
+                    //m_htimetof_pred->SetBinContent(i,j,_CacheManagerValue_[counter++]);
+                }
+            }
+
+            for(const auto& e : m_pmts)
+            {
+                const int reco_bin  = e.GetSampleBin();
+                std::vector<double> timetof_nom_sig2 = e.GetTimetofNomSig2();
+                const double* cacheValues = e.GetCacheMangerValue();
+                for (int i=1;i<=ny;i++)
+                {
+                    //const double val = e.GetCacheMangerValue(i);
+                    const double val = *(cacheValues+i);
+                    int bin = (nx+2)*i;
+                    if (!m_template_combine) bin += reco_bin+1;
+                    else bin += 1;
+                    m_htimetof_pred_w2_array[bin] += timetof_nom_sig2[i-1]*val*val;
+                    // if (!m_template_combine) 
+                    // {
+                    //     m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*val*val);
+                    // }
+                    // else
+                    // {
+                    //     m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*val*val);
+                    // }
+                }
+            }
+        }
+    }
+}
+#endif
 
 void AnaSample::FillDataHist(bool stat_fluc)
 {
@@ -475,7 +571,11 @@ void AnaSample::FillDataHist(bool stat_fluc)
     }
 #endif
     m_hdata->Reset();
-    if (m_scatter || m_scatter_map) m_hdata_control->Reset();
+    if (m_scatter || m_scatter_map) 
+    {
+        m_hdata_control->Reset();
+        m_hpred_err2->Reset();
+    }
 
     if(stat_fluc) 
         std::cout << TAG << "Applying statistical fluctuations..." << std::endl;
@@ -536,6 +636,8 @@ void AnaSample::FillDataHist(bool stat_fluc)
 
                 e.SetPEIndirect(indirect_pred);
                 e.SetPEIndirectErr(indirect_err2);
+
+                m_hpred_err2->Fill(reco_bin + 0.5, indirect_err2); // MC stat error of indirect PE prediction
             }
 
             m_hdata_control->Fill(reco_bin + 0.5, weight_control);
@@ -592,7 +694,7 @@ void AnaSample::SetLLHFunction(const std::string& func_name)
     }
 }
 
-double AnaSample::CalcLLH() const
+double AnaSample::CalcLLH(int nthreads) const
 {
     const unsigned int nbins = m_hpred->GetNbinsX();
     double* exp_w  = m_hpred->GetArray();
@@ -601,18 +703,27 @@ double AnaSample::CalcLLH() const
     double* data   = m_hdata->GetArray();
 
     double chi2 = 0.0;
+#pragma omp parallel for reduction(+:chi2) num_threads(nthreads)
     for(unsigned int i = 1; i <= nbins; ++i)
-        chi2 += (*m_llh)(exp_w[i], exp_w2[i], data[i]);
+    {
+        chi2 = chi2 + (*m_llh)(exp_w[i], exp_w2[i], data[i]);
+    }
 
     if (m_template)
     {
+        const int nx = m_htimetof_pred->GetNbinsX();
+        const int ny = m_htimetof_pred->GetNbinsY();
+
         if (m_template_only) chi2 = 0.0;
-        for(unsigned int i=1;i<=m_htimetof_pred->GetNbinsX();i++)
+#pragma omp parallel for reduction(+:chi2) num_threads(nthreads)
+        for(unsigned int i=1;i<=nx;i++)
         {
-            for (int j=1;j<=m_htimetof_pred->GetNbinsY();j++)
+            double sum = 0;
+            for (int j=1;j<=ny;j++)
             {
-                chi2 += (*m_llh)(m_htimetof_pred->GetBinContent(i,j), m_htimetof_pred_w2->GetBinContent(i,j), m_htimetof_data->GetBinContent(i,j));
+                sum += (*m_llh)(m_htimetof_pred->GetBinContent(i,j), m_htimetof_pred_w2->GetBinContent(i,j), m_htimetof_data->GetBinContent(i,j));
             }
+            chi2 = chi2 + sum ;
         }
     }
 

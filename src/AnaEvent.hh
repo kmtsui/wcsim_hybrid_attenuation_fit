@@ -72,6 +72,9 @@ class AnaEvent
         inline void SetZ0(double val){ m_z0 = val; }
         inline double GetZ0() const { return m_z0; }
 
+        inline void SetPos(std::vector<double> val){ m_pos = val; }
+        inline std::vector<double> GetPos() const { return m_pos; }
+
         inline void SetR(double val){ m_R = val; }
         inline double GetR() const { return m_R; }
 
@@ -161,6 +164,12 @@ class AnaEvent
                 return m_dz;
             else if(var == "z0")
                 return m_z0;
+            else if(var == "xpos")
+                return m_pos[0];
+            else if(var == "ypos")
+                return m_pos[1];
+            else if(var == "zpos")
+                return m_pos[2];
             else if(var == "PMT_id")
                 return m_pmtid;
             else if(var == "mPMT_id")
@@ -196,6 +205,7 @@ class AnaEvent
         double m_omega;    //solid angle subtended by PMT
         double m_dz;       // z-pos relative to source
         double m_z0;       // diffuser z-pos
+        std::vector<double> m_pos; // PMT position in the detector
         double m_R;        //distance to source
         double m_nPE;      //number of PE
         //double m_nPE_tail; //number of PE at the tail
@@ -211,6 +221,61 @@ class AnaEvent
         std::vector<int> par_list;
         std::vector<double> reco_var;
 
+/// GPU threading
+#ifdef USING_CUDA
+    public:
+        void setCacheManagerIndex(int i) {_CacheManagerIndex_ = i;}
+        int  getCacheManagerIndex() {return _CacheManagerIndex_;}
+        void setCacheManagerValuePointer(const double* v) {_CacheManagerValue_ = v;}
+        void setCacheManagerValidPointer(const bool* v) {_CacheManagerValid_ = v;}
+        void setCacheManagerUpdatePointer(void (*p)()) {_CacheManagerUpdate_ = p;}
+        const double* GetCacheMangerValue() const
+        {
+            if (_CacheManagerValue_) 
+            {
+                if (_CacheManagerValid_ && !(*_CacheManagerValid_)) {
+                    // This is slowish, but will make sure that the cached result is
+                    // updated when the cache has changed.  The values pointed to by
+                    // _CacheManagerResult_ and _CacheManagerValid_ are inside
+                    // of the weights cache (a bit of evil coding here), and are
+                    // updated by the cache.  The update is triggered by
+                    // _CacheManagerUpdate().
+                    if (_CacheManagerUpdate_) (*_CacheManagerUpdate_)();
+                }
+            }
+            return _CacheManagerValue_;
+        }
+        double GetCacheMangerValue(int i) const
+        {
+            if (_CacheManagerValue_) 
+            {
+                if (_CacheManagerValid_ && !(*_CacheManagerValid_)) {
+                    // This is slowish, but will make sure that the cached result is
+                    // updated when the cache has changed.  The values pointed to by
+                    // _CacheManagerResult_ and _CacheManagerValid_ are inside
+                    // of the weights cache (a bit of evil coding here), and are
+                    // updated by the cache.  The update is triggered by
+                    // _CacheManagerUpdate().
+                    if (_CacheManagerUpdate_) (*_CacheManagerUpdate_)();
+                }
+            }
+            if (_CacheManagerValue_ && 0 <= _CacheManagerIndex_)
+            {
+                //return _CacheManagerValue_[_CacheManagerIndex_+i];
+                return *(_CacheManagerValue_+i);
+            }
+            return m_wght;
+        }
+    private:
+        // An "opaque" index into the cache that is used to simplify bookkeeping.
+        int _CacheManagerIndex_{-1};
+        // A pointer to the cached result.
+        const double* _CacheManagerValue_{nullptr};
+        // A pointer to the cache validity flag.
+        const bool* _CacheManagerValid_{nullptr};
+        // A pointer to a callback to force the cache to be updated.
+        void (*_CacheManagerUpdate_)(){nullptr};
+#endif
 };
 
 #endif
