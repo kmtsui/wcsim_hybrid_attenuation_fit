@@ -103,3 +103,12 @@ The fitter is adapted from T2K xsllhFitter at https://gitlab.com/cuddandr/xsLLhF
 
 ## Container
 Container image is available for docker and singularity. See `container/README.md` for instructions.
+
+## GPU support
+GPU threading is now available for CUDA (NVIDIA) architecture. To enable GPU support, source the cuda environment, then configure cmake with `-DUSE_CUDA=1`. It requires cmake 3.8+, and I only tested it on cuda V11.2.152.
+
+Currently only the event reweighing in each MINUIT iteration is done in GPU. The memory copy between host (CPU) and device (GPU) is mostly done inside src/CacheManager, which is modified from the T2K GUNDAM fitter at https://github.com/nadrino/gundam. Other relevant codes are enclosed within `#ifdef USING_CUDA #endif`.
+
+In the initialization stage, each event (PMT) weight, fit parameter and the necessary event information, and histogram binning is copied from host to device. The `CacheManager` class handles most of the logistics; the `Weight*` classes do the actual event reweighing; and the `CacheIndexedSums` class sums all the event weights into the correct histogram bins.
+
+In each MINUIT iteration, the fit parameter values are copied from host to device; the event weights are calulated and summed into bins on device; and the results are copied back from device to host for chi2 calculation. If you define a new type of fit parameter for event reweighing or a new kind of histogram for chi2 calculation, those new components have to be defined inside CacheManager for proper GPU computation.
