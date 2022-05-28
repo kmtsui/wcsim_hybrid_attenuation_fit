@@ -392,9 +392,32 @@ int main(int argc, char** argv)
     int MCMCSteps = toml_h::find<int>(minimizer_config, "MCMCSteps");
     if (MCMCSteps>0)
     {
-        double MCMCStepSize = toml_h::find<double>(minimizer_config, "MCMCStepSize");
-        std::cout << TAG << "Running MCMC for " << MCMCSteps << " steps, with step size = " << MCMCStepSize << std::endl;
-        fitter.RunMCMCScan(MCMCSteps,MCMCStepSize);
+        std::string proposal = toml_h::find<std::string>(minimizer_config, "MCMCProposal");
+        if (proposal=="fixed")
+        {
+            std::cout << TAG << "Using fixed step for MCMC" << std::endl;
+        }
+        else if (proposal=="adaptive")
+        {
+            std::cout << TAG << "Using adaptive step for MCMC" << std::endl;
+        }
+        else
+        {
+            proposal = "adaptive";
+            std::cout << WAR << "Unrecognized proposal method. Using adaptive step for MCMC" << std::endl;
+        }
+
+        if (proposal=="fixed")
+        {
+            double MCMCStepSize = toml_h::find<double>(minimizer_config, "MCMCStepSize");
+            std::cout << TAG << "Running MCMC for " << MCMCSteps << " fixed steps, with step size = " << MCMCStepSize << std::endl;
+            fitter.RunMCMCFixedStep(MCMCSteps,MCMCStepSize);
+        }
+        else if (proposal=="adaptive")
+        {
+            std::cout << TAG << "Running MCMC for " << MCMCSteps << " adaptive steps" << std::endl;
+            fitter.RunMCMCAdaptiveStep(MCMCSteps);
+        }
     }
 
     // optional 1D parameter scan

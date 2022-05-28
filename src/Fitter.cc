@@ -274,7 +274,8 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
     std::vector<double> par_err_vec(par_err, par_err + ndim);
 
     unsigned int par_offset = 0;
-    TMatrixDSym cov_matrix(ndim, cov_array);
+    cov_matrix.ResizeTo(ndim,ndim);
+    cov_matrix = TMatrixDSym(ndim, cov_array);
     for(const auto& fit_param : m_fitpara)
     {
         if(fit_param->IsDecomposed())
@@ -287,7 +288,8 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 
     par_postfit = par_val_vec;
 
-    TMatrixDSym cor_matrix(ndim);
+    //cor_matrix = TMatrixDSym(ndim);
+    cor_matrix.ResizeTo(ndim,ndim);
     for(int r = 0; r < ndim; ++r)
     {
         for(int c = 0; c < ndim; ++c)
@@ -685,13 +687,10 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
     m_outtree->Write();
 }
 
-void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double force_padd, bool do_incompl_chol, double dropout_tol)
+void Fitter::RunMCMCFixedStep(int step, double stepsize, bool do_force_posdef, double force_padd, bool do_incompl_chol, double dropout_tol)
 {
     // Use MCMC to scan around the best-fit point for error estimation
     const int ndim        = m_fitter->NDim();
-    double cov_array[ndim * ndim];
-    m_fitter->GetCovMatrix(cov_array);
-    TMatrixDSym cov_matrix(ndim, cov_array);
 
     // Use post-fit covariance matrix to generate MCMC steps
     ToyThrower* toy_thrower = new ToyThrower(cov_matrix, false, 1E-48);
@@ -750,4 +749,37 @@ void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double
 
     m_dir->cd();
     m_mcmctree->Write();
+}
+
+void Fitter::RunMCMCAdaptiveStep(int step)
+{
+    // Use MCMC to scan around the best-fit point for error estimation
+    const int ndim        = m_fitter->NDim();
+
+    TTree *tree = new TTree("SimpleMCMC",
+                        "Tree of accepted points");
+
+    TSimpleMCMC<CalcLikelihoodMCMC> mcmc(tree);
+    CalcLikelihoodMCMC& like = mcmc.GetLogLikelihood();
+    like.SetFitter(this);
+    mcmc.GetProposeStep().SetDim(ndim); 
+    for (int i=0;i<ndim;i++)
+    {
+        if (par_var_fixed[i]) mcmc.GetProposeStep().SetUniform(i,par_postfit[i]*0.9999,par_postfit[i]*1.0001); // workaround for fixed variable
+        else 
+        {
+            mcmc.GetProposeStep().SetGaussian(i,std::sqrt(cov_matrix[i][i])); 
+            for (int j=i+1;j<ndim;j++)
+            {
+                if (!par_var_fixed[j]) mcmc.GetProposeStep().SetCorrelation(i,j,cor_matrix[i][j]);
+            }
+        }
+    }
+    mcmc.Start(par_postfit);
+    for (int i=0; i<step; ++i) mcmc.Step();       // Run the chain.
+    // Save the final state.  This is needed to force the proposal to save
+    // it's final state so that the chain can be continued.
+    mcmc.SaveStep();
+    m_dir->cd();
+    tree->Write();
 }

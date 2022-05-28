@@ -32,6 +32,8 @@
 #include "ToyThrower.hh"
 #include "ColorOutput.hh"
 
+#include "TSimpleMCMC.hh"
+
 struct MinSettings
 {
     std::string minimizer;
@@ -110,7 +112,8 @@ public:
         m_outtree->Branch("indirectPEerr2", &indirectPEerr2, "indirectPEerr2/D");
     }
 
-    void RunMCMCScan(int step, double stepsize, bool do_force_posdef = true, double force_padd = 1.0E-9, bool do_incompl_chol = false, double dropout_tol = 1.0E-3);
+    void RunMCMCFixedStep(int step, double stepsize, bool do_force_posdef = true, double force_padd = 1.0E-9, bool do_incompl_chol = false, double dropout_tol = 1.0E-3);
+    void RunMCMCAdaptiveStep(int step);
 
 private:
     double FillSamples(std::vector<std::vector<double>>& new_pars);
@@ -147,6 +150,9 @@ private:
     std::vector<AnaFitParameters*> m_fitpara;
     std::vector<AnaSample*> m_samples;
 
+    TMatrixDSym cov_matrix;
+    TMatrixDSym cor_matrix;
+
     MinSettings min_settings;
 
     std::vector<double> par_mcmc;
@@ -165,4 +171,17 @@ private:
     const std::string ERR = color::RED_STR + "[Fitter ERROR]: " + color::RESET_STR;
     const std::string WAR = color::RED_STR + "[Fitter WARNING]: " + color::RESET_STR;
 };
+
+class CalcLikelihoodMCMC
+{
+public:
+    void SetFitter(Fitter* f) { fitter=f; }
+    double operator()(const Vector& point)  const {
+        return -fitter->CalcLikelihood(point.data());
+    }
+
+private:
+    Fitter* fitter;
+};
+
 #endif
