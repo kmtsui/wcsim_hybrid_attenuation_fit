@@ -229,6 +229,10 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
     Cache::Manager::Build(m_samples,m_fitpara);
 #endif
 
+    vec_chi2_stat.clear();
+    vec_chi2_sys.clear();
+    vec_chi2_reg.clear();
+
     bool did_converge = false;
     std::cout << TAG << "Fit prepared." << std::endl;
     std::cout << TAG << "Calling Minimize, running " << min_settings.algorithm << std::endl;
@@ -524,10 +528,10 @@ void Fitter::SaveParams(const std::vector<std::vector<double>>& new_pars)
 
 void Fitter::SaveChi2()
 {
-    TH1D h_chi2stat("chi2_stat_periter", "chi2_stat_periter", m_calls + 1, 0, m_calls + 1);
-    TH1D h_chi2sys("chi2_syst_periter", "chi2_syst_periter", m_calls + 1, 0, m_calls + 1);
-    TH1D h_chi2reg("chi2_reg_periter", "chi2_reg_periter", m_calls + 1, 0, m_calls + 1);
-    TH1D h_chi2tot("chi2_total_periter", "chi2_total_periter", m_calls + 1, 0, m_calls + 1);
+    TH1D h_chi2stat("chi2_stat_periter", "chi2_stat_periter", vec_chi2_stat.size(), 0, vec_chi2_stat.size());
+    TH1D h_chi2sys("chi2_syst_periter", "chi2_syst_periter", vec_chi2_stat.size(), 0, vec_chi2_stat.size());
+    TH1D h_chi2reg("chi2_reg_periter", "chi2_reg_periter", vec_chi2_stat.size(), 0, vec_chi2_stat.size());
+    TH1D h_chi2tot("chi2_total_periter", "chi2_total_periter", vec_chi2_stat.size(), 0, vec_chi2_stat.size());
 
     for(size_t i = 0; i < vec_chi2_stat.size(); i++)
     {

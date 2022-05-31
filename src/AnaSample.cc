@@ -168,8 +168,17 @@ void AnaSample::ResetPMTDataHist()
     int nPMTs = selTree->GetPMTEntries();
 
     if(m_hdata_pmt != nullptr)
-        delete m_hdata_pmt;
-    m_hdata_pmt = new TH1D("","",nPMTs,0,nPMTs);
+    {
+        if (m_hdata_pmt->GetNbinsX() != nPMTs)
+        {
+            delete m_hdata_pmt;
+            m_hdata_pmt = new TH1D("","",nPMTs,0,nPMTs);
+        }
+        else 
+            m_hdata_pmt->Reset();
+    }
+    else 
+        m_hdata_pmt = new TH1D("","",nPMTs,0,nPMTs);
 
     if (m_template) m_htimetof_pmt_data->Reset();
 
@@ -177,8 +186,17 @@ void AnaSample::ResetPMTDataHist()
     if (m_scatter || m_scatter_map)
     {
         if(m_hdata_pmt_control != nullptr)
-            delete m_hdata_pmt_control;
-        m_hdata_pmt_control = new TH1D("","",nPMTs,0,nPMTs);
+        {
+            if (m_hdata_pmt_control->GetNbinsX() != nPMTs)
+            {
+                delete m_hdata_pmt_control;
+                m_hdata_pmt_control = new TH1D("","",nPMTs,0,nPMTs);
+            }
+            else 
+                m_hdata_pmt_control->Reset();
+        }
+        else 
+            m_hdata_pmt_control = new TH1D("","",nPMTs,0,nPMTs);
     }
 }
 

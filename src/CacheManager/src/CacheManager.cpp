@@ -200,16 +200,15 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
             << std::endl;
 
     // Try to allocate the GPU
-    if (!Cache::Manager::Get()) {
-        fSingleton = new Manager(events,parameters,
-                                 norms,
-                                 attens,
-                                 attenzs,
-                                 polys,
-                                 sphis,
-                                 splines, splinePoints,
-                                 histCells);
-    }
+    // Override old parameters and weights if exist
+    fSingleton = new Manager(events,parameters,
+                                norms,
+                                attens,
+                                attenzs,
+                                polys,
+                                sphis,
+                                splines, splinePoints,
+                                histCells);
 
     // In case the cache isn't allocated (usually because it's turned off on
     // the command line).
