@@ -283,9 +283,9 @@ void AnaSample::InitEventMap()
     else for(auto& e : m_pmts)
     {
         std::vector<double> binvar;
-	std::cout << TAG << m_binvar << std::endl;
+	//std::cout << TAG << m_binvar << std::endl;
 	for (auto t : m_binvar)
-            std::cout << TAG << t << std::endl;
+            //std::cout << TAG << t << std::endl;
             binvar.push_back(e.GetEventVar(t));
         const int b = m_bm.GetBinIndex(binvar);
 #ifndef NDEBUG

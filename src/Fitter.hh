@@ -102,7 +102,7 @@ public:
         m_outtree->Branch("omega", &omega, "omega/D");
         m_outtree->Branch("PMT_id", &PMT_id, "PMT_id/I");
         //new acraplet
-        m_outtree->Brach("mPMT_pmt_id", &mPMT_pmt_id, "mPMT_pmt_id/I");
+        m_outtree->Branch("mPMT_pmt_id", &mPMT_pmt_id, "mPMT_pmt_id/I");
 	m_outtree->Branch("mPMT_id", &mPMT_id, "mPMT_id/I");
         m_outtree->Branch("weight", &weight);
         m_outtree->Branch("indirectPE", &indirectPE, "indirectPE/D");
