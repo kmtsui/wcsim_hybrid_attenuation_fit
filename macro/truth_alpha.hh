@@ -1,7 +1,9 @@
+#include<vector>
 std::vector<double> truth_alpha(double wavelength=400, double ABWFF=1.30, double RAYFF=0.75) {
     const int NUMENTRIES_water=60;
     const double GeV=1.e9;
     const double cm=1;
+    //const double MIEFF=0.0;
 
     double ENERGY_water[NUMENTRIES_water] =
      { 1.56962e-09*GeV, 1.58974e-09*GeV, 1.61039e-09*GeV, 1.63157e-09*GeV, 
@@ -51,13 +53,30 @@ std::vector<double> truth_alpha(double wavelength=400, double ABWFF=1.30, double
             1309.55*cm*RAYFF, 1043.03*cm*RAYFF, 821.016*cm*RAYFF,  637.97*cm*RAYFF, 488.754*cm*RAYFF
     };
 
+//    double MIE_water[NUMENTRIES_water] = {
+//     7790020*cm*MIEFF, 7403010*cm*MIEFF, 7030610*cm*MIEFF, 6672440*cm*MIEFF, 6328120*cm*MIEFF,
+//     5997320*cm*MIEFF, 5679650*cm*MIEFF, 5374770*cm*MIEFF, 5082340*cm*MIEFF, 4802000*cm*MIEFF,
+//     4533420*cm*MIEFF, 4276280*cm*MIEFF, 4030220*cm*MIEFF, 3794950*cm*MIEFF, 3570120*cm*MIEFF,
+//     3355440*cm*MIEFF, 3150590*cm*MIEFF, 2955270*cm*MIEFF, 2769170*cm*MIEFF, 2592000*cm*MIEFF,
+//     2423470*cm*MIEFF, 2263300*cm*MIEFF, 2111200*cm*MIEFF, 1966900*cm*MIEFF, 1830120*cm*MIEFF,
+//     1700610*cm*MIEFF, 1578100*cm*MIEFF, 1462320*cm*MIEFF, 1353040*cm*MIEFF, 1250000*cm*MIEFF,
+//     1152960*cm*MIEFF, 1061680*cm*MIEFF,  975936*cm*MIEFF,  895491*cm*MIEFF,  820125*cm*MIEFF,
+//      749619*cm*MIEFF,  683760*cm*MIEFF,  622339*cm*MIEFF,  565152*cm*MIEFF,  512000*cm*MIEFF,
+//      462688*cm*MIEFF,  417027*cm*MIEFF,  374832*cm*MIEFF,  335923*cm*MIEFF,  300125*cm*MIEFF,
+//      267267*cm*MIEFF,  237184*cm*MIEFF,  209715*cm*MIEFF,  184704*cm*MIEFF,  162000*cm*MIEFF,
+//      141456*cm*MIEFF,  122931*cm*MIEFF,  106288*cm*MIEFF, 91395.2*cm*MIEFF,   78125*cm*MIEFF,
+//     66355.2*cm*MIEFF, 55968.2*cm*MIEFF, 46851.2*cm*MIEFF, 38896.2*cm*MIEFF,   32000*cm*MIEFF
+//   };
+
+
     TGraph* gr_abs = new TGraph(NUMENTRIES_water,ENERGY_water,ABSORPTION_water);
     TGraph* gr_ray = new TGraph(NUMENTRIES_water,ENERGY_water,RAYLEIGH_water);
+//    TGraph* gr_mie = new TGraph(NUMENTRIES_water,ENERGY_water,MIE_water);
     double photoEnergy = 1239.84193/wavelength;
-    double alpha = 1./(1./gr_abs->Eval(photoEnergy)+1./gr_ray->Eval(photoEnergy));
+    double alpha = 1./(1./gr_abs->Eval(photoEnergy)+1./gr_ray->Eval(photoEnergy));// + 1./gr_mie->Eval(photoEnergy));
     // std::cout<<"Absorption length = "<<gr_abs->Eval(photoEnergy)<<" cm"<<std::endl;
     // std::cout<<"Scattering length = "<<gr_ray->Eval(photoEnergy)<<" cm"<<std::endl;
     // std::cout<<"Attenutation length = "<<alpha<<" cm"<<std::endl;
 
-    return std::vector<double>{alpha,gr_abs->Eval(photoEnergy),gr_ray->Eval(photoEnergy)};
+    return std::vector<double>{alpha, gr_abs->Eval(photoEnergy),gr_ray->Eval(photoEnergy)};//, gr_mie->Eval(photoEnergy)};
 }

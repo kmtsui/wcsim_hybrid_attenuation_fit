@@ -25,6 +25,7 @@
 
 // Mock up digitization code copied from WCSIM
 // Currently contains BoxandLine20inchHQE and PMT3inchR14374 options
+//acrapet and recently the PMT3inchR12199_02 option
 #include "OPTICALFIT/utils/WCSIMDigitization.hh"
 
 #include "OPTICALFIT/utils/CalcGroupVelocity.hh"
@@ -86,7 +87,7 @@ int main(int argc, char **argv){
   double rayff = 0.75;
 
 //acraplet, with 3.505eV photons need to modify the wavelength
-  double wavelength = 353.7; //wavelength in nm
+  double wavelength = 400; //wavelength in nm
 
   int nPMTpermPMT=19;
 
@@ -312,7 +313,8 @@ int main(int argc, char **argv){
 
   // Save the PMT geometry information relative to source
   double dist, costh, cosths, phis, omega, phim, costhm, dz;
-  int mPMT_id;
+  int mPMT_id, mPMT_pmt_id;
+  double xpos, ypos, zpos;
   TTree* pmt_type0 = new TTree("pmt_type0","pmt_type0");
   pmt_type0->Branch("R",&dist);          // distance to source
   pmt_type0->Branch("costh",&costh);     // photon incident angle relative to PMT
@@ -323,7 +325,12 @@ int main(int argc, char **argv){
   pmt_type0->Branch("omega",&omega);     // solid angle subtended by PMT
   pmt_type0->Branch("dz",&dz);           // z-pos relative to source
   pmt_type0->Branch("PMT_id",&PMT_id);   // unique PMT id
-  pmt_type0->Branch("mPMT_id",&mPMT_id); // dummy 
+  pmt_type0->Branch("mPMT_id",&mPMT_id); // new: this is the id of each mPMT 
+  //acraplet
+  pmt_type0->Branch("mPMT_pmt_id", &mPMT_pmt_id); //new: this is the id of each PMT within an mPMT
+  pmt_type0->Branch("xpos", &xpos);
+  pmt_type0->Branch("ypos", &ypos);
+  pmt_type0->Branch("zpos", &zpos);
   pmt_type0->Branch("weight",&weight);   // weight from e.g. LED profile
   TTree* pmt_type1 = new TTree("pmt_type1","pmt_type1");
   pmt_type1->Branch("R",&dist);
@@ -335,6 +342,9 @@ int main(int argc, char **argv){
   pmt_type1->Branch("omega",&omega);
   pmt_type1->Branch("dz",&dz);
   pmt_type1->Branch("PMT_id",&PMT_id);
+  pmt_type1->Branch("xpos", &xpos);
+  pmt_type1->Branch("ypos", &ypos);
+  pmt_type1->Branch("zpos", &zpos);
   pmt_type1->Branch("mPMT_id",&mPMT_id); //sub-ID of PMT inside a mPMT module
                                          // 0 -11 : outermost ring
                                          // 12 - 17: middle ring
@@ -348,22 +358,27 @@ int main(int argc, char **argv){
   double vSource_localYaxis[3];
   double endcapZ = geo->GetWCCylLength()/2.*0.9; // cut value to determine whether the diffuser is in the barrel or endcap
   // Barrel injector
-  if (abs(vtxpos[2])<endcapZ) {
-    vDirSource[0]=vtxpos[0];
-    vDirSource[1]=vtxpos[1];
-    double norm = sqrt(vtxpos[0]*vtxpos[0]+vtxpos[1]*vtxpos[1]);
-    vDirSource[0]/=-norm;
-    vDirSource[1]/=-norm;
-    vDirSource[2]=0;
-    vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
-    vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
-  }
+ // if (abs(vtxpos[2])<endcapZ) {
+ //   //acraplet
+ //   //std::cout<< "Barrel INJECTOR" <<std::endl; 
+ //   vDirSource[0]=vtxpos[0];
+ //   vDirSource[1]=vtxpos[1];
+ //   double norm = sqrt(vtxpos[0]*vtxpos[0]+vtxpos[1]*vtxpos[1]);
+ //   vDirSource[0]/=-norm;
+ //   vDirSource[1]/=-norm;
+ //   vDirSource[2]=0;
+ //   vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
+ //   vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
+ // }
   //acraplet: for WCTE light diffuser the source always points downwards
   bool isWCTE = true;
   if (isWCTE) {
   vDirSource[0] = 0;
-  vDirSource[1] = 0;
-  vDirSource[2] = 1;
+  vDirSource[1] = 1;
+  vDirSource[2] = 0;
+  vSource_localXaxis[0]=1;vSource_localXaxis[1]=0;vSource_localXaxis[2]=0;
+  vSource_localYaxis[0]=0;vSource_localYaxis[1]=0;vSource_localYaxis[2]=1;
+  printf("WCTE geometry: the source is pointing in direction [0,1,0]\n");
   } 
   else // endcap injector
   {
@@ -400,14 +415,18 @@ int main(int argc, char **argv){
       else pmt = geo->GetPMT(i);
       PMT_id = i;
       // if (pmtType == 0) mPMT_id = 0;
-      // else mPMT_id = PMT_id%nPMTpermPMT; // assume the PMT_id is ordered properly for mPMT
-      mPMT_id = PMT_id%nPMTpermPMT;
+      // else mPMT_id = PMT_id%nPMTpermPMT; // assume the PMT_id is ordered properly for mPMTi
+      // acraplet: chnaged on the next line % to / and added the following line to add up the 
+      // mPMT correctly to the root file
+      mPMT_id = PMT_id/nPMTpermPMT;
+      mPMT_pmt_id = PMT_id%nPMTpermPMT;
       double PMTpos[3];
       double PMTdir[3];                   
       for(int j=0;j<3;j++){
         PMTpos[j] = pmt.GetPosition(j);
         PMTdir[j] = pmt.GetOrientation(j);
       }
+      xpos = PMTpos[0]; ypos = PMTpos[1]; zpos = PMTpos[2];
       double particleRelativePMTpos[3];
       for(int j=0;j<3;j++) particleRelativePMTpos[j] = PMTpos[j] - vtxpos[j];
       double vDir[3];double vOrientation[3];
@@ -478,7 +497,10 @@ int main(int argc, char **argv){
 
   // Ad-hoc digitizer, PMT specific 
   BoxandLine20inchHQE_Digitizer* BnLDigitizer = new BoxandLine20inchHQE_Digitizer();
-  PMT3inchR14374_Digitizer* mPMTDigitizer = new PMT3inchR14374_Digitizer();
+  //acraplet, change the digitiser to the WCTE one
+  //PMT3inchR14374_Digitizer* mPMTDigitizer = new PMT3inchR14374_Digitizer();
+  PMT3inchR12199_02_Digitizer* mPMTDigitizer = new PMT3inchR12199_02_Digitizer();
+   
 
   // Now loop over events
   for (int ev=startEvent; ev<nevent; ev++)
@@ -496,7 +518,6 @@ int main(int argc, char **argv){
       printf("Mode %d\n", wcsimrootevent->GetMode());
       printf("Number of subevents %d\n",
 	     wcsimrootsuperevent->GetNumberOfSubEvents());
-      
       printf("Vtxvol %d\n", wcsimrootevent->GetVtxvol());
       printf("Vtx %f %f %f\n", wcsimrootevent->GetVtx(0),
 	     wcsimrootevent->GetVtx(1),wcsimrootevent->GetVtx(2));

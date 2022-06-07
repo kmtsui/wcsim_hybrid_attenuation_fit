@@ -148,9 +148,10 @@ int main(int argc, char** argv)
                         s->SetnPMTpermPMT(nPMTpermPMT);
                     }
                 }
-                else if (optname=="mask_mPMT")
+                else if (optname=="mask_mPMT_pmt")
                 {
-                    if (pmttype==1)
+		    //acraplet - change not 1 but 0 for WCTE
+                    if (pmttype==0)
                     {
                         auto mask = toml_h::find<std::vector<int>>(opt,1);
                         std::cout << TAG << "Masking the small PMTs inside mPMT: ";
@@ -158,10 +159,25 @@ int main(int argc, char** argv)
                         std::cout << std::endl;
                         auto nPMTpermPMT = toml_h::find<int>(samples_config, "nPMTpermPMT");
                         std::cout << TAG << "Set nPMTpermPMT =  "<< nPMTpermPMT <<std::endl;
-                        s->MaskmPMT(mask);
+                        s->MaskmPMT_pmt(mask);
                         s->SetnPMTpermPMT(nPMTpermPMT);
                     }
                 }
+		else if (optname=="mask_mPMT")
+		{
+		    //acraplet change 1 to 0 for WCTE
+		    if (pmttype==0)
+		    {
+			auto mask = toml_h::find<std::vector<int>>(opt,1);
+			std::cout << TAG << "Masking the full mPMTs: ";
+			for (auto m : mask) std::cout << m <<" ";
+                        std::cout << std::endl;
+			auto nmPMT = toml_h::find<int>(samples_config, "nmPMT");
+			std::cout << TAG << "Set nmPMT =  "<< nmPMT <<std::endl;
+			s->MaskmPMT(mask);
+                        s->SetnmPMT(nmPMT);
+		    }
+		}
                 else if (optname=="scatter_control")
                 {
                     auto time1 = toml_h::find<double>(opt,1);

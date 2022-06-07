@@ -27,8 +27,10 @@ private:
 
     std::vector<int> pmt_mask;
     std::vector<int> mpmt_mask;
+    std::vector<int> mpmt_pmt_mask;
     bool m_maskpmt;
     bool m_maskmpmt;
+    bool m_maskmpmt_pmt;
 
     // Declaration of leaf types
     double nHits;
@@ -44,6 +46,7 @@ private:
     double timetof;
     int PMT_id;
     int mPMT_id;
+    int mPMT_pmt_id;
     double weight;
 
     const std::string TAG = color::GREEN_STR + "[AnaTree]: " + color::RESET_STR;
@@ -55,7 +58,8 @@ public:
     ~AnaTree();
 
     void MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT = 19);
-    void MaskmPMT(std::vector<int> vec, int nPMTpermPMT = 19);
+    void MaskmPMT(std::vector<int> vec, int nmPMT = 106);
+    void MaskmPMT_pmt(std::vector<int> vec, int nPMTpermPMT=19);
 
     long int GetEntry(long int entry) const;
     void SetDataBranches();
@@ -89,6 +93,8 @@ public:
             return PMT_id;
         else if(var == "mPMT_id")
             return mPMT_id;
+        else if(var == "mPMT_pmt_id")
+	    return mPMT_pmt_id;
         else
         {
             std::cout << ERR <<" Error! Variable "<<var<<" not available in AnaTree"<<std::endl;

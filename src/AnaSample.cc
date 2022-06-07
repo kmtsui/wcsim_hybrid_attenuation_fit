@@ -94,7 +94,9 @@ AnaSample::~AnaSample()
 void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name)
 {
     selTree = new AnaTree(file_name, tree_name, pmt_tree_name);
-    if (m_pmttype==1 && m_mPMTmask.size()>0) selTree->MaskmPMT(m_mPMTmask, m_nPMTpermPMT);
+    //acraplet
+    if (m_pmttype==0 && m_mPMTmask.size()>0) selTree->MaskmPMT(m_mPMTmask, m_nmPMT);
+    if (m_pmttype==0 && m_mPMTpmtmask.size()>0) selTree->MaskmPMT_pmt(m_mPMTpmtmask, m_nPMTpermPMT);
     if (m_pmtmask>0) selTree->MaskPMT(m_pmtmask, m_pmttype, m_nPMTpermPMT);
 
     std::cout << TAG  << "Reading events for from "<<file_name<<"...\n";
@@ -265,7 +267,6 @@ void AnaSample::MakeHistos()
 
 void AnaSample::InitEventMap()
 {
-    int count_fails=0;
     if (m_binvar[0]=="unbinned")
     {
         m_nbins = m_pmts.size();
@@ -282,22 +283,20 @@ void AnaSample::InitEventMap()
     else for(auto& e : m_pmts)
     {
         std::vector<double> binvar;
-        //std::cout << TAG << m_binvar << std::endl;
+	std::cout << TAG << m_binvar << std::endl;
 	for (auto t : m_binvar)
-            //std::cout << TAG << t << std::endl;
+            std::cout << TAG << t << std::endl;
             binvar.push_back(e.GetEventVar(t));
         const int b = m_bm.GetBinIndex(binvar);
 #ifndef NDEBUG
-        //int count_fails=0;
         if(b < 0)
         {
-//acraplet -> need to see what I am doung rmove the warnings
+//acraplet -> need to see what I am doing remove the warnings
             std::cout << TAG << "In InitEventMap() - "
-                      << "No bin for current PMT: b=" << b << "count_fails=" << count_fails<< std::endl;
+                      << "No bin for current PMT: b=" << b << std::endl;
             //std::cout << TAG << "PMT Var: " << std::endl;
             //for(const auto val : e.GetRecoVar())
-                //std::cout << TAG << val << std::endl;i
-            count_fails = count_fails+1;
+                //std::cout << TAG << val << std::endl;
         }
 #endif
         e.SetSampleBin(b);

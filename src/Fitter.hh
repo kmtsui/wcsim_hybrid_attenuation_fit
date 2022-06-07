@@ -83,6 +83,7 @@ public:
     double omega;
     int PMT_id;
     int mPMT_id;
+    int mPMT_pmt_id;
     std::vector<double> weight;
     double indirectPE;
     double indirectPEerr2;
@@ -100,7 +101,9 @@ public:
         m_outtree->Branch("phim", &phim, "phim/D");
         m_outtree->Branch("omega", &omega, "omega/D");
         m_outtree->Branch("PMT_id", &PMT_id, "PMT_id/I");
-        m_outtree->Branch("mPMT_id", &mPMT_id, "mPMT_id/I");
+        //new acraplet
+        m_outtree->Brach("mPMT_pmt_id", &mPMT_pmt_id, "mPMT_pmt_id/I");
+	m_outtree->Branch("mPMT_id", &mPMT_id, "mPMT_id/I");
         m_outtree->Branch("weight", &weight);
         m_outtree->Branch("indirectPE", &indirectPE, "indirectPE/D");
         m_outtree->Branch("indirectPEerr2", &indirectPEerr2, "indirectPEerr2/D");

@@ -17,6 +17,7 @@ AnaTree::AnaTree(const std::string& file_name, const std::string& tree_name, con
 
     m_maskpmt = false;
     m_maskmpmt = false;
+    m_maskmpmt_pmt = false;
 
 }
 
@@ -81,17 +82,40 @@ void AnaTree::MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT)
     m_maskpmt = true;
 }
 
-void AnaTree::MaskmPMT(std::vector<int> vec, int nPMTpermPMT)
+void AnaTree::MaskmPMT_pmt(std::vector<int> vec, int nPMTpermPMT)
 {
     // mask the small PMT in mPMT
-    mpmt_mask.clear();
-    m_maskmpmt = false;
+    // acraplet CAREFUL: NAME CHANGE from MaskmPMT to MaskmPMT_pmt
+    // TODO: write the AnaTree::MaskmPMT function
+    mpmt_pmt_mask.clear();
+    m_maskmpmt_pmt = false;
 
-    mpmt_mask.resize(nPMTpermPMT,0);
+    mpmt_pmt_mask.resize(nPMTpermPMT,0);
     bool mask = false;
     for (auto m : vec) 
     {
         if ( m<0 || m>=nPMTpermPMT )
+            std::cout << ERR << "In MaskmPMT(), mPMT_pmt_id = " << m << " is invalid, this PMT is not masked" << std::endl;
+        else
+        {
+            std::cout << TAG << "Masking mPMT_pmt_id = " << m << std::endl;
+            mpmt_pmt_mask[m] = 1;
+            mask = true;
+        }
+    }
+
+    if (mask) m_maskmpmt_pmt = true;
+}
+
+void AnaTree::MaskmPMT(std::vector<int> vec, int nmPMT)
+{
+    mpmt_mask.clear();
+    m_maskmpmt = false;
+    mpmt_mask.resize(nmPMT,0);
+    bool mask = false;
+    for (auto m : vec)
+    {
+        if ( m<0 || m>=nmPMT )
             std::cout << ERR << "In MaskmPMT(), mPMT_id = " << m << " is invalid, this PMT is not masked" << std::endl;
         else
         {
@@ -100,7 +124,6 @@ void AnaTree::MaskmPMT(std::vector<int> vec, int nPMTpermPMT)
             mask = true;
         }
     }
-
     if (mask) m_maskmpmt = true;
 }
 
@@ -137,6 +160,8 @@ void AnaTree::SetPMTBranches()
     t_pmt->SetBranchAddress("dz", &dz);
     t_pmt->SetBranchAddress("PMT_id", &PMT_id);
     t_pmt->SetBranchAddress("mPMT_id", &mPMT_id);
+    //acraplet : added the mPMT_pmt_id branch
+    t_pmt->SetBranchAddress("mPMT_pmt_id", &mPMT_pmt_id);
     
 }
 
@@ -150,8 +175,8 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
         return pmt_vec;
     }
 
-    // enforce maskpmt if maskmpmt is true
-    if (m_maskmpmt)
+    // enforce maskpmt if maskmpmt or maskmpmt_pmt is true
+    if (m_maskmpmt_pmt || m_maskmpmt)
         if (!m_maskpmt)
         {
             m_maskpmt = true;
@@ -166,12 +191,18 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
 
         if (m_maskpmt) if (pmt_mask.at(PMT_id)) continue;
         // Mask small PMT at run time to avoid possible ordering problem
-        if (m_maskmpmt) 
-            if (mpmt_mask.at(mPMT_id))
+        if (m_maskmpmt_pmt) 
+            if (mpmt_pmt_mask.at(mPMT_pmt_id))
             {
                 pmt_mask.at(PMT_id) = 1;
                 continue;
             }
+        if (m_maskmpmt)
+	   if (mpmt_mask.at(mPMT_id))
+           {
+		pmt_mask.at(PMT_id)=1;
+		continue;
+	   }
 
         AnaEvent ev(jentry);
         ev.SetR(R);
@@ -184,6 +215,7 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
         ev.SetDz(dz); 
         ev.SetPMTID(PMT_id);
         ev.SetmPMTID(mPMT_id);
+        ev.SetmPMTpmtID(mPMT_pmt_id);
         
         std::vector<double> reco_var;
         reco_var.emplace_back(costh); reco_var.emplace_back(R);
