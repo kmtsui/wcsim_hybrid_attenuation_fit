@@ -150,8 +150,7 @@ int main(int argc, char** argv)
                 }
                 else if (optname=="mask_mPMT_pmt")
                 {
-		    //acraplet - change not 1 but 0 for WCTE
-                    if (pmttype==0)
+                    if (pmttype==1)
                     {
                         auto mask = toml_h::find<std::vector<int>>(opt,1);
                         std::cout << TAG << "Masking the small PMTs inside mPMT: ";
@@ -165,8 +164,7 @@ int main(int argc, char** argv)
                 }
 		else if (optname=="mask_mPMT")
 		{
-		    //acraplet change 1 to 0 for WCTE
-		    if (pmttype==0)
+		    if (pmttype==1)
 		    {
 			auto mask = toml_h::find<std::vector<int>>(opt,1);
 			std::cout << TAG << "Masking the full mPMTs: ";
