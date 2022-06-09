@@ -45,6 +45,9 @@ class AnaEvent
 
         inline void SetmPMTID(const int val){ m_mpmtid = val; }
         inline int GetmPMTID() const { return m_mpmtid; }
+        //acraplet new
+        inline void SetmPMTpmtID(const int val){ m_mpmt_pmtid = val; }
+        inline int GetmPMTpmtID() const { return m_mpmt_pmtid;}
 
         inline long int GetEvId() const { return m_evid; }
 
@@ -187,7 +190,8 @@ class AnaEvent
         short m_sample;    //sample type (aka cutBranch)
         int m_bin;       //reco bin for the sample binning
         int m_pmtid;       //pmt unique id
-        int m_mpmtid;      //pmt unique id inside a mPMT
+        int m_mpmtid;      //mPMT unique id
+        int m_mpmt_pmtid;  //pmt unique id whithin the mPMT 
         double m_cosths;   //PMT angle relative to source
         double m_phis;     //PMT phi angle relative to source
         double m_costh;    //photon incident angle relative to PMT

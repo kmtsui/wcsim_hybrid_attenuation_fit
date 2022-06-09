@@ -88,29 +88,34 @@ double CalcLikelihood(const double* par)
 
 void FitAngularResponsePol()
 {
-    TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_400nm_nominal_BnLPMT.root");
+    
+    //TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_400nm_nominal_BnLPMT.root");
+    //acrapet
+    TFile f("/home/hep/ac4317/WCTE/wcsim_hybrid_attenuation_fit/build/Fitoutputs/fitoutput_wcsim_2kphot_3eV_16cShort_pos1_v4.root");
     //TFile f("/bundle/data/T2K/users/kmtsui/LI/fitter/TN/diffusr4_400nm_nominal_mPMT.root");
     TVectorD* res_vector = (TVectorD*)f.Get("res_vector");
     TMatrixDSym* res_cov_matrix = (TMatrixDSym*)f.Get("res_cov_matrix");
     int startingIndex = 2;
+//acraplet changed from 20 to 7
     int nParameters = 20;
-    double costh_min = 0.5;
+    //std::cout << "made it here" <<std::endl;
+    double costh_min = 0.0;
     double costh_max = 1.0;
     TH1D* hist_postfit = new TH1D("","",nParameters,costh_min,costh_max);
 
     // Setup the polynomials to fit
     // BnL example here consists of a 2nd order polynomial in [0.5,0.6], and a 3rd order polynomial in [0.6,1.0]
-    int orders[] = {2,3};
-    double ranges[] = {0.5,0.6,1.0};
+    int orders[] = {3,2};
+    double ranges[] = {0,0.5,1.0};
     // mPMT requires one more polynomial 
-    // int orders[] = {2,3,3};
-    // double ranges[] = {0.5,0.6,0.75,1.0};
+    //int orders[] = {2,3,3};
+    //double ranges[] = {0,0.6,0.75,1.0};
     bool plot_extra_pol = false; // use this with par_pol to plot an extra polynomials for comparison
     //double par_pol[] = {0.200778,0.248166,-0.298219,0.288687,-0.15455};
     //double par_pol[] = {0.20845,0.252388,-0.288586,0.315924,-0.183385};
-    //double par_pol[] = {0.213834,0.218174,0.121592,-0.0341528,0.358366};
-    double par_pol[] = {0.187242,0.171461,0.24356,-0.0771831,0.372188};
-    // double par_pol[] = {0.169528,0.346621,0.653342,-0.90903,7.74369,-4.63063,10.9356};
+    double par_pol[] = {0.213834,0.218174,0.121592,-0.0341528,0.358366};
+    //double par_pol[] = {0.187242,0.171461,0.24356,-0.0771831,0.372188};
+    //double par_pol[] = {0.169528,0.346621,0.653342,-0.90903,7.74369,-4.63063,10.9356};
 
     int ndof = 0;
     std::vector<int> index_array;
@@ -119,6 +124,7 @@ void FitAngularResponsePol()
         int idx = i+startingIndex;
         double val = (*res_vector)[idx];
         double err = sqrt((*res_cov_matrix)[idx][idx]);
+        //std::cout << "made it here" <<std::endl;
         if (err>0) // remove the fixed variable
         {
             if (ndof==0) hist_postfit->SetMinimum(val*0.9);
@@ -133,7 +139,7 @@ void FitAngularResponsePol()
         }
     }
 
-
+    //std::cout << "made it there" <<std::endl;
     cov_mat.ResizeTo(ndof, ndof);
     cov_mat.Zero();
 
@@ -141,7 +147,8 @@ void FitAngularResponsePol()
     {
             for (int j=0;j<ndof;j++)
             {
-                cov_mat(i,j) = (*res_cov_matrix)[index_array[i]][index_array[j]];
+               std::cout << "made it: "<< i << ", " << j <<std::endl; 
+               cov_mat(i,j) = (*res_cov_matrix)[index_array[i]][index_array[j]];
             }
     }
     // for (int i=0;i<cov_mat.GetNrows();i++) for (int j=0;j<cov_mat.GetNrows();j++) {
@@ -151,6 +158,7 @@ void FitAngularResponsePol()
     double det = 0;
     double total_add = 0;
     TDecompLU inv_test;
+    std::cout << "made it there" <<std::endl;
     TMatrixD inv_matrix(cov_mat);
     while (!inv_test.InvertLU(inv_matrix, 1E-48, &det))
     {
@@ -301,5 +309,5 @@ void FitAngularResponsePol()
     {
         latex.DrawLatex(pol_range[i]+0.02,hist_postfit->GetMaximum(),Form("pol%i",pol_orders[i]));
     }
-    c1->SaveAs("test.pdf");
+    c1->SaveAs("pos1_233.pdf");
 }
