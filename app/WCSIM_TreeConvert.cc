@@ -249,7 +249,10 @@ int main(int argc, char **argv){
 
   // Get the a pointer to the tree from the file
   //TTree *tree = (TTree*)file->Get("wcsimT");
+<<<<<<< HEAD
 
+=======
+>>>>>>> experimental
 
   // Get the number of events
   long int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);

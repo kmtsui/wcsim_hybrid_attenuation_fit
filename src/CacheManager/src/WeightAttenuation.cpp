@@ -1,0 +1,167 @@
+#include "WeightAttenuation.h"
+
+#include <algorithm>
+#include <iostream>
+#include <exception>
+#include <limits>
+#include <cmath>
+
+#include <hemi/hemi_error.h>
+#include <hemi/launch.h>
+#include <hemi/grid_stride_range.h>
+
+// #include "Logger.h"
+// LoggerInit([](){
+//   Logger::setUserHeaderStr("[Cache]");
+// })
+
+// The constructor
+Cache::Weight::Attenuation::Attenuation(
+    Cache::Weights::Results& weights,
+    Cache::Parameters::Values& parameters,
+    std::size_t attens)
+    : Cache::Weight::Base("attenuation",weights,parameters),
+      fAttensReserved(attens), fAttensUsed(0) {
+
+    std::cout << "Cached Weights: reserved Attenuations: "
+           << GetAttensReserved()
+           << std::endl;
+    if (GetAttensReserved() < 1) return;
+
+    fTotalBytes += GetAttensReserved()*sizeof(int);   // fNormResult
+    fTotalBytes += GetAttensReserved()*sizeof(short); // fNormParameter
+    fTotalBytes += GetAttensReserved()*sizeof(WEIGHT_BUFFER_FLOAT); // fR
+    fTotalBytes += GetAttensReserved()*sizeof(WEIGHT_BUFFER_FLOAT); // fOmega
+
+    std::cout << "Approximate Memory Size: " << fTotalBytes/1E+9
+           << " GB" << std::endl;
+
+    try {
+        // Get the CPU/GPU memory for the normalization index tables.  These
+        // are copied once during initialization so do not pin the CPU memory
+        // into the page set.
+        fAttenResult.reset(new hemi::Array<int>(GetAttensReserved(),false));
+        fAttenParameter.reset(new hemi::Array<short>(GetAttensReserved(),false));
+        fR.reset(new hemi::Array<WEIGHT_BUFFER_FLOAT>(GetAttensReserved(),false));
+        fOmega.reset(new hemi::Array<WEIGHT_BUFFER_FLOAT>(GetAttensReserved(),false));
+    }
+    catch (std::bad_alloc&) {
+        std::cerr << "Failed to allocate memory, so stopping" << std::endl;
+        throw std::runtime_error("Not enough memory available");
+    }
+
+}
+
+// The destructor
+Cache::Weight::Attenuation::~Attenuation() {}
+
+// Reserve space for another normalization parameter.
+int Cache::Weight::Attenuation::ReserveAtten(int resIndex, int parIndex, double R, double omega) {
+    if (resIndex < 0) {
+        std::cerr << "Invalid result index"
+               << std::endl;
+        throw std::runtime_error("Negative result index");
+    }
+    if (fWeights.size() <= resIndex) {
+        std::cerr << "Invalid result index"
+               << std::endl;
+        throw std::runtime_error("Result index out of bounds");
+    }
+    if (parIndex < 0) {
+        std::cerr << "Invalid parameter index"
+               << std::endl;
+        throw std::runtime_error("Negative parameter index");
+    }
+    if (fParameters.size() <= parIndex) {
+        std::cerr << "Invalid parameter index"
+               << std::endl;
+        throw std::runtime_error("Parameter index out of bounds");
+    }
+    int newIndex = fAttensUsed++;
+    if (fAttensUsed > fAttensReserved) {
+        std::cerr << "Not enough space reserved for Attens"
+                  << std::endl;
+        throw std::runtime_error("Not enough space reserved for results");
+    }
+    fAttenResult->hostPtr()[newIndex] = resIndex;
+    fAttenParameter->hostPtr()[newIndex] = parIndex;
+    fR->hostPtr()[newIndex] = R;
+    fOmega->hostPtr()[newIndex] = omega;
+    return newIndex;
+}
+
+#include "CacheAtomicMult.h"
+
+namespace {
+    // A function to be used as the kernen on a CPU or GPU.  This must be
+    // valid CUDA.  This accumulates the normalization parameters into the
+    // results.
+    HEMI_KERNEL_FUNCTION(HEMIAttensKernel,
+                         double* results,
+                         const double* params,
+                         const WEIGHT_BUFFER_FLOAT* R,
+                         const WEIGHT_BUFFER_FLOAT* omega,
+                         const int* rIndex,
+                         const short* pIndex,
+                         const int NP) {
+        for (int i : hemi::grid_stride_range(0,NP)) {
+            const double val = exp(-R[i]/params[pIndex[i]])*omega[i];
+            CacheAtomicMult(&results[rIndex[i]], val);
+#ifndef HEMI_DEV_CODE
+#ifdef CACHE_DEBUG
+            if (rIndex[i] < PRINT_STEP) {
+                std::cout << "Attens kernel " << i
+                       << " iEvt " << rIndex[i]
+                       << " iPar " << pIndex[i]
+                       << " = " << params[pIndex[i]]
+                       << std::endl;
+            }
+#endif
+#endif
+        }
+    }
+}
+
+bool Cache::Weight::Attenuation::Apply() {
+    if (GetAttensUsed() < 1) return false;
+
+    HEMIAttensKernel attensKernel;
+    hemi::launch(attensKernel,
+                 fWeights.writeOnlyPtr(),
+                 fParameters.readOnlyPtr(),
+                 fR->readOnlyPtr(),
+                 fOmega->readOnlyPtr(),
+                 fAttenResult->readOnlyPtr(),
+                 fAttenParameter->readOnlyPtr(),
+                 GetAttensUsed());
+
+    return true;
+}
+
+// An MIT Style License
+
+// Copyright (c) 2022 Clark McGrew
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// Local Variables:
+// mode:c++
+// c-basic-offset:4
+// compile-command:"$(git rev-parse --show-toplevel)/cmake/gundam-build.sh"
+// End:

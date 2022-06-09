@@ -253,6 +253,12 @@ int main(int argc, char** argv)
                     std::cout << TAG << "Apply PMT efficiency variation with 1-sigma =  "<< sigma << std::endl;
                     s->SetPMTEffVar(sigma);
                 }
+                else if (optname=="data_hist")
+                {
+                    auto hname =  toml_h::find<std::string>(opt,1);
+                    s->SetDataHistName(hname);
+                    std::cout << TAG << "Use PMT data histogram:  "<< hname << std::endl;
+                }
             }
         }
 
@@ -360,6 +366,10 @@ int main(int argc, char** argv)
                     //auto num = toml_h::find<int>(opt,3);
                     fitpara->SetSpline(fname,sname);
                 } 
+                else if (optname=="throw") // throw priors for chi2 calculation
+                {
+                    fitpara->SetThrowPars(true);
+                } 
             }
         }
         fitpara->SetParameterFunction(functype);
@@ -396,9 +406,32 @@ int main(int argc, char** argv)
     int MCMCSteps = toml_h::find<int>(minimizer_config, "MCMCSteps");
     if (MCMCSteps>0)
     {
-        double MCMCStepSize = toml_h::find<double>(minimizer_config, "MCMCStepSize");
-        std::cout << TAG << "Running MCMC for " << MCMCSteps << " steps, with step size = " << MCMCStepSize << std::endl;
-        fitter.RunMCMCScan(MCMCSteps,MCMCStepSize);
+        std::string proposal = toml_h::find<std::string>(minimizer_config, "MCMCProposal");
+        if (proposal=="fixed")
+        {
+            std::cout << TAG << "Using fixed step for MCMC" << std::endl;
+        }
+        else if (proposal=="adaptive")
+        {
+            std::cout << TAG << "Using adaptive step for MCMC" << std::endl;
+        }
+        else
+        {
+            proposal = "adaptive";
+            std::cout << WAR << "Unrecognized proposal method. Using adaptive step for MCMC" << std::endl;
+        }
+
+        if (proposal=="fixed")
+        {
+            double MCMCStepSize = toml_h::find<double>(minimizer_config, "MCMCStepSize");
+            std::cout << TAG << "Running MCMC for " << MCMCSteps << " fixed steps, with step size = " << MCMCStepSize << std::endl;
+            fitter.RunMCMCFixedStep(MCMCSteps,MCMCStepSize);
+        }
+        else if (proposal=="adaptive")
+        {
+            std::cout << TAG << "Running MCMC for " << MCMCSteps << " adaptive steps" << std::endl;
+            fitter.RunMCMCAdaptiveStep(MCMCSteps);
+        }
     }
 
     // optional 1D parameter scan
