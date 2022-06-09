@@ -7,6 +7,7 @@
 #include <TApplication.h>
 #include <TStyle.h>
 #include <TFile.h>
+#include <TChain.h>
 #include <TTree.h>
 #include <TCanvas.h>
 #include <TChain.h>
@@ -31,6 +32,14 @@
 #include "OPTICALFIT/utils/CalcGroupVelocity.hh"
 #include "OPTICALFIT/utils/LEDProfile.hh"
 #include "OPTICALFIT/utils/AttenuationZ.hh"
+
+#include "OPTICALFIT/BinManager.hh"
+
+#include "OPTICALFIT/ColorOutput.hh"
+
+const std::string TAG = color::GREEN_STR + "[WCSIM_TreeConvert]: " + color::RESET_STR;
+const std::string ERR = color::RED_STR + "[ERROR]: " + color::RESET_STR;
+const std::string WAR = color::RED_STR + "[WARNING]: " + color::RESET_STR;
 
 using namespace std;
 
@@ -58,16 +67,20 @@ void HelpMessage()
             << "-f : Input file\n"
             << "-o : Output file\n"
             << "-l : Laser wavelength\n"
-            << "-w : Apply diffuser profile reweight\n"
-            << "-z : Reweighing attenuation factor with input slope\n"
-            << "-p : Set water parameters for attenuation factor reweight (ABWFF,RAYFF)\n"
             << "-b : Use only B&L PMTs\n"
             << "-d : Run with raw Cherenkov hits and perform ad-hoc digitization\n"
             << "-t : Use separated triggers\n"
+            << "-c : Produce photon hit histogram with specified binning\n"
             << "-v : Verbose\n"
             << "-s : Start event\n"
             << "-e : End event\n"
-            << "-r : RNG seed\n";
+            << "-r : RNG seed\n"
+            << "-w : Reweight options (multiple can be applied)\n"
+            << "     led : diffuser profile\n"
+            << "     attenz,slope : linear z-dependence of attenuation length with input slope\n"
+            << "     linz,slope : linear z-dependence of PMT efficiency with input slope\n"
+            << "-p : Set water parameters for attenuation factor reweight (ABWFF,RAYFF)\n"
+            ;
 }
 
 int main(int argc, char **argv){
@@ -82,20 +95,24 @@ int main(int argc, char **argv){
   bool separatedTriggers=false; //Assume two independent triggers, one for mPMT, one for B&L
   bool diffuserProfile = false; //Reweigh PMT hits by source angle
   bool zreweight = false; //Reweigh PMT hits by a z-dependence in attenuation length
+  bool lzreweight = false; // Reweigh PMT hits by a linear function in z
   double slopeA = 0;
   double abwff = 1.3;
   double rayff = 0.75;
+  double lzslope = 0;
+  bool hitHisto = false;
+  BinManager bm;
 
 //acraplet, with 3.505eV photons need to modify the wavelength
   double wavelength = 400; //wavelength in nm
 
   int nPMTpermPMT=19;
 
-  int startEvent=0;
-  int endEvent=0;
+  long int startEvent=0;
+  long int endEvent=0;
   int seed = 0;
   char c;
-  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:z:p:hdtvw")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
+  while( (c = getopt(argc,argv,"f:o:b:s:e:l:r:p:c:w:hdtv")) != -1 ){//input in c the argument (-f etc...) and in optarg the next argument. When the above test becomes -1, it means it fails to find a new argument.
     switch(c){
       case 'f':
         filename = optarg;
@@ -116,35 +133,59 @@ int main(int argc, char **argv){
 	      outfilename = optarg;
 	      break;
       case 's':
-	      startEvent = std::stoi(optarg);
+	      startEvent = std::stol(optarg);
         if (startEvent<0) startEvent = 0; 
 	      break;
       case 'e':
-	      endEvent = std::stoi(optarg);
+	      endEvent = std::stol(optarg);
 	      break;
       case 'r':
 	      seed = std::stoi(optarg);
         if (seed<0) seed=0;
-        std::cout<<"Set RNG seed = "<<seed<<std::endl;
+        std::cout<<TAG<<"Set RNG seed = "<<seed<<std::endl;
 	      break;
       case 'l':
         wavelength = std::stod(optarg);
         if (wavelength<0) {
-          std::cout<<"Wavelength < 0, using default = 400 nm"<<std::endl;
+          std::cout<<TAG<<"Wavelength < 0, using default = 400 nm"<<std::endl;
           wavelength = 400;
         }
 	      break;
       case 'w':
-        diffuserProfile = true;
-        break;
-      case 'z':
-        slopeA = std::stod(optarg);
-        if (fabs(slopeA)>1.e-9)
         {
-          zreweight = true;
-          std::cout<<"Reweighing attenuation factor with linear z-dependence, slope = "<<slopeA<<std::endl;
+          std::string wp = optarg;
+          std::stringstream ss(wp);
+          int count = 0;
+          for(std::string s; std::getline(ss, s, ',');)
+          {
+            if (s=="led")
+            {
+              diffuserProfile = true;
+              std::cout<<TAG<<"Reweigh PMT hits by diffuser profile"<<std::endl;
+            }
+            else if (s=="attenz")
+            {
+              std::getline(ss, s, ',');
+              slopeA = std::stod(s);
+              if (fabs(slopeA)>1.e-9)
+              {
+                zreweight = true;
+                std::cout<<TAG<<"Reweigh attenuation factor with linear z-dependence, slope = "<<slopeA<<std::endl;
+              }
+            }
+            else if (s=="linz")
+            {
+              std::getline(ss, s, ',');
+              lzslope = std::stod(s);
+              if (fabs(lzslope)>1.e-9)
+              {
+                lzreweight = true;
+                std::cout<<TAG<<"Reweigh PMT efficiency with linear z-dependence, slope = "<<lzslope<<std::endl;
+              }
+            }
+          }
+          break;
         }
-        break;
       case 'p':
         {
           std::string wp = optarg;
@@ -160,7 +201,15 @@ int main(int argc, char **argv){
             }
             count++;
           }
-          std::cout<<"Setting new water paramters, ABWFF = "<<abwff<<", RAYFF = "<<rayff<<std::endl;
+          std::cout<<TAG<<"Setting new water paramters, ABWFF = "<<abwff<<", RAYFF = "<<rayff<<std::endl;
+          break;
+        }
+      case 'c':
+        {
+          hitHisto = true;
+          std::string binning = optarg;
+          std::cout<<TAG<<"Produce PMT hit histogram with timetof binning from "<<binning<<std::endl;
+          bm = BinManager(binning);
           break;
         }
       case 'h':
@@ -175,18 +224,21 @@ int main(int argc, char **argv){
 
   // Open the file
   if (filename==NULL){
-    std::cout << "Error, no input file: " << std::endl;
+    std::cout << ERR << "Error, no input file: " << std::endl;
     HelpMessage();
     return -1;
   }
-  TFile *file = TFile::Open(filename);
+  TChain *tree = new TChain("wcsimT");
+  tree->Add(filename);
+  std::string single_file_name = tree->GetFile()->GetName();
+  TFile *file = TFile::Open(single_file_name.c_str());
   if (!file->IsOpen()){
-    std::cout << "Error, could not open input file: " << filename << std::endl;
+    std::cout << ERR << "Error, could not open input file: " << filename << std::endl;
     return -1;
   }
   
   double vg = CalcGroupVelocity(wavelength);
-  std::cout<<"Now using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
+  std::cout<<TAG<<"Using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
   vg /= 1.e9; // convert to m/ns
   
   //test from acraplet
@@ -196,15 +248,13 @@ int main(int argc, char **argv){
   gRandom = rng;
 
   // Get the a pointer to the tree from the file
-  TTree *tree = (TTree*)file->Get("wcsimT");
-  //acraplet
-  //TTree *tree = (TTree*)file->Get("wcsimGeoT");
+  //TTree *tree = (TTree*)file->Get("wcsimT");
 
 
   // Get the number of events
-  int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
+  long int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
   if(endEvent>0 && endEvent<=nevent) nevent = endEvent;
-  if(verbose) printf("nevent %d\n",nevent);
+  if(verbose) printf("nevent %ld\n",nevent);
   
   // Create a WCSimRootEvent to put stuff from the tree in
 
@@ -212,23 +262,25 @@ int main(int argc, char **argv){
   WCSimRootEvent* wcsimrootsuperevent2 = new WCSimRootEvent();
 
   // Set the branch address for reading from the tree
-  TBranch *branch = tree->GetBranch("wcsimrootevent");
-  branch->SetAddress(&wcsimrootsuperevent);
+  //TBranch *branch = tree->GetBranch("wcsimrootevent");
+  //branch->SetAddress(&wcsimrootsuperevent);
+  tree->SetBranchAddress("wcsimrootevent",&wcsimrootsuperevent);
   // Force deletion to prevent memory leak 
-  tree->GetBranch("wcsimrootevent")->SetAutoDelete(kTRUE);
+  //tree->GetBranch("wcsimrootevent")->SetAutoDelete(kTRUE);
 
   TBranch *branch2;
   if(hybrid){
-    branch2 = tree->GetBranch("wcsimrootevent2");
-    branch2->SetAddress(&wcsimrootsuperevent2);
+    //branch2 = tree->GetBranch("wcsimrootevent2");
+    //branch2->SetAddress(&wcsimrootsuperevent2);
+    tree->SetBranchAddress("wcsimrootevent2",&wcsimrootsuperevent2);
   // Force deletion to prevent memory leak 
-    tree->GetBranch("wcsimrootevent2")->SetAutoDelete(kTRUE);
+    //tree->GetBranch("wcsimrootevent2")->SetAutoDelete(kTRUE);
   }
 
   // Geometry tree - only need 1 "event"
   TTree *geotree = (TTree*)file->Get("wcsimGeoT");
   geotree->SetBranchAddress("wcsimrootgeom", &geo);
-  if(verbose) std::cout << "Geotree has " << geotree->GetEntries() << " entries" << std::endl;
+  if(verbose) std::cout <<TAG << "Geotree has " << geotree->GetEntries() << " entries" << std::endl;
   if (geotree->GetEntries() == 0) {
       exit(9);
   }
@@ -241,7 +293,7 @@ int main(int argc, char **argv){
   TTree *opttree = (TTree*)file->Get("wcsimRootOptionsT");
   WCSimRootOptions *opt = 0; 
   opttree->SetBranchAddress("wcsimrootoptions", &opt);
-  if(verbose) std::cout << "Optree has " << opttree->GetEntries() << " entries" << std::endl;
+  if(verbose) std::cout << TAG << "Optree has " << opttree->GetEntries() << " entries" << std::endl;
   if (opttree->GetEntries() == 0) {
     exit(9);
   }
@@ -256,7 +308,7 @@ int main(int argc, char **argv){
   if(outfilename==NULL) outfilename = (char*)"out.root";
   
   TFile * outfile = new TFile(outfilename,"RECREATE");
-  std::cout<<"File "<<outfilename<<" is open for writing"<<std::endl;
+  std::cout<<TAG<<"File "<<outfilename<<" is open for writing"<<std::endl;
 
   double nHits, nPE, timetof;
   double weight;
@@ -342,6 +394,9 @@ int main(int argc, char **argv){
   pmt_type1->Branch("omega",&omega);
   pmt_type1->Branch("dz",&dz);
   pmt_type1->Branch("PMT_id",&PMT_id);
+  pmt_type1->Branch("xpos",&xpos);
+  pmt_type1->Branch("ypos",&ypos);
+  pmt_type1->Branch("zpos",&zpos);
   pmt_type1->Branch("xpos", &xpos);
   pmt_type1->Branch("ypos", &ypos);
   pmt_type1->Branch("zpos", &zpos);
@@ -401,10 +456,9 @@ int main(int argc, char **argv){
   int nPMTs_type0=geo->GetWCNumPMT();
   int nPMTs_type1=0; if (hybrid) nPMTs_type1=geo->GetWCNumPMT();
   // reweight factor per PMT
-  std::vector<double> ledweight_type0(nPMTs_type0,-1);
-  std::vector<double> ledweight_type1(nPMTs_type1,-1);
-  std::vector<double> atten_weight0(nPMTs_type0,-1);
-  std::vector<double> atten_weight1(nPMTs_type1,-1);
+  std::vector<double> reweight_type0(nPMTs_type0,1);
+  std::vector<double> reweight_type1(nPMTs_type1,1);
+
   for (int pmtType=0;pmtType<nPMTtypes;pmtType++) 
   {
     int nPMTs_type = pmtType==0 ? nPMTs_type0 : nPMTs_type1;
@@ -451,8 +505,8 @@ int main(int argc, char **argv){
       {
         double wgt = led->GetLEDWeight(cosths,phis);
         weight *= wgt;
-        if (pmtType==0) ledweight_type0[i]=wgt;
-        if (pmtType==1) ledweight_type1[i]=wgt;
+        if (pmtType==0) reweight_type0[i] *= wgt;
+        if (pmtType==1) reweight_type1[i] *= wgt;
       }
       double pmtradius = pmtType==0 ? PMTradius[0] : PMTradius[1]; 
       omega = CalcSolidAngle(pmtradius,dist,costh);
@@ -484,8 +538,15 @@ int main(int argc, char **argv){
       {
         double wgt = attenZ->GetAttenuationZWeight(dist,dz);
         weight *= wgt;
-        if (pmtType==0) atten_weight0[i]=wgt;
-        if (pmtType==1) atten_weight1[i]=wgt;
+        if (pmtType==0) reweight_type0[i] *= wgt;
+        if (pmtType==1) reweight_type1[i] *= wgt;
+      }
+      if (lzreweight)
+      {
+        double wgt = 1 + lzslope*zpos;
+        weight *= wgt;
+        if (pmtType==0) reweight_type0[i] *= wgt;
+        if (pmtType==1) reweight_type1[i] *= wgt;
       }
       if (pmtType==0) pmt_type0->Fill();
       if (pmtType==1) pmt_type1->Fill();
@@ -493,7 +554,29 @@ int main(int argc, char **argv){
   }
   outfile->cd();
   pmt_type0->Write();
-  pmt_type1->Write();
+  if (hybrid) pmt_type1->Write();
+
+  // int nBins_timetof = 255;
+  // double timetof_min = -955, timetof_max = -750;
+  TH2F* hitRateHist_pmtType0;
+  TH2F* hitRateHist_pmtType1;
+  if (hitHisto)
+  {
+    //const double* bin_edges = bm.GetBinVector(0).data();
+    std::vector<double> bin_edges = bm.GetBinVector(0);
+    // for (int i=0;i<bin_edges.size();i++)
+    //   std::cout<<bin_edges[i]<<std::endl;
+    hitRateHist_pmtType0 = new TH2F("hitRateHist_pmtType0","hitRateHist_pmtType0",
+                                    nPMTs_type0,0,nPMTs_type0, bm.GetNbins(), bin_edges.data());
+    if (hybrid)
+      hitRateHist_pmtType1 = new TH2F("hitRateHist_pmtType1","hitRateHist_pmtType1",
+                                      nPMTs_type1,0,nPMTs_type1, bm.GetNbins(), bin_edges.data());
+  }
+  // hitRateHist_pmtType0 = new TH2D("hitRateHist_pmtType0","hitRateHist_pmtType0",
+  //                                 nPMTs_type0,0,nPMTs_type0, nBins_timetof, timetof_min, timetof_max);
+  // if (hybrid)
+  //   hitRateHist_pmtType1 = new TH2F("hitRateHist_pmtType1","hitRateHist_pmtType1",
+  //                                 nPMTs_type1,0,nPMTs_type1, nBins_timetof, timetof_min, timetof_max);
 
   // Ad-hoc digitizer, PMT specific 
   BoxandLine20inchHQE_Digitizer* BnLDigitizer = new BoxandLine20inchHQE_Digitizer();
@@ -503,8 +586,16 @@ int main(int argc, char **argv){
    
 
   // Now loop over events
-  for (int ev=startEvent; ev<nevent; ev++)
+  for (long int ev=startEvent; ev<nevent; ev++)
   {
+    delete wcsimrootsuperevent;
+    wcsimrootsuperevent = 0;  // EXTREMELY IMPORTANT
+    if(hybrid)
+    {
+      delete wcsimrootsuperevent2;
+      wcsimrootsuperevent2 = 0;  // EXTREMELY IMPORTANT
+    }
+    
     // Read the event from the tree into the WCSimRootEvent instance
     tree->GetEntry(ev);
 
@@ -575,7 +666,7 @@ int main(int argc, char **argv){
     int ncherenkovdigihits2 = 0;if(hybrid) ncherenkovdigihits2 = wcsimrootevent2->GetNcherenkovdigihits(); 
     
     if(verbose){
-      printf("node id: %i\n", ev);
+      printf("node id: %li\n", ev);
       printf("Ncherenkovhits %d\n",     ncherenkovhits);
       printf("Ncherenkovdigihits %d\n", ncherenkovdigihits);
       printf("Ncherenkovhits2 %d\n",     ncherenkovhits2);
@@ -594,7 +685,7 @@ int main(int argc, char **argv){
       
       TClonesArray *timeArray;//An array of pointers on CherenkovHitsTimes.
       if(pmtType==0) timeArray = wcsimrootevent->GetCherenkovHitTimes();
-      else timeArray = wcsimrootevent2->GetCherenkovHitTimes();
+      else if (hybrid) timeArray = wcsimrootevent2->GetCherenkovHitTimes();
       
       //double particleRelativePMTpos[3];
       double totalPe = 0;
@@ -689,14 +780,8 @@ int main(int argc, char **argv){
         mPMTDigitizer->Digitize(nPE_digi,timetof_digi);
 
         weight = 1;
-        if (diffuserProfile) 
-        {
-          weight *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
-        }
-        if (zreweight)
-        {
-          weight *= pmtType==0 ? atten_weight0[PMT_id] : atten_weight1[PMT_id];   
-        }
+        weight *= pmtType==0 ? reweight_type0[PMT_id] : reweight_type1[PMT_id];
+
         nPE *= weight;  
         nPE_digi *= weight;  
 
@@ -797,17 +882,19 @@ int main(int argc, char **argv){
 
         nHits = 1; nPE = peForTube; 
         weight = 1;
-        if (diffuserProfile) 
-        {
-          weight *= pmtType==0 ? ledweight_type0[PMT_id] : ledweight_type1[PMT_id];   
-        }
-        if (zreweight)
-        {
-          weight *= pmtType==0 ? atten_weight0[PMT_id] : atten_weight1[PMT_id];   
-        }
+        weight *= pmtType==0 ? reweight_type0[PMT_id] : reweight_type1[PMT_id];   
+
         nPE *= weight;  
-        if (pmtType==0) hitRate_pmtType0->Fill();
-        if (pmtType==1) hitRate_pmtType1->Fill();
+        if (pmtType==0) 
+        {
+          hitRate_pmtType0->Fill();
+          if (hitHisto) hitRateHist_pmtType0->Fill(PMT_id+0.5,timetof,nPE);
+        }
+        if (pmtType==1) 
+        {
+          hitRate_pmtType1->Fill();
+          if (hitHisto) hitRateHist_pmtType1->Fill(PMT_id+0.5,timetof,nPE);
+        }
 
 
       } // End of loop over Cherenkov hits
@@ -824,7 +911,12 @@ int main(int argc, char **argv){
   //acraplet -> can probably remove the following line 
   ////it is empty for our non-hybrid geometry anyways
   hitRate_pmtType0->Write();
-  hitRate_pmtType1->Write();
+  if (hybrid) hitRate_pmtType1->Write();
+  if (hitHisto) 
+  {
+    hitRateHist_pmtType0->Write();
+    if (hybrid) hitRateHist_pmtType1->Write();
+  }
 
   outfile->Close();
   
