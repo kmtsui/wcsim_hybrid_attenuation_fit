@@ -251,7 +251,7 @@ int main(int argc, char **argv){
   long int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
   if(endEvent>0 && endEvent<=nevent) nevent = endEvent;
   if(verbose) printf("nevent %ld\n",nevent);
-  
+  if (verbose) printf("Hybrid geometry: %b, injector direction: [%f %f %f]\n", hybrid, vDirSource[0], vDirSource[1], vDirSource[2]); 
   // Create a WCSimRootEvent to put stuff from the tree in
 
   WCSimRootEvent* wcsimrootsuperevent = new WCSimRootEvent();
@@ -597,9 +597,6 @@ int main(int argc, char **argv){
       printf("********************************************************");
       printf("Evt, date %d %d\n", wcsimrootevent->GetHeader()->GetEvtNum(),
 	     wcsimrootevent->GetHeader()->GetDate());
-      if(!hybrid){
-        printf("Non-hybrid geometry, injector light direction: [%f %f %f]", vDirSource[0], vDirSource[1], vDirSource[2]);
-      }
       printf("Mode %d\n", wcsimrootevent->GetMode());
       printf("Number of subevents %d\n",
 	     wcsimrootsuperevent->GetNumberOfSubEvents());
