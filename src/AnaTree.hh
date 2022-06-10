@@ -95,6 +95,8 @@ public:
             return mPMT_id;
         else if(var == "mPMT_pmt_id")
 	    return mPMT_pmt_id;
+	//else if (var == "nHits")
+	    //return nHits;
         else
         {
             std::cout << ERR <<" Error! Variable "<<var<<" not available in AnaTree"<<std::endl;

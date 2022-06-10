@@ -202,6 +202,8 @@ class AnaEvent
         double m_z0;       // diffuser z-pos
         double m_R;        //distance to source
         double m_nPE;      //number of PE
+        //acraplet
+        //int m_nHits //number of hits
         //double m_nPE_tail; //number of PE at the tail
         double m_nPE_indirect; //indirect PE prediction
         double m_nPE_indirect_err; //err^2

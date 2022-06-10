@@ -283,20 +283,14 @@ void AnaSample::InitEventMap()
     else for(auto& e : m_pmts)
     {
         std::vector<double> binvar;
-	//std::cout << TAG << m_binvar << std::endl;
 	for (auto t : m_binvar)
-            //std::cout << TAG << t << std::endl;
             binvar.push_back(e.GetEventVar(t));
         const int b = m_bm.GetBinIndex(binvar);
 #ifndef NDEBUG
         if(b < 0)
         {
-//acraplet -> need to see what I am doing remove the warnings
             std::cout << TAG << "In InitEventMap() - "
                       << "No bin for current PMT: b=" << b << std::endl;
-            //std::cout << TAG << "PMT Var: " << std::endl;
-            //for(const auto val : e.GetRecoVar())
-                //std::cout << TAG << val << std::endl;
         }
 #endif
         e.SetSampleBin(b);

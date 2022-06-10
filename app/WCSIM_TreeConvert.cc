@@ -189,17 +189,11 @@ int main(int argc, char **argv){
   std::cout<<"Now using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
   vg /= 1.e9; // convert to m/ns
   
-  //test from acraplet
-  std::cout<<"Test 3"<<std::endl;
-
   rng = new TRandom3(seed);
   gRandom = rng;
 
   // Get the a pointer to the tree from the file
   TTree *tree = (TTree*)file->Get("wcsimT");
-  //acraplet
-  //TTree *tree = (TTree*)file->Get("wcsimGeoT");
-
 
   // Get the number of events
   int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
@@ -207,7 +201,6 @@ int main(int argc, char **argv){
   if(verbose) printf("nevent %d\n",nevent);
   
   // Create a WCSimRootEvent to put stuff from the tree in
-
   WCSimRootEvent* wcsimrootsuperevent = new WCSimRootEvent();
   WCSimRootEvent* wcsimrootsuperevent2 = new WCSimRootEvent();
 
@@ -326,7 +319,6 @@ int main(int argc, char **argv){
   pmt_type0->Branch("dz",&dz);           // z-pos relative to source
   pmt_type0->Branch("PMT_id",&PMT_id);   // unique PMT id
   pmt_type0->Branch("mPMT_id",&mPMT_id); // new: this is the id of each mPMT 
-  //acraplet
   pmt_type0->Branch("mPMT_pmt_id", &mPMT_pmt_id); //new: this is the id of each PMT within an mPMT
   pmt_type0->Branch("xpos", &xpos);
   pmt_type0->Branch("ypos", &ypos);
@@ -353,23 +345,22 @@ int main(int argc, char **argv){
 
   // Assume the "source" is the UK injection system, either diffuser or collimator
   // LI source direction is always perpendicular to the wall
+
   double vDirSource[3];
   double vSource_localXaxis[3];
   double vSource_localYaxis[3];
   double endcapZ = geo->GetWCCylLength()/2.*0.9; // cut value to determine whether the diffuser is in the barrel or endcap
   // Barrel injector
- // if (abs(vtxpos[2])<endcapZ) {
- //   //acraplet
- //   //std::cout<< "Barrel INJECTOR" <<std::endl; 
- //   vDirSource[0]=vtxpos[0];
- //   vDirSource[1]=vtxpos[1];
- //   double norm = sqrt(vtxpos[0]*vtxpos[0]+vtxpos[1]*vtxpos[1]);
- //   vDirSource[0]/=-norm;
- //   vDirSource[1]/=-norm;
- //   vDirSource[2]=0;
- //   vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
- //   vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
- // }
+  if (abs(vtxpos[2])<endcapZ) {
+    vDirSource[0]=vtxpos[0];
+    vDirSource[1]=vtxpos[1];
+    double norm = sqrt(vtxpos[0]*vtxpos[0]+vtxpos[1]*vtxpos[1]);
+    vDirSource[0]/=-norm;
+    vDirSource[1]/=-norm;
+    vDirSource[2]=0;
+    vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
+    vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
+  }
   //acraplet: for WCTE light diffuser the source always points downwards
   bool isWCTE = true;
   if (isWCTE) {
