@@ -240,12 +240,12 @@ int main(int argc, char **argv){
   double vg = CalcGroupVelocity(wavelength);
   std::cout<<TAG<<"Using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
   vg /= 1.e9; // convert to m/ns
-  
+
   rng = new TRandom3(seed);
   gRandom = rng;
 
   // Get the a pointer to the tree from the file
-  TTree *tree = (TTree*)file->Get("wcsimT");
+  //TTree *tree = (TTree*)file->Get("wcsimT");
 
   // Get the number of events
   long int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
@@ -253,6 +253,7 @@ int main(int argc, char **argv){
   if(verbose) printf("nevent %ld\n",nevent);
   
   // Create a WCSimRootEvent to put stuff from the tree in
+
   WCSimRootEvent* wcsimrootsuperevent = new WCSimRootEvent();
   WCSimRootEvent* wcsimrootsuperevent2 = new WCSimRootEvent();
 
@@ -402,13 +403,12 @@ int main(int argc, char **argv){
 
   // Assume the "source" is the UK injection system, either diffuser or collimator
   // LI source direction is always perpendicular to the wall
-
   double vDirSource[3];
   double vSource_localXaxis[3];
   double vSource_localYaxis[3];
   double endcapZ = geo->GetWCCylLength()/2.*0.9; // cut value to determine whether the diffuser is in the barrel or endcap
-  //WCTE laser diffuser ball
-  if (!hybrid) {
+  //non-hybrid geometry: WCTE's laser diffuser emits vertically
+  if (!hybrid){
     vDirSource[0] = 0;
     vDirSource[1] = 1;
     vDirSource[2] = 0;
@@ -425,13 +425,13 @@ int main(int argc, char **argv){
     vDirSource[2]=0;
     vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
     vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
-  } 
+  }
   else // endcap injector
   {
     vDirSource[0]=0;
     vDirSource[1]=0;
     if (vtxpos[2]>endcapZ) 
-   {
+    {
       vDirSource[2]=-1;
       vSource_localXaxis[0]=1;vSource_localXaxis[1]=0;vSource_localXaxis[2]=0;
       vSource_localYaxis[0]=0;vSource_localYaxis[1]=-1;vSource_localYaxis[2]=0;
@@ -597,8 +597,8 @@ int main(int argc, char **argv){
       printf("********************************************************");
       printf("Evt, date %d %d\n", wcsimrootevent->GetHeader()->GetEvtNum(),
 	     wcsimrootevent->GetHeader()->GetDate());
-      if (!hybrid){
-	printf("Non-hybrid configuration, light source direction: [%f %f %f]", vDirSource[0], vDirSource[1], vDirSource[2]);
+      if(!hybrid){
+        printf("Non-hybrid geometry, injector light direction: [%f %f %f]", vDirSource[0], vDirSource[1], vDirSource[2]);
       }
       printf("Mode %d\n", wcsimrootevent->GetMode());
       printf("Number of subevents %d\n",
