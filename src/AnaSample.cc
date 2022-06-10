@@ -32,6 +32,7 @@ AnaSample::AnaSample(int sample_id, const std::string& name, const std::string& 
     , m_eff_sig(0.0)
     , m_template(false)
     , selTree(nullptr)
+    , m_data_hist_name("")
 {
     TH1::SetDefaultSumw2(true);
 
@@ -95,8 +96,8 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
 {
     selTree = new AnaTree(file_name, tree_name, pmt_tree_name);
     //acraplet
-    if (m_pmttype==0 && m_mPMTmask.size()>0) selTree->MaskmPMT(m_mPMTmask, m_nmPMT);
-    if (m_pmttype==0 && m_mPMTpmtmask.size()>0) selTree->MaskmPMT_pmt(m_mPMTpmtmask, m_nPMTpermPMT);
+    if (m_pmttype==1 && m_mPMTmask.size()>0) selTree->MaskmPMT(m_mPMTmask, m_nmPMT);
+    if (m_pmttype==1 && m_mPMTpmtmask.size()>0) selTree->MaskmPMT_pmt(m_mPMTpmtmask, m_nPMTpermPMT);
     if (m_pmtmask>0) selTree->MaskPMT(m_pmtmask, m_pmttype, m_nPMTpermPMT);
 
     std::cout << TAG  << "Reading events for from "<<file_name<<"...\n";
@@ -128,18 +129,22 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         if (!skip) AddPMT(pmt_vec[i]);
     }
 
-    selTree->SetDataBranches();
+    ThrowPMTTimeConstants();
 
-    unsigned long nDataEntries = selTree->GetDataEntries();
+    ResetPMTDataHist();
 
-    if(m_hdata_pmt != nullptr)
-        delete m_hdata_pmt;
+    if (selTree->UseDataHist()) LoadPMTDataHist();
+    else LoadPMTDataEntries();
 
+    PrintStats();
+}
+
+void AnaSample::ThrowPMTTimeConstants()
+{
     int nPMTs = selTree->GetPMTEntries();
-    m_hdata_pmt = new TH1D("","",nPMTs,0,nPMTs);
 
     // determine the random offset for each PMT
-    std::vector<double> timetof_shift;
+    timetof_shift.clear();
     if (m_time_offset)
     {
         for (int i=0;i<nPMTs;i++)
@@ -147,7 +152,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     }
 
     // determine the random smearing for each PMT
-    std::vector<double> time_resolution;
+    time_resolution.clear();
     if (m_time_smear)
     {
         for (int i=0;i<nPMTs;i++)
@@ -158,19 +163,71 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
             time_resolution.push_back(resol);   
         }
     }
+}
+
+void AnaSample::ResetPMTDataHist()
+{
+    int nPMTs = selTree->GetPMTEntries();
+
+    if(m_hdata_pmt != nullptr)
+    {
+        if (m_hdata_pmt->GetNbinsX() != nPMTs)
+        {
+            delete m_hdata_pmt;
+            m_hdata_pmt = new TH1D("","",nPMTs,0,nPMTs);
+        }
+        else 
+            m_hdata_pmt->Reset();
+    }
+    else 
+        m_hdata_pmt = new TH1D("","",nPMTs,0,nPMTs);
+
+    if (m_template) m_htimetof_pmt_data->Reset();
 
     // Setup control region if the scattering option is on
     if (m_scatter || m_scatter_map)
     {
         if(m_hdata_pmt_control != nullptr)
-            delete m_hdata_pmt_control;
-        m_hdata_pmt_control = new TH1D("","",nPMTs,0,nPMTs);
+        {
+            if (m_hdata_pmt_control->GetNbinsX() != nPMTs)
+            {
+                delete m_hdata_pmt_control;
+                m_hdata_pmt_control = new TH1D("","",nPMTs,0,nPMTs);
+            }
+            else 
+                m_hdata_pmt_control->Reset();
+        }
+        else 
+            m_hdata_pmt_control = new TH1D("","",nPMTs,0,nPMTs);
     }
+}
+
+void AnaSample::LoadPMTDataEntries()
+{
+    selTree->SetDataBranches();
+
+    unsigned long nDataEntries = selTree->GetDataEntries();
 
     double timetof, nPE;
     int pmtID;
 
-    std::cout << TAG<<"Reading PMT hit data..."<<std::endl;
+    double t_min = -DBL_MAX, t_max = DBL_MAX;
+    double pe_min = -DBL_MAX, pe_max = DBL_MAX;
+    for (int j=0;j<m_cutvar.size();j++) 
+    {
+        if (m_cutvar[j]=="timetof")
+        {
+            t_min = m_cutlow[j];
+            t_max = m_cuthigh[j];
+        }
+        else if (m_cutvar[j]=="nPE")
+        {
+            pe_min = m_cutlow[j];
+            pe_max = m_cuthigh[j];
+        }
+    }
+
+    std::cout << TAG << "Reading PMT hit data..." << std::endl;
     for (unsigned long i=0;i<nDataEntries;i++)
     {
         if (!selTree->GetDataEntry(i,timetof,nPE,pmtID)) continue;
@@ -178,31 +235,15 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         if (m_time_offset) timetof += timetof_shift[pmtID];
         if (m_time_smear) timetof += gRandom->Gaus(0,time_resolution[pmtID]);
 
-        bool skip = false;
-
-        for (int j=0;j<m_cutvar.size();j++) {
-            if (m_cutvar[j]=="timetof")
-            {
-                if (timetof<m_cutlow[j] || timetof>m_cuthigh[j]) {
-                    skip = true;   
-                    break;
-                }
-            }
-            else if (m_cutvar[j]=="nPE")
-            {
-                if (nPE<m_cutlow[j] || nPE>m_cuthigh[j]) {
-                    skip = true;   
-                    break;
-                }
-            }
-        }
-
         if (m_template)
         {
             m_htimetof_pmt_data->Fill(pmtID+0.5,timetof+m_timetof_offset,nPE);
         }
 
-        if (skip) continue;
+
+        if ( timetof < t_min || timetof > t_max ) continue;
+        if ( nPE < pe_min || nPE > pe_max ) continue;
+
         if (m_scatter || m_scatter_map)
         {
             if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_pmt->Fill(pmtID+0.5, nPE);
@@ -210,8 +251,62 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
         }
         else m_hdata_pmt->Fill(pmtID+0.5, nPE);
     }
+}
 
-    PrintStats();
+void AnaSample::LoadPMTDataHist()
+{
+    std::cout << TAG<<"Reading PMT hit histogram..."<<std::endl;
+
+    TH2F* hist = selTree->GetDataHist();
+    int nTBins = hist->GetNbinsY();
+    double t_min = -DBL_MAX, t_max = DBL_MAX;
+    for (int j=0;j<m_cutvar.size();j++) 
+    {
+        if (m_cutvar[j]=="timetof")
+        {
+            t_min = m_cutlow[j];
+            t_max = m_cuthigh[j];
+            break;
+        }
+    }
+
+    for(auto& e : m_pmts)
+    {
+        int pmtID = e.GetPMTID();
+        for (int i=1; i<=nTBins; i++)
+        {
+            double timetof = hist->GetYaxis()->GetBinCenter(i);
+            double nPE = hist->GetBinContent(pmtID+1,i);
+
+            if (m_time_offset) timetof += timetof_shift[pmtID];
+            if (m_time_smear)
+            {
+                nPE = 0;
+                for (int j=1; j<=nTBins; j++)
+                {
+                    // convolution to smear timetof
+                    double t = hist->GetYaxis()->GetBinCenter(t);
+                    double val = hist->GetBinContent(pmtID+1,j);
+                    double fac = TMath::Gaus(timetof, t, time_resolution[pmtID], true);
+                    nPE += val*fac;
+                }
+            }
+
+            if (m_template)
+            {
+                m_htimetof_pmt_data->Fill(pmtID+0.5,timetof+m_timetof_offset,nPE);
+            }
+
+            if ( timetof < t_min || timetof > t_max ) continue;
+
+            if (m_scatter || m_scatter_map)
+            {
+                if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_pmt->Fill(pmtID+0.5, nPE);
+                else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_pmt_control->Fill(pmtID+0.5, nPE);
+            }
+            else m_hdata_pmt->Fill(pmtID+0.5, nPE);
+        }
+    }
 }
 
 AnaEvent* AnaSample::GetPMT(const unsigned int evnum)
@@ -343,7 +438,7 @@ void AnaSample::FillEventHist(bool reset_weights)
     }
 #endif
     m_hpred->Reset();
-    if (m_scatter||m_scatter_map) m_hpred_err2->Reset();
+    //if (m_scatter||m_scatter_map) m_hpred_err2->Reset();
 
     if (m_template) 
     {
@@ -351,16 +446,22 @@ void AnaSample::FillEventHist(bool reset_weights)
         m_htimetof_pred_w2->Reset();
     }
 
+    double* m_hpred_array  = m_hpred->GetArray();
+    double* m_htimetof_pred_array  = m_template ? m_htimetof_pred->GetArray() : 0;
+    double* m_htimetof_pred_w2_array  = m_template ? m_htimetof_pred_w2->GetArray() : 0;
+
     for(const auto& e : m_pmts)
     {
         const double weight = reset_weights ? e.GetEvWghtMC() : e.GetEvWght();
         const int reco_bin  = e.GetSampleBin();
-        m_hpred->Fill(reco_bin + 0.5, weight); // direct PE prediction
+        //m_hpred->Fill(reco_bin + 0.5, weight); // direct PE prediction
+        m_hpred_array[reco_bin+1] += weight;
 
         if (m_scatter||m_scatter_map)
         {
-            m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
-            m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr()); // MC stat error of indirect PE prediction
+            //m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
+            m_hpred_array[reco_bin+1] += e.GetPEIndirect();
+            //m_hpred_err2->Fill(reco_bin + 0.5, e.GetPEIndirectErr()); // MC stat error of indirect PE prediction
         }
 
         if (m_template)
@@ -369,22 +470,112 @@ void AnaSample::FillEventHist(bool reset_weights)
             std::vector<double> timetof_nom_sig2 = e.GetTimetofNomSig2();
             for (int i=1;i<=m_htimetof_pred->GetNbinsY();i++)
             {
-                if (!m_template_combine) 
-                {
-                    m_htimetof_pred->Fill(reco_bin + 0.5,i-0.5,timetof_pred[i-1]);
-                    m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
-                }
-                else
-                {
-                    m_htimetof_pred->Fill(0.5,i-0.5,timetof_pred[i-1]);
-                    m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
-                }
+                int bin = (m_htimetof_pred->GetNbinsX()+2)*i;
+                if (!m_template_combine) bin += reco_bin+1;
+                else bin += 1;
+                m_htimetof_pred_array[bin] += timetof_pred[i-1];
+                m_htimetof_pred_w2_array[bin] += timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1];
+                // if (!m_template_combine) 
+                // {
+                //     m_htimetof_pred->Fill(reco_bin + 0.5,i-0.5,timetof_pred[i-1]);
+                //     m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
+                // }
+                // else
+                // {
+                //     m_htimetof_pred->Fill(0.5,i-0.5,timetof_pred[i-1]);
+                //     m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*timetof_pred[i-1]*timetof_pred[i-1]);
+                // }
             }
         }
     }
 
     return;
 }
+
+#ifdef USING_CUDA
+void AnaSample::FillEventHistCuda()
+{
+    if (_CacheManagerValue_) {
+        if (_CacheManagerValid_ && !(*_CacheManagerValid_)) {
+            // This is slowish, but will make sure that the cached result is
+            // updated when the cache has changed.  The values pointed to by
+            // _CacheManagerResult_ and _CacheManagerValid_ are inside
+            // of the weights cache (a bit of evil coding here), and are
+            // updated by the cache.  The update is triggered by
+            // _CacheManagerUpdate().
+            if (_CacheManagerUpdate_) (*_CacheManagerUpdate_)();
+        }
+    }
+
+    if (_CacheManagerValue_ && 0 <= _CacheManagerIndex_)
+    {
+        double* m_hpred_array  = m_hpred->GetArray();
+
+        for (int i = 0; i < m_nbins ; i++)
+        {
+            double val = _CacheManagerValue_[_CacheManagerIndex_+i];
+            //m_hpred->SetBinContent(i+1,val);
+            m_hpred_array[i+1] = val;
+        }
+
+        if (m_scatter||m_scatter_map)
+        {
+            for(const auto& e : m_pmts)
+            {
+                const int reco_bin  = e.GetSampleBin();
+                //m_hpred->Fill(reco_bin + 0.5, e.GetPEIndirect()); // indirect PE prediction
+                m_hpred_array[reco_bin+1] += e.GetPEIndirect();
+            }
+        }
+
+        if (m_template)
+        {
+            m_htimetof_pred_w2->Reset();
+
+            double* m_htimetof_pred_array  = m_htimetof_pred->GetArray();
+            double* m_htimetof_pred_w2_array  = m_htimetof_pred_w2->GetArray();
+
+            const int nx = m_htimetof_pred->GetNbinsX();
+            const int ny = m_htimetof_pred->GetNbinsY();
+
+            int counter =  _CacheManagerIndex_ + m_nbins ;
+            for (int j=1;j<=ny;j++)
+            {
+                int bin = (nx+2)*j;
+                for (int i=1;i<=nx;i++)
+                {
+                    m_htimetof_pred_array[++bin] = _CacheManagerValue_[counter++];
+                    //m_htimetof_pred->SetBinContent(i,j,_CacheManagerValue_[counter++]);
+                }
+            }
+
+            for(const auto& e : m_pmts)
+            {
+                const int reco_bin  = e.GetSampleBin();
+                std::vector<double> timetof_nom_sig2 = e.GetTimetofNomSig2();
+                const double* cacheValues = e.GetCacheMangerValue();
+                for (int i=1;i<=ny;i++)
+                {
+                    //const double val = e.GetCacheMangerValue(i);
+                    const double val = *(cacheValues+i);
+                    int bin = (nx+2)*i;
+                    if (!m_template_combine) bin += reco_bin+1;
+                    else bin += 1;
+                    m_htimetof_pred_w2_array[bin] += timetof_nom_sig2[i-1]*val*val;
+                    // if (!m_template_combine) 
+                    // {
+                    //     m_htimetof_pred_w2->Fill(reco_bin + 0.5,i-0.5,timetof_nom_sig2[i-1]*val*val);
+                    // }
+                    // else
+                    // {
+                    //     m_htimetof_pred_w2->Fill(0.5,i-0.5,timetof_nom_sig2[i-1]*val*val);
+                    // }
+                }
+            }
+        }
+    }
+}
+#endif
 
 void AnaSample::FillDataHist(bool stat_fluc)
 {
@@ -397,7 +588,11 @@ void AnaSample::FillDataHist(bool stat_fluc)
     }
 #endif
     m_hdata->Reset();
-    if (m_scatter || m_scatter_map) m_hdata_control->Reset();
+    if (m_scatter || m_scatter_map) 
+    {
+        m_hdata_control->Reset();
+        m_hpred_err2->Reset();
+    }
 
     if(stat_fluc) 
         std::cout << TAG << "Applying statistical fluctuations..." << std::endl;
@@ -458,6 +653,8 @@ void AnaSample::FillDataHist(bool stat_fluc)
 
                 e.SetPEIndirect(indirect_pred);
                 e.SetPEIndirectErr(indirect_err2);
+
+                m_hpred_err2->Fill(reco_bin + 0.5, indirect_err2); // MC stat error of indirect PE prediction
             }
 
             m_hdata_control->Fill(reco_bin + 0.5, weight_control);
@@ -514,7 +711,7 @@ void AnaSample::SetLLHFunction(const std::string& func_name)
     }
 }
 
-double AnaSample::CalcLLH() const
+double AnaSample::CalcLLH(int nthreads) const
 {
     const unsigned int nbins = m_hpred->GetNbinsX();
     double* exp_w  = m_hpred->GetArray();
@@ -523,18 +720,27 @@ double AnaSample::CalcLLH() const
     double* data   = m_hdata->GetArray();
 
     double chi2 = 0.0;
+#pragma omp parallel for reduction(+:chi2) num_threads(nthreads)
     for(unsigned int i = 1; i <= nbins; ++i)
-        chi2 += (*m_llh)(exp_w[i], exp_w2[i], data[i]);
+    {
+        chi2 = chi2 + (*m_llh)(exp_w[i], exp_w2[i], data[i]);
+    }
 
     if (m_template)
     {
+        const int nx = m_htimetof_pred->GetNbinsX();
+        const int ny = m_htimetof_pred->GetNbinsY();
+
         if (m_template_only) chi2 = 0.0;
-        for(unsigned int i=1;i<=m_htimetof_pred->GetNbinsX();i++)
+#pragma omp parallel for reduction(+:chi2) num_threads(nthreads)
+        for(unsigned int i=1;i<=nx;i++)
         {
-            for (int j=1;j<=m_htimetof_pred->GetNbinsY();j++)
+            double sum = 0;
+            for (int j=1;j<=ny;j++)
             {
-                chi2 += (*m_llh)(m_htimetof_pred->GetBinContent(i,j), m_htimetof_pred_w2->GetBinContent(i,j), m_htimetof_data->GetBinContent(i,j));
+                sum += (*m_llh)(m_htimetof_pred->GetBinContent(i,j), m_htimetof_pred_w2->GetBinContent(i,j), m_htimetof_data->GetBinContent(i,j));
             }
+            chi2 = chi2 + sum ;
         }
     }
 
@@ -628,72 +834,11 @@ void AnaSample::InitToy()
 
     if ( m_time_offset || m_time_smear ) 
     {
-        int nPMTs = selTree->GetPMTEntries();
-        // determine the random offset for each PMT
-        std::vector<double> timetof_shift;
-        if (m_time_offset)
-        {
-            for (int i=0;i<nPMTs;i++)
-                timetof_shift.push_back( gRandom->Gaus(0,m_time_offset_width) );
-        }
+        ThrowPMTTimeConstants();
 
-        // determine the random smearing for each PMT
-        std::vector<double> time_resolution;
-        if (m_time_smear)
-        {
-            for (int i=0;i<nPMTs;i++)
-            {
-                double resol = -1;
-                while (resol<0)
-                    resol = gRandom->Gaus(m_time_smear_mean,m_time_smear_width);
-                time_resolution.push_back(resol);   
-            }
-        }
+        ResetPMTDataHist();
 
-        unsigned long nDataEntries = selTree->GetDataEntries();
-        double timetof, nPE;
-        int pmtID;
-        if (m_template) m_htimetof_pmt_data->Reset();
-        m_hdata_pmt->Reset();
-        m_hdata_pmt_control->Reset();
-        for (unsigned long i=0;i<nDataEntries;i++)
-        {
-            if (!selTree->GetDataEntry(i,timetof,nPE,pmtID)) continue;
-
-            if (m_time_offset) timetof += timetof_shift[pmtID];
-            if (m_time_smear) timetof += gRandom->Gaus(0,time_resolution[pmtID]);
-
-            bool skip = false;
-
-            for (int j=0;j<m_cutvar.size();j++) {
-                if (m_cutvar[j]=="timetof")
-                {
-                    if (timetof<m_cutlow[j] || timetof>m_cuthigh[j]) {
-                        skip = true;   
-                        break;
-                    }
-                }
-                else if (m_cutvar[j]=="nPE")
-                {
-                    if (nPE<m_cutlow[j] || nPE>m_cuthigh[j]) {
-                        skip = true;   
-                        break;
-                    }
-                }
-            }
-
-            if (m_template)
-            {
-                m_htimetof_pmt_data->Fill(pmtID+0.5,timetof+m_timetof_offset,nPE);
-            }
-
-            if (skip) continue;
-            if (m_scatter || m_scatter_map)
-            {
-                if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_pmt->Fill(pmtID+0.5, nPE);
-                else if (timetof>=m_scatter_time2 && timetof<m_scatter_time3) m_hdata_pmt_control->Fill(pmtID+0.5, nPE);
-            }
-            else m_hdata_pmt->Fill(pmtID+0.5, nPE);
-        }
+        if (selTree->UseDataHist()) LoadPMTDataHist();
+        else LoadPMTDataEntries();
     }
 }

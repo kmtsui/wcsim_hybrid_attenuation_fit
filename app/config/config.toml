@@ -11,10 +11,15 @@ max_iter = 1E6
 max_fcn = 1E9
 # Poisson statistical fluctuation in data
 stat_fluc = false
+
 # Optional MCMC method to estimate the fit uncertainty, only useful when MCMCSteps>0
-# Tune step size to get a reasonable acceptance
 MCMCSteps = 0
+# Two step proposal options are available: "adaptive" and "fixed"
+# "adaptive" uses the TSimpleMCMC class and automatically adjusts the size size as the chain walks
+# "fixed" uses the step size defined by MCMCStepSize, may need to tune this number to get a reasonable acceptance
+MCMCProposal = "adaptive"
 MCMCStepSize = 0.3
+
 # Optional 1D parameter scan around the minimum point, only useful when ScanSteps>0
 # ParameterScans is the vector of integers corresponding to parameter indices to scan
 # Indices run from 0 according to the order of the fit parameters declared below

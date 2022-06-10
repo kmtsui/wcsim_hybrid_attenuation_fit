@@ -24,6 +24,10 @@
 #include "Likelihoods.hh"
 #include "ColorOutput.hh"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 class AnaSample
 {
 public:
@@ -39,14 +43,19 @@ public:
     AnaEvent* GetPMT(const unsigned int evnum);
 
     void LoadEventsFromFile(const std::string& file_name, const std::string& tree_name, const std::string& pmt_tree_name);
+    void LoadPMTDataEntries();
+    void LoadPMTDataHist();
+    void ResetPMTDataHist();
+    inline void SetDataHistName(const std::string& val) { m_data_hist_name = val; }
 
     void PrintStats() const;
     void MakeHistos();
     void SetNorm(const double val) { m_norm = val; }
 
     void SetLLHFunction(const std::string& func_name);
-    double CalcLLH() const;
+    double CalcLLH(int nthreads = 1) const;
 
+    inline int GetNBins() const { return m_nbins; }
     void FillEventHist(bool reset_weights = false);
     void FillDataHist(bool stat_fluc = false);
 
@@ -82,6 +91,8 @@ public:
     void SetTemplate(const TH2D& hist, double offset, bool combine, bool template_only);
     inline bool UseTemplate() { return m_template; } 
     TH2D* GetTemplate() { return m_htimetof_pmt_pred;}
+    inline bool CombineTemplate() const { return m_template_combine; }
+    inline int GetNTemplateBins() const { return m_template ? m_htimetof_pred->GetNbinsX()*m_htimetof_pred->GetNbinsY() : 0 ;}
 
     void SetPMTEff(const TH1D& hist);
     inline void SetPMTEffVar(double val) { m_eff_var  = true; m_eff_sig = val; }
@@ -91,6 +102,8 @@ public:
     inline void SetTimeOffset(bool offset, double width) { m_time_offset = offset; m_time_offset_width = width; }
 
     inline void SetTimeSmear(bool smear, double mean, double width) { m_time_smear = smear; m_time_smear_mean = mean; m_time_smear_width = width; }
+
+    void ThrowPMTTimeConstants();
 
     inline void SetZ0(double val) { m_z0 = val; }
 
@@ -119,10 +132,12 @@ protected:
 
     bool m_time_offset;
     double m_time_offset_width;
+    std::vector<double> timetof_shift;
 
     bool m_time_smear;
     double m_time_smear_mean;
     double m_time_smear_width;
+    std::vector<double> time_resolution;
 
     double m_z0;
 
@@ -131,6 +146,7 @@ protected:
     double m_eff_sig;
 
     AnaTree* selTree;
+    std::string m_data_hist_name;
 
     std::vector<std::string> m_binvar;
 
@@ -166,6 +182,26 @@ protected:
     const std::string TAG = color::GREEN_STR + "[AnaSample]: " + color::RESET_STR;
     const std::string ERR = color::RED_STR + "[AnaSample ERROR]: " + color::RESET_STR;
     const std::string WAR = color::RED_STR + "[AnaSample WARNING]: " + color::RESET_STR;
+
+/// GPU threading
+#ifdef USING_CUDA
+    public:
+        void setCacheManagerIndex(int i) {_CacheManagerIndex_ = i;}
+        int  getCacheManagerIndex() {return _CacheManagerIndex_;}
+        void setCacheManagerValuePointer(const double* v) {_CacheManagerValue_ = v;}
+        void setCacheManagerValidPointer(const bool* v) {_CacheManagerValid_ = v;}
+        void setCacheManagerUpdatePointer(void (*p)()) {_CacheManagerUpdate_ = p;}
+	    void FillEventHistCuda();
+    private:
+        // An "opaque" index into the cache that is used to simplify bookkeeping.
+        int _CacheManagerIndex_{-1};
+        // A pointer to the cached result.
+        const double* _CacheManagerValue_{nullptr};
+        // A pointer to the cache validity flag.
+        const bool* _CacheManagerValid_{nullptr};
+        // A pointer to a callback to force the cache to be updated.
+        void (*_CacheManagerUpdate_)(){nullptr};
+#endif
 
 };
 

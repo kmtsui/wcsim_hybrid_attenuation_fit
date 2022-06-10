@@ -1,5 +1,9 @@
 #include "Fitter.hh"
 
+#ifdef USING_CUDA
+#include "CacheManager.h"
+#endif
+
 Fitter::Fitter(TDirectory* dirout, const int seed, const int num_threads)
     : rng(new TRandom3(seed))
     , m_fitter(nullptr)
@@ -216,6 +220,19 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 
     SaveEventHist();
 
+    for(const auto& fitpar : m_fitpara)
+    {
+        fitpar -> ThrowPars();
+    }
+
+#ifdef USING_CUDA
+    Cache::Manager::Build(m_samples,m_fitpara);
+#endif
+
+    vec_chi2_stat.clear();
+    vec_chi2_sys.clear();
+    vec_chi2_reg.clear();
+
     bool did_converge = false;
     std::cout << TAG << "Fit prepared." << std::endl;
     std::cout << TAG << "Calling Minimize, running " << min_settings.algorithm << std::endl;
@@ -261,7 +278,8 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
     std::vector<double> par_err_vec(par_err, par_err + ndim);
 
     unsigned int par_offset = 0;
-    TMatrixDSym cov_matrix(ndim, cov_array);
+    cov_matrix.ResizeTo(ndim,ndim);
+    cov_matrix = TMatrixDSym(ndim, cov_array);
     for(const auto& fit_param : m_fitpara)
     {
         if(fit_param->IsDecomposed())
@@ -274,7 +292,8 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
 
     par_postfit = par_val_vec;
 
-    TMatrixDSym cor_matrix(ndim);
+    //cor_matrix = TMatrixDSym(ndim);
+    cor_matrix.ResizeTo(ndim,ndim);
     for(int r = 0; r < ndim; ++r)
     {
         for(int c = 0; c < ndim; ++c)
@@ -357,6 +376,22 @@ double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
         m_fitpara[i]->ApplyParameters(new_pars[i]);
     }
 
+#ifdef USING_CUDA
+    Cache::Manager::Fill();
+    for(int s = 0; s < m_samples.size(); ++s)
+    {
+        m_samples[s]->FillEventHistCuda();
+
+        double sample_chi2 = m_samples[s]->CalcLLH(m_threads);
+        chi2 += sample_chi2;
+
+        if(output_chi2)
+        {
+            std::cout << TAG << "Chi2 for sample " << m_samples[s]->GetName() << " is "
+                      << sample_chi2 << std::endl;
+        }
+    }
+#else
     for(int s = 0; s < m_samples.size(); ++s)
     {
         const unsigned int num_pmts = m_samples[s]->GetNPMTs();
@@ -374,7 +409,7 @@ double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
         }
 
         m_samples[s]->FillEventHist();
-        double sample_chi2 = m_samples[s]->CalcLLH();
+        double sample_chi2 = m_samples[s]->CalcLLH(m_threads);
         chi2 += sample_chi2;
 
         if(output_chi2)
@@ -383,7 +418,7 @@ double Fitter::FillSamples(std::vector<std::vector<double>>& new_pars)
                       << sample_chi2 << std::endl;
         }
     }
-
+#endif
     return chi2;
 }
 
@@ -493,10 +528,10 @@ void Fitter::SaveParams(const std::vector<std::vector<double>>& new_pars)
 
 void Fitter::SaveChi2()
 {
-    TH1D h_chi2stat("chi2_stat_periter", "chi2_stat_periter", m_calls + 1, 0, m_calls + 1);
-    TH1D h_chi2sys("chi2_syst_periter", "chi2_syst_periter", m_calls + 1, 0, m_calls + 1);
-    TH1D h_chi2reg("chi2_reg_periter", "chi2_reg_periter", m_calls + 1, 0, m_calls + 1);
-    TH1D h_chi2tot("chi2_total_periter", "chi2_total_periter", m_calls + 1, 0, m_calls + 1);
+    TH1D h_chi2stat("chi2_stat_periter", "chi2_stat_periter", vec_chi2_stat.size(), 0, vec_chi2_stat.size());
+    TH1D h_chi2sys("chi2_syst_periter", "chi2_syst_periter", vec_chi2_stat.size(), 0, vec_chi2_stat.size());
+    TH1D h_chi2reg("chi2_reg_periter", "chi2_reg_periter", vec_chi2_stat.size(), 0, vec_chi2_stat.size());
+    TH1D h_chi2tot("chi2_total_periter", "chi2_total_periter", vec_chi2_stat.size(), 0, vec_chi2_stat.size());
 
     for(size_t i = 0; i < vec_chi2_stat.size(); i++)
     {
@@ -625,14 +660,16 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
         for(int i = 0; i < num_pmts; i++)
         {
             AnaEvent* ev = m_samples[s]->GetPMT(i);
+            double wgt = 1.0;
             for(size_t j = 0; j < m_fitpara.size(); j++)
             {
                 if (m_fitpara[j]->GetPMTType()>=0 && m_fitpara[j]->GetPMTType() != pmttype) weight[j] = 1.;
                 else weight[j] = m_fitpara[j]->GetWeight(ev, pmttype, s, i, res_params[j]);
+                wgt *= weight[j];
             }
 
             nPE_data= ev->GetPE();
-            nPE_pred= ev->GetEvWght();
+            nPE_pred= wgt; //ev->GetEvWght();
             R       = ev->GetR();
             costh   = ev->GetCosth();
             cosths  = ev->GetCosths();
@@ -640,6 +677,9 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
             costhm  = ev->GetCosthm();
             phim    = ev->GetPhim();
             omega   = ev->GetOmega();
+            xpos    = ev->GetPos()[0];
+            ypos    = ev->GetPos()[1];
+            zpos    = ev->GetPos()[2];
             PMT_id  = ev->GetPMTID();
             mPMT_id = ev->GetmPMTID();
             indirectPE = ev->GetPEIndirect();
@@ -651,13 +691,10 @@ void Fitter::SaveEventTree(std::vector<std::vector<double>>& res_params)
     m_outtree->Write();
 }
 
-void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double force_padd, bool do_incompl_chol, double dropout_tol)
+void Fitter::RunMCMCFixedStep(int step, double stepsize, bool do_force_posdef, double force_padd, bool do_incompl_chol, double dropout_tol)
 {
     // Use MCMC to scan around the best-fit point for error estimation
     const int ndim        = m_fitter->NDim();
-    double cov_array[ndim * ndim];
-    m_fitter->GetCovMatrix(cov_array);
-    TMatrixDSym cov_matrix(ndim, cov_array);
 
     // Use post-fit covariance matrix to generate MCMC steps
     ToyThrower* toy_thrower = new ToyThrower(cov_matrix, false, 1E-48);
@@ -716,4 +753,37 @@ void Fitter::RunMCMCScan(int step, double stepsize, bool do_force_posdef, double
 
     m_dir->cd();
     m_mcmctree->Write();
+}
+
+void Fitter::RunMCMCAdaptiveStep(int step)
+{
+    // Use MCMC to scan around the best-fit point for error estimation
+    const int ndim        = m_fitter->NDim();
+
+    TTree *tree = new TTree("SimpleMCMC",
+                        "Tree of accepted points");
+
+    TSimpleMCMC<CalcLikelihoodMCMC> mcmc(tree);
+    CalcLikelihoodMCMC& like = mcmc.GetLogLikelihood();
+    like.SetFitter(this);
+    mcmc.GetProposeStep().SetDim(ndim); 
+    for (int i=0;i<ndim;i++)
+    {
+        if (par_var_fixed[i]) mcmc.GetProposeStep().SetUniform(i,par_postfit[i]*0.9999,par_postfit[i]*1.0001); // workaround for fixed variable
+        else 
+        {
+            mcmc.GetProposeStep().SetGaussian(i,std::sqrt(cov_matrix[i][i])); 
+            for (int j=i+1;j<ndim;j++)
+            {
+                if (!par_var_fixed[j]) mcmc.GetProposeStep().SetCorrelation(i,j,cor_matrix[i][j]);
+            }
+        }
+    }
+    mcmc.Start(par_postfit);
+    for (int i=0; i<step; ++i) mcmc.Step();       // Run the chain.
+    // Save the final state.  This is needed to force the proposal to save
+    // it's final state so that the chain can be continued.
+    mcmc.SaveStep();
+    m_dir->cd();
+    tree->Write();
 }

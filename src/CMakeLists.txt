@@ -10,6 +10,7 @@ set(HEADERS
     EigenDecomp.hh
     ToyThrower.hh
     ColorOutput.hh
+    TSimpleMCMC.hh
 )
 
 add_library(OpticalFit SHARED 
@@ -26,6 +27,13 @@ set_target_properties(OpticalFit PROPERTIES
 	PUBLIC_HEADER "${HEADERS}")
 
 LinkToROOT(OpticalFit)
+
+if( USE_CUDA )
+    target_link_libraries( OpticalFit CudaCache )
+    target_include_directories( OpticalFit PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/CacheManager/include
+        ${CMAKE_SOURCE_DIR}/src)
+endif()
 
 install(TARGETS OpticalFit DESTINATION lib/
 		PUBLIC_HEADER DESTINATION include/OpticalFit)
