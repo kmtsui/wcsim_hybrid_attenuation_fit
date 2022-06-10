@@ -407,8 +407,16 @@ int main(int argc, char **argv){
   double vSource_localXaxis[3];
   double vSource_localYaxis[3];
   double endcapZ = geo->GetWCCylLength()/2.*0.9; // cut value to determine whether the diffuser is in the barrel or endcap
+  //WCTE laser diffuser ball
+  if (!hybrid) {
+    vDirSource[0] = 0;
+    vDirSource[1] = 1;
+    vDirSource[2] = 0;
+    vSource_localXaxis[0]=1;vSource_localXaxis[1]=0;vSource_localXaxis[2]=0;
+    vSource_localYaxis[0]=0;vSource_localYaxis[1]=0;vSource_localYaxis[2]=1;
+  }
   // Barrel injector
-  if (abs(vtxpos[2])<endcapZ) {
+  else if (abs(vtxpos[2])<endcapZ) {
     vDirSource[0]=vtxpos[0];
     vDirSource[1]=vtxpos[1];
     double norm = sqrt(vtxpos[0]*vtxpos[0]+vtxpos[1]*vtxpos[1]);
@@ -417,23 +425,13 @@ int main(int argc, char **argv){
     vDirSource[2]=0;
     vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
     vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
-  }
-  //acraplet: for WCTE light diffuser the source always points downwards
-  bool isWCTE = true;
-  if (isWCTE) {
-  vDirSource[0] = 0;
-  vDirSource[1] = 1;
-  vDirSource[2] = 0;
-  vSource_localXaxis[0]=1;vSource_localXaxis[1]=0;vSource_localXaxis[2]=0;
-  vSource_localYaxis[0]=0;vSource_localYaxis[1]=0;vSource_localYaxis[2]=1;
-  printf("WCTE geometry: the source is pointing in direction [0,1,0]\n");
   } 
   else // endcap injector
   {
     vDirSource[0]=0;
     vDirSource[1]=0;
     if (vtxpos[2]>endcapZ) 
-    {
+   {
       vDirSource[2]=-1;
       vSource_localXaxis[0]=1;vSource_localXaxis[1]=0;vSource_localXaxis[2]=0;
       vSource_localYaxis[0]=0;vSource_localYaxis[1]=-1;vSource_localYaxis[2]=0;
@@ -599,6 +597,9 @@ int main(int argc, char **argv){
       printf("********************************************************");
       printf("Evt, date %d %d\n", wcsimrootevent->GetHeader()->GetEvtNum(),
 	     wcsimrootevent->GetHeader()->GetDate());
+      if (!hybrid){
+	printf("Non-hybrid configuration, light source direction: [%f %f %f]", vDirSource[0], vDirSource[1], vDirSource[2]);
+      }
       printf("Mode %d\n", wcsimrootevent->GetMode());
       printf("Number of subevents %d\n",
 	     wcsimrootsuperevent->GetNumberOfSubEvents());

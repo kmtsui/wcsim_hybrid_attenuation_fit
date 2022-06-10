@@ -386,6 +386,8 @@ void AnaSample::InitEventMap()
         {
             std::cout << TAG << "In InitEventMap() - "
                       << "No bin for current PMT: b=" << b << std::endl;
+	    std::cout << TAG << "PMT Var: " << std::endl;
+            for(const auto val : e.GetRecoVar()) std::cout << TAG << "\t" << val << std::endl;
         }
 #endif
         e.SetSampleBin(b);
