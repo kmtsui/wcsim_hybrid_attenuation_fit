@@ -115,7 +115,6 @@ void AnaTree::MaskmPMT_pmt(std::vector<int> vec, int nPMTpermPMT)
 {
     // mask the small PMT in mPMT
     // acraplet CAREFUL: NAME CHANGE from MaskmPMT to MaskmPMT_pmt
-    // TODO: write the AnaTree::MaskmPMT function
     mpmt_pmt_mask.clear();
     m_maskmpmt_pmt = false;
 
@@ -172,6 +171,8 @@ void AnaTree::SetDataBranches()
     fChain->SetBranchAddress("nPE", &nPE);
     fChain->SetBranchAddress("timetof", &timetof);
     fChain->SetBranchAddress("PMT_id", &PMT_id);
+    //acraplet new for nHits cuts
+    //fChain->SetBranchAddress("nHits", &nHits);
 
 }
 
@@ -273,6 +274,9 @@ bool AnaTree::GetDataEntry(unsigned long entry, double& time, double& charge, in
     charge = nPE;
 
     pmtID = PMT_id;
+
+    //acraplet
+   // PMT_nHits = nHits;
 
     return true;
 }

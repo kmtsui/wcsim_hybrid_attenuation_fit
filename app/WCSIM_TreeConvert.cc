@@ -240,9 +240,6 @@ int main(int argc, char **argv){
   double vg = CalcGroupVelocity(wavelength);
   std::cout<<TAG<<"Using wavelength = "<<wavelength<<" nm, group velocity = "<<vg<<" m/s, n = "<<cvacuum/vg<<std::endl;
   vg /= 1.e9; // convert to m/ns
-  
-  //test from acraplet
-  std::cout<<"Test 3"<<std::endl;
 
   rng = new TRandom3(seed);
   gRandom = rng;
@@ -254,7 +251,7 @@ int main(int argc, char **argv){
   long int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
   if(endEvent>0 && endEvent<=nevent) nevent = endEvent;
   if(verbose) printf("nevent %ld\n",nevent);
-  
+  if (verbose) printf("Hybrid geometry: %b, injector direction: [%f %f %f]\n", hybrid, vDirSource[0], vDirSource[1], vDirSource[2]); 
   // Create a WCSimRootEvent to put stuff from the tree in
 
   WCSimRootEvent* wcsimrootsuperevent = new WCSimRootEvent();
@@ -377,7 +374,6 @@ int main(int argc, char **argv){
   pmt_type0->Branch("dz",&dz);           // z-pos relative to source
   pmt_type0->Branch("PMT_id",&PMT_id);   // unique PMT id
   pmt_type0->Branch("mPMT_id",&mPMT_id); // new: this is the id of each mPMT 
-  //acraplet
   pmt_type0->Branch("mPMT_pmt_id", &mPMT_pmt_id); //new: this is the id of each PMT within an mPMT
   pmt_type0->Branch("xpos", &xpos);
   pmt_type0->Branch("ypos", &ypos);
@@ -411,29 +407,25 @@ int main(int argc, char **argv){
   double vSource_localXaxis[3];
   double vSource_localYaxis[3];
   double endcapZ = geo->GetWCCylLength()/2.*0.9; // cut value to determine whether the diffuser is in the barrel or endcap
+  //non-hybrid geometry: WCTE's laser diffuser emits vertically
+  if (!hybrid){
+    vDirSource[0] = 0;
+    vDirSource[1] = 1;
+    vDirSource[2] = 0;
+    vSource_localXaxis[0]=1;vSource_localXaxis[1]=0;vSource_localXaxis[2]=0;
+    vSource_localYaxis[0]=0;vSource_localYaxis[1]=0;vSource_localYaxis[2]=1;
+  }
   // Barrel injector
- // if (abs(vtxpos[2])<endcapZ) {
- //   //acraplet
- //   //std::cout<< "Barrel INJECTOR" <<std::endl; 
- //   vDirSource[0]=vtxpos[0];
- //   vDirSource[1]=vtxpos[1];
- //   double norm = sqrt(vtxpos[0]*vtxpos[0]+vtxpos[1]*vtxpos[1]);
- //   vDirSource[0]/=-norm;
- //   vDirSource[1]/=-norm;
- //   vDirSource[2]=0;
- //   vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
- //   vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
- // }
-  //acraplet: for WCTE light diffuser the source always points downwards
-  bool isWCTE = true;
-  if (isWCTE) {
-  vDirSource[0] = 0;
-  vDirSource[1] = 1;
-  vDirSource[2] = 0;
-  vSource_localXaxis[0]=1;vSource_localXaxis[1]=0;vSource_localXaxis[2]=0;
-  vSource_localYaxis[0]=0;vSource_localYaxis[1]=0;vSource_localYaxis[2]=1;
-  printf("WCTE geometry: the source is pointing in direction [0,1,0]\n");
-  } 
+  else if (abs(vtxpos[2])<endcapZ) {
+    vDirSource[0]=vtxpos[0];
+    vDirSource[1]=vtxpos[1];
+    double norm = sqrt(vtxpos[0]*vtxpos[0]+vtxpos[1]*vtxpos[1]);
+    vDirSource[0]/=-norm;
+    vDirSource[1]/=-norm;
+    vDirSource[2]=0;
+    vSource_localXaxis[0]=0;vSource_localXaxis[1]=0;vSource_localXaxis[2]=1;
+    vSource_localYaxis[0]=-vtxpos[1]/norm;vSource_localYaxis[1]=vtxpos[0]/norm;vSource_localYaxis[2]=0;
+  }
   else // endcap injector
   {
     vDirSource[0]=0;

@@ -98,7 +98,6 @@ void FitAngularResponsePol()
     int startingIndex = 2;
 //acraplet changed from 20 to 7
     int nParameters = 20;
-    //std::cout << "made it here" <<std::endl;
     double costh_min = 0.0;
     double costh_max = 1.0;
     TH1D* hist_postfit = new TH1D("","",nParameters,costh_min,costh_max);
@@ -124,7 +123,6 @@ void FitAngularResponsePol()
         int idx = i+startingIndex;
         double val = (*res_vector)[idx];
         double err = sqrt((*res_cov_matrix)[idx][idx]);
-        //std::cout << "made it here" <<std::endl;
         if (err>0) // remove the fixed variable
         {
             if (ndof==0) hist_postfit->SetMinimum(val*0.9);
@@ -138,8 +136,6 @@ void FitAngularResponsePol()
             //std::cout<<"costh = "<<costh<<", val = "<<val<<std::endl;
         }
     }
-
-    //std::cout << "made it there" <<std::endl;
     cov_mat.ResizeTo(ndof, ndof);
     cov_mat.Zero();
 
@@ -309,5 +305,5 @@ void FitAngularResponsePol()
     {
         latex.DrawLatex(pol_range[i]+0.02,hist_postfit->GetMaximum(),Form("pol%i",pol_orders[i]));
     }
-    c1->SaveAs("pos1_233.pdf");
+    c1->SaveAs("test.pdf");
 }
