@@ -650,7 +650,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
                 // MC stat error from scale factor estimation
                 if (m_scatter_map)
                     indirect_err2 += m_h_scatter_map->GetBinError(pmtID+1)*m_h_scatter_map->GetBinError(pmtID+1);
-                indirect_err2 *= indirect_pred*indirect_pred;
+                indirect_err2 *= indirect_pred*indirect_pred*m_scatter_error*m_scatter_error;
 
                 e.SetPEIndirect(indirect_pred);
                 e.SetPEIndirectErr(indirect_err2);
@@ -785,10 +785,11 @@ void AnaSample::WriteDataHist(TDirectory* dirout, const std::string& bsname)
     }        
 }
 
-void AnaSample::SetScatterMap(double time1, double time2, double time3, const TH1D& hist)
+void AnaSample::SetScatterMap(double time1, double time2, double time3, const TH1D& hist, double error)
 {
     // read the pre-calculated scale factor for indirect PE estimation
     m_scatter_map = true; m_scatter_time1 = time1; m_scatter_time2 = time2; m_scatter_time3 = time3;
+    m_scatter_error = error;
     if(m_h_scatter_map != nullptr)
         delete m_h_scatter_map;
     m_h_scatter_map = new TH1D(hist);

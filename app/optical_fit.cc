@@ -178,10 +178,11 @@ int main(int argc, char** argv)
                     auto time1 = toml_h::find<double>(opt,3);
                     auto time2 = toml_h::find<double>(opt,4);
                     auto time3 = toml_h::find<double>(opt,5);
-                    std::cout << TAG<<"Applying scattering map "<<hname<<" from "<<fname<<", for timetof region = ["<<time1<<","<<time2<<","<<time3<<"]"<<std::endl;
+                    auto error = toml_h::find<double>(opt,6);
+                    std::cout << TAG<<"Applying scattering map "<<hname<<" from "<<fname<<", for timetof region = ["<<time1<<","<<time2<<","<<time3<<"], scaling error with a factor of "<<error<<std::endl;
                     TFile fs(fname.c_str());
                     TH1D* hs = (TH1D*)fs.Get(hname.c_str());
-                    s->SetScatterMap(time1,time2,time3,*hs);
+                    s->SetScatterMap(time1,time2,time3,*hs,error);
                 }
                 else if (optname=="time_offset")
                 {
