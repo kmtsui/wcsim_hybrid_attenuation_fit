@@ -276,19 +276,19 @@ void AnaSample::LoadPMTDataHist()
             double timetof = hist->GetYaxis()->GetBinCenter(i);
             double nPE = hist->GetBinContent(pmtID+1,i);
 
-            if (m_time_offset) timetof += timetof_shift[pmtID];
             if (m_time_smear)
             {
                 nPE = 0;
                 for (int j=1; j<=nTBins; j++)
                 {
                     // convolution to smear timetof
-                    double t = hist->GetYaxis()->GetBinCenter(t);
+                    double t = hist->GetYaxis()->GetBinCenter(j);
                     double val = hist->GetBinContent(pmtID+1,j);
                     double fac = TMath::Gaus(timetof, t, time_resolution[pmtID], true);
                     nPE += val*fac;
                 }
             }
+            if (m_time_offset) timetof += timetof_shift[pmtID];
 
             if (m_template)
             {
