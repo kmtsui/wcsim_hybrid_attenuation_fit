@@ -343,8 +343,9 @@ int main(int argc, char** argv)
                     TFile f(fname.c_str());
                     std::cout << TAG<<"Set prior central values to  "<<hname<<" from "<<fname<<std::endl;
                     TH1D* hist = (TH1D*)f.Get(hname.c_str());
-                    for (int j=0;j<npar;j++)
-                        priors[j] = hist->GetBinContent(j+1);
+                    priors.clear();
+                    for (int j=0;j<hist->GetNbinsX();j++)
+                        priors.push_back(hist->GetBinContent(j+1));
                 } 
                 else if (optname=="spline") // set spline reweight
                 {

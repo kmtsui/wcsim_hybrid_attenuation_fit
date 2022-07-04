@@ -178,7 +178,7 @@ void AnaFitParameters::InitParameters(std::vector<std::string> names, std::vecto
         }
 
         SetParNames(pol_names);
-        SetParPriors(pol_priors);
+        if (pol_priors.size()!=priors.size()) SetParPriors(pol_priors); // do not overwrite if prior is properly set
         SetParSteps(pol_steps);
         SetParLimits(pol_lows,pol_highs);
         SetParFixed(pol_fixed);
