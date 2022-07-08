@@ -883,6 +883,10 @@ int main(int argc, char **argv){
     if (hybrid) hitRateHist_pmtType1->Write();
   }
 
+  // Save injector position
+  TVector3 injector_position(vtxpos[0],vtxpos[1],vtxpos[2]);
+  injector_position.Write("injector_position");
+
   outfile->Close();
   
   return 0;
