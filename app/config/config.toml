@@ -52,8 +52,7 @@ names = [
 # Available options are:
 # ["norm", double]: scale the number of hits in the whole sample
 # ["mask", int]: Enabling only the specified number of PMTs (for mPMT, the entire module of 19 PMTs is enabled/disabled as a whole) 
-# ["mask_mPMT", [int]]: Vector of integers to mask mPMT by mPMT_id
-# ["mask_mPMT_pmt", [int]]: Vector of integers to mask small PMTs in mPMT by mPMT_pmt_id
+# ["mask_mPMT", [int]]: Vector of integers to mask small PMTs in mPMT by mPMT_id
 # ["time_offset", width]: Random timetof offset per PMT, sampled from a Gaussian(mean = 0, sigma = width) => timetof = timetof + offset
 # ["time_smear", mean, width]: Random timetof smearing per PMT, sampled from a Gaussian(mean, width) => timetof = timetof + gRandom->Gaus(0,smearing)
 # ["z0", double]: set source Z-pos for fitting AttenuationZ
