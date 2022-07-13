@@ -278,19 +278,19 @@ void AnaSample::LoadPMTDataHist()
             double timetof = hist->GetYaxis()->GetBinCenter(i);
             double nPE = hist->GetBinContent(pmtID+1,i);
 
+            if (m_time_offset) timetof += timetof_shift[pmtID];
             if (m_time_smear)
             {
                 nPE = 0;
                 for (int j=1; j<=nTBins; j++)
                 {
                     // convolution to smear timetof
-                    double t = hist->GetYaxis()->GetBinCenter(j);
+                    double t = hist->GetYaxis()->GetBinCenter(t);
                     double val = hist->GetBinContent(pmtID+1,j);
                     double fac = TMath::Gaus(timetof, t, time_resolution[pmtID], true);
                     nPE += val*fac;
                 }
             }
-            if (m_time_offset) timetof += timetof_shift[pmtID];
 
             if (m_template)
             {
@@ -651,7 +651,7 @@ void AnaSample::FillDataHist(bool stat_fluc)
                 // MC stat error from scale factor estimation
                 if (m_scatter_map)
                     indirect_err2 += m_h_scatter_map->GetBinError(pmtID+1)*m_h_scatter_map->GetBinError(pmtID+1);
-                indirect_err2 *= indirect_pred*indirect_pred*m_scatter_error*m_scatter_error;
+                indirect_err2 *= indirect_pred*indirect_pred;
 
                 e.SetPEIndirect(indirect_pred);
                 e.SetPEIndirectErr(indirect_err2);
@@ -786,11 +786,10 @@ void AnaSample::WriteDataHist(TDirectory* dirout, const std::string& bsname)
     }        
 }
 
-void AnaSample::SetScatterMap(double time1, double time2, double time3, const TH1D& hist, double error)
+void AnaSample::SetScatterMap(double time1, double time2, double time3, const TH1D& hist)
 {
     // read the pre-calculated scale factor for indirect PE estimation
     m_scatter_map = true; m_scatter_time1 = time1; m_scatter_time2 = time2; m_scatter_time3 = time3;
-    m_scatter_error = error;
     if(m_h_scatter_map != nullptr)
         delete m_h_scatter_map;
     m_h_scatter_map = new TH1D(hist);
