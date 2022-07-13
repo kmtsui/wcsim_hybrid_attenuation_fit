@@ -186,3 +186,14 @@ BnLPMT_angular_pol = [  0, # only apply to B&L PMT
 # the attenuation factor now takes a more complicated form than just exp(-R/alpha)
 alphaZ       = [ -1, "AttenuationZ", 2, [["alpha", 10650, 1000, 0, 100000, false],
                                          ["slope", 0.15, 0.01, -1, 1, false]], ["R_binning.txt",    ["R"]]     ]
+
+
+# Second order correction to angular response of mPMTs
+# Dependency on the PMT position within the mPMTs, i.e. innermost, middle and outermost rings
+mPMT_id      = [  1, "Identity",   3,  [["mPMT_id_1",1, 0.1, 0, 10, true],
+                                        ["mPMT_id_2",1, 0.1, 0, 10, false],
+                                        ["mPMT_id_3",1, 0.1, 0, 10, false]] , ["mPMTid_binning.txt",["mPMT_id"]]]
+# Dependency on the photon incident angle relative to the central PMT
+phim         = [  1, "Identity",   11,  [["phim0",1, 0.1, 0, 10, true],
+                                         #["phim1",1, 0.1, 0, 10, true],
+                                         ["phim",1, 0.1, 0, 10, false]] , ["phim_binning.txt",["phim"]]]
