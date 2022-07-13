@@ -88,7 +88,8 @@ int main(int argc, char **argv){
   char * filename=NULL;
   char * outfilename=NULL;
   bool verbose=false;
-  bool hybrid = true;
+ //change for WCTE
+  bool hybrid = false;
   double cvacuum = 3e8 ;//speed of light, in m/s.
   double nindex = 1.373;//refraction index of water
   bool plotDigitized = true; //using digitized hits
