@@ -192,10 +192,11 @@ int main(int argc, char** argv)
                     auto time1 = toml_h::find<double>(opt,3);
                     auto time2 = toml_h::find<double>(opt,4);
                     auto time3 = toml_h::find<double>(opt,5);
-                    std::cout << TAG<<"Applying scattering map "<<hname<<" from "<<fname<<", for timetof region = ["<<time1<<","<<time2<<","<<time3<<"]"<<std::endl;
+                    auto error = toml_h::find<double>(opt,6);
+                    std::cout << TAG<<"Applying scattering map "<<hname<<" from "<<fname<<", for timetof region = ["<<time1<<","<<time2<<","<<time3<<"], scaling error with a factor of "<<error<<std::endl;
                     TFile fs(fname.c_str());
                     TH1D* hs = (TH1D*)fs.Get(hname.c_str());
-                    s->SetScatterMap(time1,time2,time3,*hs);
+                    s->SetScatterMap(time1,time2,time3,*hs,error);
                 }
                 else if (optname=="time_offset")
                 {
@@ -356,8 +357,9 @@ int main(int argc, char** argv)
                     TFile f(fname.c_str());
                     std::cout << TAG<<"Set prior central values to  "<<hname<<" from "<<fname<<std::endl;
                     TH1D* hist = (TH1D*)f.Get(hname.c_str());
-                    for (int j=0;j<npar;j++)
-                        priors[j] = hist->GetBinContent(j+1);
+                    priors.clear();
+                    for (int j=0;j<hist->GetNbinsX();j++)
+                        priors.push_back(hist->GetBinContent(j+1));
                 } 
                 else if (optname=="spline") // set spline reweight
                 {

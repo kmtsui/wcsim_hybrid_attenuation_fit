@@ -60,12 +60,13 @@ IF(NOT DEFINED USE_CUDA OR NOT USE_CUDA)
 	SET(USE_CUDA 0)
 ELSE()
 	SET(USE_CUDA 1)
-ENDIF()
 
-if (${CMAKE_VERSION} VERSION_LESS 3.8)
-  cmessage(WARNING "cmake too old to support cuda compilation. Try version >=3.8")
-  SET(USE_CUDA 0)
-endif()
+  if (${CMAKE_VERSION} VERSION_LESS 3.8)
+    cmessage(WARNING "cmake too old to support cuda compilation. Try version >=3.8")
+    SET(USE_CUDA 0)
+  endif()
+
+ENDIF()
 
 IF(USE_CUDA)
   include(CheckLanguage)

@@ -86,7 +86,7 @@ public:
         m_scatter = true; m_scatter_time1 = time1; m_scatter_time2 = time2; m_scatter_time3 = time3; m_scatter_factor = factor; 
     }
 
-    void SetScatterMap(double time1, double time2, double time3, const TH1D& hist);
+    void SetScatterMap(double time1, double time2, double time3, const TH1D& hist, double error=1.0);
 
     void SetTemplate(const TH2D& hist, double offset, bool combine, bool template_only);
     inline bool UseTemplate() { return m_template; } 
@@ -126,6 +126,7 @@ protected:
     double m_scatter_time2;
     double m_scatter_time3;
     double m_scatter_factor;
+    double m_scatter_error;
 
     bool m_scatter_map;
     TH1D* m_h_scatter_map;
