@@ -134,6 +134,7 @@ names = [
 # optional_config
 # ["covariance",fileName,matrixName] : optional config to load parameter prior covariance matrix
 # ["prior",fileName,histname] : optional config to load parameter prior central values, overriding values in [par_setup]
+# ["spline",fileName,splineName]: load the spline that only changes the direct photon prediction. No example yet 
 # ["template_spline",fileName,splineName]: load the spline that only changes the template prediction. See macro/build_template_and_spline.c 
 
 # The example here specifies four classes of parameters

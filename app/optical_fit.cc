@@ -336,6 +336,12 @@ int main(int argc, char** argv)
                     priors.clear();
                     for (int j=0;j<hist->GetNbinsX();j++)
                         priors.push_back(hist->GetBinContent(j+1));
+                }
+                else if (optname=="spline") // set spline reweight
+                {
+                    auto fname = toml_h::find<std::vector<std::string>>(opt,1);
+                    auto sname = toml_h::find<std::vector<std::string>>(opt,2);
+                    fitpara->SetSpline(fname,sname);
                 } 
                 else if (optname=="template_spline") // set template spline reweight
                 {

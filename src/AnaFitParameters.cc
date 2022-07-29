@@ -13,6 +13,7 @@ AnaFitParameters::AnaFitParameters(const std::string& par_name, const int pmttyp
     , covariance(nullptr)
     , covarianceI(nullptr)
     , original_cov(nullptr)
+    , m_spline(false)
     , m_template_spline(false)
     , m_pars_throw(false)
 
@@ -243,6 +244,9 @@ void AnaFitParameters::InitEventMap(std::vector<AnaSample*> &sample)
         m_evmap.push_back(sample_map);
     }
 
+    if (m_spline)
+        LoadSpline(sample);
+
     if (m_template_spline)
         LoadTemplateSpline(sample);
 
@@ -278,6 +282,11 @@ void AnaFitParameters::ReWeight(AnaEvent* event, int pmttype, int nsample, int n
 #endif
 
     //if (m_pmttype >=0 && pmttype != m_pmttype) return;
+
+    if (m_spline)
+    {
+        ReWeightSpline(event, pmttype, nsample, nevent, params);
+    }
 
     if (m_template_spline)
     {
@@ -407,11 +416,63 @@ double AnaFitParameters::GetChi2(const std::vector<double>& params) const
     return chi2;
 }
 
+void AnaFitParameters::SetSpline(const std::vector<std::string> file_name, const std::vector<std::string> spline_name)
+{
+    m_spline = true;
+    m_spline_file_name = file_name;
+    m_spline_name = spline_name;
+}
+
 void AnaFitParameters::SetTemplateSpline(const std::vector<std::string> file_name, const std::vector<std::string> spline_name)
 {
     m_template_spline = true;
     m_template_spline_file_name = file_name;
     m_template_spline_name = spline_name;
+}
+
+void AnaFitParameters::LoadSpline(std::vector<AnaSample*> &sample)
+{
+    // Load spline
+
+    spline.clear();
+
+    double x[] = {-100000,100000};
+    double y[] = {1,1};
+    TGraph* flatspline = new TGraph(2,x,y);
+
+    for(std::size_t s=0; s < sample.size(); s++)
+    {
+        std::vector<TGraph*> sample_map;
+
+        TFile f(m_spline_file_name[s].c_str());
+        if (!f.IsOpen()){
+            std::cout << ERR << "Could not open input file: " << m_spline_file_name[s] << std::endl;
+        }
+        
+        for(int i=0; i < sample[s] -> GetNPMTs(); i++)
+        {
+            AnaEvent* ev = sample[s] -> GetPMT(i);
+            int pmtID = ev->GetPMTID();
+
+            std::string graphname = Form("%s/PMT%i",m_spline_name[s].c_str(),pmtID);
+            TGraph* graph = (TGraph*)f.Get(graphname.c_str());
+            if (graph)
+            {
+                sample_map.push_back(graph);
+            }
+            else
+            {
+                std::cout << WAR << "Could not find "<< graphname <<std::endl;
+                sample_map.push_back(flatspline);
+            }
+        }
+
+        std::cout << TAG << "Loaded spline for sample "<< sample[s]->GetName() << " of total "<< sample[s] -> GetNPMTs() << "PMTs"<<std::endl;
+        spline.emplace_back(sample_map);
+
+        f.Close();
+    }
+
 }
 
 void AnaFitParameters::LoadTemplateSpline(std::vector<AnaSample*> &sample)
@@ -469,12 +530,20 @@ void AnaFitParameters::LoadTemplateSpline(std::vector<AnaSample*> &sample)
             sample_map.emplace_back(pmt_map);
         }
 
-        std::cout << TAG << "Loaded spline for sample "<< sample[s]->GetName() << " of total "<< sample[s] -> GetNPMTs() << "PMTs"<<std::endl;
+        std::cout << TAG << "Loaded template spline for sample "<< sample[s]->GetName() << " of total "<< sample[s] -> GetNPMTs() << "PMTs"<<std::endl;
         template_spline.emplace_back(sample_map);
 
         f.Close();
     }
 
+}
+
+void AnaFitParameters::ReWeightSpline(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params)
+{
+
+    double weight = spline[nsample][nevent]->Eval(params[0]);
+
+    event -> AddEvWght(weight);
 }
 
 void AnaFitParameters::ReWeightTemplateSpline(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params)
