@@ -1,9 +1,9 @@
 // Use with WCSIM_TreeConvert output with -d options to produce a maping of indirect light background
-void make_scatter_map(std::string filename = "/bundle/data/T2K/users/kmtsui/LI/production/out_diffuser4_400nm_nominal_*.root", int pmttype = 0){
+void make_scatter_map(std::string filename = "/bundle/data/T2K/users/kmtsui/LI/production/diffuser4_400nm_nominal_raw.root", int pmttype = 0){
 
     std::string chainname = pmttype == 0 ? "hitRate_pmtType0" : "hitRate_pmtType1";
     std::string treename = pmttype == 0 ? "pmt_type0" : "pmt_type1";
-    double timetof_indirect = pmttype == 0 ? 1.0 : 0.6 ;
+    double timetof_indirect = pmttype == 0 ? 0.0 : 0.3 ;
     double timetof_cut1 = pmttype == 0 ? 15 : 2 ;
     double timetof_cut2 = 200;
 
@@ -46,7 +46,7 @@ void make_scatter_map(std::string filename = "/bundle/data/T2K/users/kmtsui/LI/p
     for (unsigned long int i=0;i<fChain_digitized->GetEntries();i++){
         fChain_digitized->GetEntry(i);
         if (nPE_digi<=0) continue;
-        if (timetof>timetof_indirect) // use timetof to get indirect photon
+        if (timetof>timetof_indirect || nRaySct>0) // use timetof and scattering count to get indirect photon
         {
             if (timetof_digi<timetof_cut1) h_signal_region->Fill(PMT_id+0.5,nPE_digi);
             else if (timetof_digi<timetof_cut2) h_control_region->Fill(PMT_id+0.5,nPE_digi);
