@@ -147,9 +147,9 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                     sphis++;
                 }
 
-                if ( fitpara->UseSpline() && sample->UseTemplate())
+                if ( fitpara->UseTemplateSpline() && sample->UseTemplate())
                 {
-                    std::vector<TGraph*> graphs = fitpara->GetSplineGraph(event->GetSampleType(), i);
+                    std::vector<TGraph*> graphs = fitpara->GetTemplateSplineGraph(event->GetSampleType(), i);
                     for(auto& graph : graphs)
                     {
                         splines++;
@@ -322,9 +322,9 @@ bool Cache::Manager::Build(std::vector<AnaSample*> samples, std::vector<AnaFitPa
                         ->ReserveSPhi(resultIndex,parIndex+bin,cos(event->GetPhis()));
                 }
 
-                if ( fitpara->UseSpline() && sample->UseTemplate())
+                if ( fitpara->UseTemplateSpline() && sample->UseTemplate())
                 {
-                    std::vector<TGraph*> graphs = fitpara->GetSplineGraph(event->GetSampleType(), i);
+                    std::vector<TGraph*> graphs = fitpara->GetTemplateSplineGraph(event->GetSampleType(), i);
                     for(int j=0;j<graphs.size();j++)
                     {
                         Cache::Manager::Get()

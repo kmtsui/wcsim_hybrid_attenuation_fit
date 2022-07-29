@@ -106,11 +106,11 @@ public:
         return eigen_decomp->GetOriginalParameters(param, start_idx);
     }
 
-    void SetSpline(const std::vector<std::string> file_name, const std::vector<std::string> spline_name);
-    void LoadSpline(std::vector<AnaSample*>& sample);
-    void ReWeightSpline(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
-    bool UseSpline() const { return m_spline; }
-    std::vector<TGraph*> GetSplineGraph(int nsample, int nevent) const { return spline[nsample][nevent]; }
+    void SetTemplateSpline(const std::vector<std::string> file_name, const std::vector<std::string> spline_name);
+    void LoadTemplateSpline(std::vector<AnaSample*>& sample);
+    void ReWeightTemplateSpline(AnaEvent* event, int pmttype, int nsample, int nevent, std::vector<double>& params);
+    bool UseTemplateSpline() const { return m_template_spline; }
+    std::vector<TGraph*> GetTemplateSplineGraph(int nsample, int nevent) const { return template_spline[nsample][nevent]; }
 
 
 protected:
@@ -151,10 +151,10 @@ protected:
     std::vector<double> pol_range; // applicable range for each polynomial
 
     // spline reweight for indirect photon
-    bool m_spline;
-    std::vector<std::string> m_spline_file_name;
-    std::vector<std::string> m_spline_name;
-    std::vector<std::vector<std::vector<TGraph*>>> spline;
+    bool m_template_spline;
+    std::vector<std::string> m_template_spline_file_name;
+    std::vector<std::string> m_template_spline_name;
+    std::vector<std::vector<std::vector<TGraph*>>> template_spline;
     //std::vector<TGraph> spline;
 
     const std::string TAG = color::GREEN_STR + "[AnaFitParameters]: " + color::RESET_STR;

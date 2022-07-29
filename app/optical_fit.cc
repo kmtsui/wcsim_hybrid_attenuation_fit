@@ -205,22 +205,12 @@ int main(int argc, char** argv)
                 }
                 else if (optname=="template")
                 {
-                    // auto fname = toml_h::find<std::string>(opt,1);
-                    // auto hname = toml_h::find<std::string>(opt,2);
-                    // auto offset = toml_h::find<double>(opt,3);
-                    // auto lo = toml_h::find<double>(opt,4);
-                    // auto hi = toml_h::find<double>(opt,5);
-                    // std::cout << TAG<<"Use timetof template "<< hname <<" from "<< fname <<std::endl;
-                    // TFile fs(fname.c_str());
-                    // TH1D* hs = (TH1D*)fs.Get(hname.c_str());
-                    // s->SetTemplate(*hs, offset, lo, hi);
-
                     auto fname = toml_h::find<std::string>(opt,1);
                     auto hname = toml_h::find<std::string>(opt,2);
                     auto offset = toml_h::find<double>(opt,3);
                     auto combine = toml_h::find<bool>(opt,4);
                     auto template_only = toml_h::find<bool>(opt,5);
-                    std::cout << TAG<<"Use timetof template "<< hname << " from "<< fname <<std::endl;
+                    std::cout << TAG << "Use timetof template "<< hname << " from "<< fname <<std::endl;
                     TFile fs(fname.c_str());
                     TH2D* hist = (TH2D*)fs.Get(hname.c_str());
                     s->SetTemplate(*hist, offset, combine, template_only);
@@ -347,12 +337,12 @@ int main(int argc, char** argv)
                     for (int j=0;j<hist->GetNbinsX();j++)
                         priors.push_back(hist->GetBinContent(j+1));
                 } 
-                else if (optname=="spline") // set spline reweight
+                else if (optname=="template_spline") // set template spline reweight
                 {
                     auto fname = toml_h::find<std::vector<std::string>>(opt,1);
                     auto sname = toml_h::find<std::vector<std::string>>(opt,2);
                     //auto num = toml_h::find<int>(opt,3);
-                    fitpara->SetSpline(fname,sname);
+                    fitpara->SetTemplateSpline(fname,sname);
                 } 
                 else if (optname=="throw") // throw priors for chi2 calculation
                 {
