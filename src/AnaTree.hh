@@ -62,6 +62,7 @@ public:
 
     void MaskPMT(int nPMT, bool mPMT, int nPMTpermPMT = 19);
     void MaskmPMT(std::vector<int> vec, int nPMTpermPMT = 19);
+    void MaskPMTid(std::vector<int> vec);
 
     long int GetEntry(long int entry) const;
     void SetDataBranches();

@@ -53,11 +53,13 @@ names = [
 # ["norm", double]: scale the number of hits in the whole sample
 # ["mask", int]: Enabling only the specified number of PMTs (for mPMT, the entire module of 19 PMTs is enabled/disabled as a whole) 
 # ["mask_mPMT", [int]]: Vector of integers to mask small PMTs in mPMT by mPMT_id
+# ["mask_PMTid", file_name]: Mask PMTs by id listed in the file. Each line in the file contains a single PMT_id
 # ["time_offset", width]: Random timetof offset per PMT, sampled from a Gaussian(mean = 0, sigma = width) => timetof = timetof + offset
 # ["time_smear", mean, width]: Random timetof smearing per PMT, sampled from a Gaussian(mean, width) => timetof = timetof + gRandom->Gaus(0,smearing)
 # ["z0", double]: set source Z-pos for fitting AttenuationZ
 # ["pmt_eff", file_name, hist_name]: read the PMT relative efficiency. The histogram should be a TH1 with the x-axis being the PMT_id, bin content being the efficiency
 # ["pmt_eff_var", sigma]: random variation of PMT efficiency around the nominal value => eff*=gRandom->Gaus(1,sigma)
+# ["data_hist", hist_name]: load PMT hit data binned in histogram, to speed up the loading process. Need to run WCSIM_TreeConvert with -c option to produce such histogram
 
 # Special optional to fit the indirect photon distribution
 # ["template", file_name, hist_name, timetof_offset, combine_bool, template_only_bool]: fit the timetof distribution for indirect photon in each PMT

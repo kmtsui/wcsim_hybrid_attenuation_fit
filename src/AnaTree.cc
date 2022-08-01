@@ -133,6 +133,33 @@ void AnaTree::MaskmPMT(std::vector<int> vec, int nPMTpermPMT)
     if (mask) m_maskmpmt = true;
 }
 
+void AnaTree::MaskPMTid(std::vector<int> vec)
+{
+    // mask PMT with specific id
+    bool mask = false;
+
+    if (!m_maskpmt)
+    {
+        pmt_mask.clear();
+        pmt_mask.resize(t_pmt->GetEntries(),0);
+    }
+
+    for (auto id : vec) 
+    {
+        if ( id<0 || id>=pmt_mask.size() )
+            std::cout << ERR << "In MaskPMTid(), PMT_id = " << id << " is invalid, this PMT is not masked" << std::endl;
+        else
+        {
+            std::cout << TAG << "Masking PMT_id = " << id << std::endl;
+            pmt_mask[id] = 1;
+            mask = true;
+        }
+    }
+
+    if (!m_maskpmt && mask) m_maskpmt = true;
+
+}
+
 long int AnaTree::GetEntry(long int entry) const
 {
     // Read contents of entry.

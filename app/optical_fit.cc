@@ -124,6 +124,7 @@ int main(int argc, char** argv)
             s->SetCut(cutvar,cutlow,cuthigh);
         }
 
+        // optional config, specified by [key, value(s)]
         if (ele.size()>6)
         {
             for (int i=6; i<ele.size();i++ )
@@ -160,6 +161,34 @@ int main(int argc, char** argv)
                         std::cout << TAG << "Set nPMTpermPMT =  "<< nPMTpermPMT <<std::endl;
                         s->MaskmPMT(mask);
                         s->SetnPMTpermPMT(nPMTpermPMT);
+                    }
+                }
+                else if (optname=="mask_PMTid")
+                {
+                    auto fname = toml_h::find<std::string>(opt,1);
+                    std::cout << TAG << "Masking PMT_id in file "<< fname <<std::endl;
+
+                    std::ifstream fin(fname, std::ios::in);
+                    if(!fin.is_open())
+                    {
+                        std::cerr << ERR << "Failed to open " << fname << std::endl;
+                        return 0;
+                    }
+                    else
+                    {
+                        std::string line;
+                        std::vector<int> pmtid_list;
+
+                        while(std::getline(fin, line))
+                        {
+                            std::stringstream ss(line);
+                            int pmtid;
+                            ss >> pmtid;
+                            pmtid_list.push_back(pmtid);
+                        }
+                        fin.close();
+
+                        s->SetMaskPMTid(pmtid_list);
                     }
                 }
                 else if (optname=="scatter_control")
