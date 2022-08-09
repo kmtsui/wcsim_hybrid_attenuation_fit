@@ -177,6 +177,8 @@ class AnaEvent
                 return m_pmtid;
             else if(var == "mPMT_id")
                 return m_mpmtid;
+	    else if(var == "mPMT_pmt_id")
+		return (m_mpmt_pmtid);
             else if(var == "Eff")
                 return m_eff;
             else

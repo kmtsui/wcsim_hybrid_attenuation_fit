@@ -89,7 +89,7 @@ int main(int argc, char **argv){
   char * outfilename=NULL;
   bool verbose=false;
  //change for WCTE
-  bool hybrid = false;
+  bool hybrid = true;
   double cvacuum = 3e8 ;//speed of light, in m/s.
   double nindex = 1.373;//refraction index of water
   bool plotDigitized = true; //using digitized hits
@@ -252,7 +252,8 @@ int main(int argc, char **argv){
   long int nevent = ((int)tree->GetEntries());//std::min(((int)tree->GetEntries()),100000);
   if(endEvent>0 && endEvent<=nevent) nevent = endEvent;
   if(verbose) printf("nevent %ld\n",nevent);
-  if (verbose) printf("Hybrid geometry: %b, injector direction: [%f %f %f]\n", hybrid, vDirSource[0], vDirSource[1], vDirSource[2]); 
+  //acraplet
+  //if (verbose) printf("Hybrid geometry: %b, injector direction: [%f %f %f]\n", hybrid, vDirSource[0], vDirSource[1], vDirSource[2]); 
   // Create a WCSimRootEvent to put stuff from the tree in
 
   WCSimRootEvent* wcsimrootsuperevent = new WCSimRootEvent();
@@ -911,8 +912,9 @@ int main(int argc, char **argv){
   }
 
   // Save injector position
-  TVector3 injector_position(vtxpos[0],vtxpos[1],vtxpos[2]);
-  injector_position.Write("injector_position");
+  // acraplet - believe this is causing an issue in the WCTE working
+  //TVector3 injector_position(vtxpos[0],vtxpos[1],vtxpos[2]);
+  //injector_position.Write("injector_position");
 
   outfile->Close();
   
