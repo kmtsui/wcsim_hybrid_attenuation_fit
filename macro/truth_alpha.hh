@@ -1,5 +1,5 @@
 #include<vector>
-double truth_alpha(double wavelength=401.9, double ABWFF=0.0374372, double RAYFF=0.02339828) {
+double truth_alpha(double wavelength=401.9, double ABWFF=1.3000000000, double RAYFF=1000000000) {
     const int NUMENTRIES_water=60;
     const double GeV=1.e9;
     const double cm=1;

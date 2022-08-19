@@ -324,9 +324,9 @@ int main(int argc, char **argv){
   // Branches below only filled for raw hits
   if (!plotDigitized)
   {
-    hitRate_pmtType0->Branch("nReflec",&nReflec); // Number of reflection experienced by a photon before reaching the sensitive detector
+    hitRate_pmtType0->Branch("nReflect",&nReflec); // Number of reflection experienced by a photon before reaching the sensitive detector
     hitRate_pmtType0->Branch("nRaySct",&nRaySct); // Number of Rayleigh scattering
-    hitRate_pmtType0->Branch("nMieSct",&nMieSct); // Number of Mie scattering
+    hitRate_pmtType0->Branch("nMieSct",&nMieSct); // Number of Mie tscattering
     hitRate_pmtType0->Branch("photonStartTime",&photonStartTime); // True photon start time
     hitRate_pmtType0->Branch("nPE_digi",&nPE_digi); // nPE after ad-hoc digitization
     hitRate_pmtType0->Branch("timetof_digi",&timetof_digi); // hittime-tof after ad-hoc digitization
