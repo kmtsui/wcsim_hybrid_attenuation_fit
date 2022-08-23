@@ -54,6 +54,7 @@ private:
     double nReflec;
     double nRaySct;
     double nMieSct;
+
     // histogram that stores all the hits, to speed-up loading process
     TH2F* data_hist;
     bool use_hist;

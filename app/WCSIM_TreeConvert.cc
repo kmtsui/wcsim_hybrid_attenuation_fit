@@ -676,7 +676,6 @@ int main(int argc, char **argv){
         if(triggerInfo2.size()!=0 && pmtType==0) continue;
         if(triggerInfo.size()!=0 && pmtType==1) continue;
       }
-      
       if(verbose) cout << "PMT Type =" << pmtType << endl;
  
       // Grab the big arrays of times and parent IDs
@@ -754,11 +753,9 @@ int main(int argc, char **argv){
         nReflec = 0;
         nRaySct = 0;
         nMieSct = 0;
-        
         nReflec = HitTime->GetReflection();
 	nRaySct = HitTime->GetRayScattering();
 	nMieSct = HitTime->GetMieScattering();
-        
         for (int idx = timeArrayIndex; idx<timeArrayIndex+peForTube; idx++) {
           //std::cout << idx << std::endl;
           WCSimRootCherenkovHitTime * cht = (WCSimRootCherenkovHitTime*) timeArray->At(idx);

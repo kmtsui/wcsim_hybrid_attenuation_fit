@@ -207,7 +207,6 @@ void AnaSample::LoadPMTDataEntries()
     selTree->SetDataBranches();
 
     unsigned long nDataEntries = selTree->GetDataEntries();
-
     double timetof, nPE, nReflec, nRaySct, nMieSct;
     int pmtID;
 
@@ -249,7 +248,6 @@ void AnaSample::LoadPMTDataEntries()
     for (unsigned long i=0;i<nDataEntries;i++)
     { 
 	if (!selTree->GetDataEntry(i,timetof,nPE,pmtID,nReflec,nRaySct,nMieSct)) continue;
-
         if (m_time_offset) timetof += timetof_shift[pmtID];
         if (m_time_smear) timetof += gRandom->Gaus(0,time_resolution[pmtID]);
 
@@ -257,14 +255,11 @@ void AnaSample::LoadPMTDataEntries()
         {
             m_htimetof_pmt_data->Fill(pmtID+0.5,timetof+m_timetof_offset,nPE);
         }
-
-
         if ( timetof < t_min || timetof > t_max ) continue;
         if ( nPE < pe_min || nPE > pe_max ) continue;
         if ( nReflec < nReflec_min || nReflec > nReflec_max ) continue;
 	if ( nRaySct < nRaySct_min || nRaySct > nRaySct_max ) continue;
         if ( nMieSct < nMieSct_min || nMieSct > nMieSct_max ) continue;
-
         if (m_scatter || m_scatter_map)
         {
             if (timetof>=m_scatter_time1 && timetof<m_scatter_time2) m_hdata_pmt->Fill(pmtID+0.5, nPE);

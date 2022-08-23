@@ -173,10 +173,7 @@ void AnaTree::SetDataBranches()
     fChain->SetBranchAddress("PMT_id", &PMT_id);
     fChain->SetBranchAddress("nReflec", &nReflec);
     fChain->SetBranchAddress("nRaySct", &nRaySct);
-    fChain->SetBranchAddress("nMieSct", &nMieSct);
-    //acraplet new for nHits cuts
-    //fChain->SetBranchAddress("nHits", &nHits);
-
+    fChain->SetBranchAddress("nMieSct", &nMieSct);    
 }
 
 void AnaTree::SetPMTBranches()
@@ -266,6 +263,7 @@ std::vector<AnaEvent> AnaTree::GetPMTs()
 }
 
 bool AnaTree::GetDataEntry(unsigned long entry, double& time, double& charge, int& pmtID, double& num_Reflec, double& num_RaySct, double& num_MieSct)
+
 {
     fChain->GetEntry(entry);
 
