@@ -31,6 +31,10 @@ class AnaEvent
             m_eff = 1.0;
             m_wght     = 1.0;
             m_wghtMC   = 1.0;
+	    //acraplet 
+	    m_nReflec = -999.0;
+            m_nRaySct = -999.0;
+	    m_nMieSct = -999.0;
         }
 
         //Set/Get methods
@@ -89,6 +93,15 @@ class AnaEvent
 
         inline void SetPEIndirect(double val){ m_nPE_indirect = val; }
         inline double GetPEIndirect() const { return m_nPE_indirect; }
+	
+	inline void SetnReflec(double val){ m_nReflec = val; }
+        inline double GetnReflec() const { return m_nReflec; }
+
+	inline void SetnRaySct(double val){ m_nRaySct = val; }
+        inline double GetnRaySct() const { return m_nRaySct; }
+
+	inline void SetnMieSct(double val){ m_nMieSct = val; }
+        inline double GetnMieSct() const { return m_nMieSct; }
 
         inline void SetPEIndirectErr(double val){ m_nPE_indirect_err = val; }
         inline double GetPEIndirectErr() const { return m_nPE_indirect_err; }
@@ -132,7 +145,10 @@ class AnaEvent
                       << "nPE         " << GetPE() << std::endl
                       << "timetof     " << GetTimetof() << std::endl
                       << "Weight      " << GetEvWght() << std::endl
-                      << "Weight MC   " << GetEvWghtMC() << std::endl;
+                      << "Weight MC   " << GetEvWghtMC() << std::endl
+		      << "nReflec     " << GetnReflec() << std::endl
+		      << "nRaySct     " << GetnRaySct() << std::endl
+		      << "nMieSct     " << GetnMieSct() << std::endl;
         }
 
         double GetEventVar(const std::string& var) const
@@ -181,6 +197,12 @@ class AnaEvent
 		return (m_mpmt_pmtid);
             else if(var == "Eff")
                 return m_eff;
+            else if(var == "nReflec")
+		return m_nReflec;
+	    else if(var == "nRaySct")
+                return m_nRaySct;
+	    else if(var == "nMieSct")
+                return m_nMieSct;
             else
             {
                 std::cout<<" Error! Variable "<<var<<" not available in AnaEvent"<<std::endl;
@@ -228,6 +250,9 @@ class AnaEvent
         std::vector<double> m_timetof_pred;     // template prediction modified by parameter spline
         std::vector<int> par_list;
         std::vector<double> reco_var;
+	double m_nReflec; //could be int but double for safety
+	double m_nRaySct; // number of refelections and scattering that the photon undergoes
+	double m_nMieSct;
 
 /// GPU threading
 #ifdef USING_CUDA

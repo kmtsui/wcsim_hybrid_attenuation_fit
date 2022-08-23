@@ -672,7 +672,7 @@ int main(int argc, char **argv){
         if(triggerInfo2.size()!=0 && pmtType==0) continue;
         if(triggerInfo.size()!=0 && pmtType==1) continue;
       }
-      if(verbose) cout << "PMT Type = " << pmtType << endl;
+      if(verbose) cout << "PMT Type =" << pmtType << endl;
  
       // Grab the big arrays of times and parent IDs
       
@@ -749,14 +749,20 @@ int main(int argc, char **argv){
         nReflec = 0;
         nRaySct = 0;
         nMieSct = 0;
+        //std::cout << "Number of reflections :" << HitTime->GetReflection() << std::endl;
+        nReflec = HitTime->GetReflection();
+	nRaySct = HitTime->GetRayScattering();
+	nMieSct = HitTime->GetMieScattering();
         for (int idx = timeArrayIndex; idx<timeArrayIndex+peForTube; idx++) {
+          //std::cout << idx << std::endl;
           WCSimRootCherenkovHitTime * cht = (WCSimRootCherenkovHitTime*) timeArray->At(idx);
 
           // only works well for peForTube = 1
           // if peForTube > 1, you don't know whether reflection and scattering happens at the same time for a single photon
-          // if (cht->GetReflection()>0) nReflec++;
-          // if (cht->GetRayScattering()>0) nRaySct++;
-          // if (cht->GetMieScattering()>0) nMieSct++;
+        // if (cht->GetReflection()>0) nReflec++;
+         //if (cht->GetRayScattering()>0) nRaySct++;
+         //if (cht->GetMieScattering()>0) nMieSct++;
+         //std::cout << "Number of reflections: "<< cht->GetReflection() << std::endl;
         }
         ////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////
@@ -783,6 +789,7 @@ int main(int argc, char **argv){
 
       } // End of loop over Cherenkov hits
       if(verbose) cout << "Total Pe : " << totalPe << endl;
+      if(verbose) cout << "nReflection : " << nReflec << endl;
     }
 
 
@@ -892,6 +899,7 @@ int main(int argc, char **argv){
 
       } // End of loop over Cherenkov hits
       if(verbose) cout << "Total Pe : " << totalPe << std::endl; //", total hit : " << totalHit << endl;
+      if(verbose) cout << "nReflection : " << nReflec << std::endl;
     }
 
     // reinitialize super event between loops.
