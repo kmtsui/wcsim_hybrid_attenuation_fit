@@ -110,7 +110,7 @@ void AnaSample::LoadEventsFromFile(const std::string& file_name, const std::stri
     for (long int i=0;i<pmt_vec.size();i++) {
         bool skip = false;
         for (int j=0;j<m_cutvar.size();j++) {
-            if (m_cutvar[j]=="nPE"||m_cutvar[j]=="timetof") continue;
+            if (m_cutvar[j]=="nPE"||m_cutvar[j]=="timetof"||m_cutvar[j]=="nReflec"||m_cutvar[j]=="nRaySct"||m_cutvar[j]=="nMieSct") continue;
             double val = pmt_vec[i].GetEventVar(m_cutvar[j]); // check if PMT passes the cuts
             if (val<m_cutlow[j] || val>m_cuthigh[j]) {
                 skip=true;
@@ -208,11 +208,14 @@ void AnaSample::LoadPMTDataEntries()
 
     unsigned long nDataEntries = selTree->GetDataEntries();
 
-    double timetof, nPE;
+    double timetof, nPE, nReflec, nRaySct, nMieSct;
     int pmtID;
 
     double t_min = -DBL_MAX, t_max = DBL_MAX;
     double pe_min = -DBL_MAX, pe_max = DBL_MAX;
+    double nReflec_min = -DBL_MAX, nReflec_max = DBL_MAX;
+    double nRaySct_min = -DBL_MAX, nRaySct_max = DBL_MAX;
+    double nMieSct_min = -DBL_MAX, nMieSct_max = DBL_MAX;
     for (int j=0;j<m_cutvar.size();j++) 
     {
         if (m_cutvar[j]=="timetof")
@@ -225,12 +228,27 @@ void AnaSample::LoadPMTDataEntries()
             pe_min = m_cutlow[j];
             pe_max = m_cuthigh[j];
         }
+        else if (m_cutvar[j]=="nReflec")
+        {
+            nReflec_min = m_cutlow[j];
+            nReflec_max = m_cuthigh[j];
+        }
+	else if (m_cutvar[j]=="nRaySct")
+        {
+            nRaySct_min = m_cutlow[j];
+            nRaySct_max = m_cuthigh[j];
+        }
+        else if (m_cutvar[j]=="nMieSct")
+        {
+            nMieSct_min = m_cutlow[j];
+            nMieSct_max = m_cuthigh[j];
+        }
     }
 
     std::cout << TAG << "Reading PMT hit data..." << std::endl;
     for (unsigned long i=0;i<nDataEntries;i++)
-    {
-        if (!selTree->GetDataEntry(i,timetof,nPE,pmtID)) continue;
+    { 
+	if (!selTree->GetDataEntry(i,timetof,nPE,pmtID,nReflec,nRaySct,nMieSct)) continue;
 
         if (m_time_offset) timetof += timetof_shift[pmtID];
         if (m_time_smear) timetof += gRandom->Gaus(0,time_resolution[pmtID]);
@@ -243,6 +261,9 @@ void AnaSample::LoadPMTDataEntries()
 
         if ( timetof < t_min || timetof > t_max ) continue;
         if ( nPE < pe_min || nPE > pe_max ) continue;
+        if ( nReflec < nReflec_min || nReflec > nReflec_max ) continue;
+	if ( nRaySct < nRaySct_min || nRaySct > nRaySct_max ) continue;
+        if ( nMieSct < nMieSct_min || nMieSct > nMieSct_max ) continue;
 
         if (m_scatter || m_scatter_map)
         {

@@ -310,7 +310,7 @@ int main(int argc, char **argv){
 
   double nHits, nPE, timetof;
   double weight;
-  int nReflec, nRaySct, nMieSct;
+  double nReflec, nRaySct, nMieSct;
   double photonStartTime;
   double nPE_digi, timetof_digi;
   int PMT_id;
@@ -321,12 +321,16 @@ int main(int argc, char **argv){
   hitRate_pmtType0->Branch("timetof",&timetof); // hittime-tof
   hitRate_pmtType0->Branch("PMT_id",&PMT_id);
   hitRate_pmtType0->Branch("weight",&weight);
+  hitRate_pmtType0->Branch("nReflec",&nReflec); // Number of reflection experienced by a photon before reaching the sensitive detector
+  hitRate_pmtType0->Branch("nRaySct",&nRaySct); // Number of Rayleigh scattering
+  hitRate_pmtType0->Branch("nMieSct",&nMieSct); // Number of Mie tscattering
+
   // Branches below only filled for raw hits
   if (!plotDigitized)
   {
-    hitRate_pmtType0->Branch("nReflect",&nReflec); // Number of reflection experienced by a photon before reaching the sensitive detector
-    hitRate_pmtType0->Branch("nRaySct",&nRaySct); // Number of Rayleigh scattering
-    hitRate_pmtType0->Branch("nMieSct",&nMieSct); // Number of Mie tscattering
+    //hitRate_pmtType0->Branch("nReflec",&nReflec); // Number of reflection experienced by a photon before reaching the sensitive detector
+    //hitRate_pmtType0->Branch("nRaySct",&nRaySct); // Number of Rayleigh scattering
+    //hitRate_pmtType0->Branch("nMieSct",&nMieSct); // Number of Mie tscattering
     hitRate_pmtType0->Branch("photonStartTime",&photonStartTime); // True photon start time
     hitRate_pmtType0->Branch("nPE_digi",&nPE_digi); // nPE after ad-hoc digitization
     hitRate_pmtType0->Branch("timetof_digi",&timetof_digi); // hittime-tof after ad-hoc digitization
@@ -672,7 +676,8 @@ int main(int argc, char **argv){
         if(triggerInfo2.size()!=0 && pmtType==0) continue;
         if(triggerInfo.size()!=0 && pmtType==1) continue;
       }
-      if(verbose) cout << "PMT Type = " << pmtType << endl;
+      
+      if(verbose) cout << "PMT Type =" << pmtType << endl;
  
       // Grab the big arrays of times and parent IDs
       
@@ -687,7 +692,7 @@ int main(int argc, char **argv){
       int nhits;
       if(pmtType == 0) nhits = ncherenkovhits;
       else nhits = ncherenkovhits2;
-
+      
       // Get the number of Cherenkov hits
       // Loop over sub events
       // Loop through elements in the TClonesArray of WCSimRootCherenkovHits
@@ -749,14 +754,21 @@ int main(int argc, char **argv){
         nReflec = 0;
         nRaySct = 0;
         nMieSct = 0;
+        
+        nReflec = HitTime->GetReflection();
+	nRaySct = HitTime->GetRayScattering();
+	nMieSct = HitTime->GetMieScattering();
+        
         for (int idx = timeArrayIndex; idx<timeArrayIndex+peForTube; idx++) {
+          //std::cout << idx << std::endl;
           WCSimRootCherenkovHitTime * cht = (WCSimRootCherenkovHitTime*) timeArray->At(idx);
 
           // only works well for peForTube = 1
           // if peForTube > 1, you don't know whether reflection and scattering happens at the same time for a single photon
-          // if (cht->GetReflection()>0) nReflec++;
-          // if (cht->GetRayScattering()>0) nRaySct++;
-          // if (cht->GetMieScattering()>0) nMieSct++;
+        // if (cht->GetReflection()>0) nReflec++;
+         //if (cht->GetRayScattering()>0) nRaySct++;
+         //if (cht->GetMieScattering()>0) nMieSct++;
+         //std::cout << "Number of reflections: "<< cht->GetReflection() << std::endl;
         }
         ////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////
@@ -783,6 +795,7 @@ int main(int argc, char **argv){
 
       } // End of loop over Cherenkov hits
       if(verbose) cout << "Total Pe : " << totalPe << endl;
+      if(verbose) cout << "nReflection : " << nReflec << endl;
     }
 
 
@@ -795,7 +808,7 @@ int main(int argc, char **argv){
         if(triggerInfo2.size()!=0 && pmtType==0) continue;
         if(triggerInfo.size()!=0 && pmtType==1) continue;
       }
-      if(verbose) cout << "PMT Type = " << pmtType << endl;
+      if(verbose) cout << "PMT Type AAAA = " << pmtType << endl;
       // Grab the big arrays of times and parent IDs
       /*
       // Not used
@@ -891,7 +904,8 @@ int main(int argc, char **argv){
 
 
       } // End of loop over Cherenkov hits
-      if(verbose) cout << "Total Pe : " << totalPe << std::endl; //", total hit : " << totalHit << endl;
+      if(verbose) cout << "Total Pe : " << totalPe <<endl; // ", total hit : " << totalHit << endl;
+      if(verbose) cout << "nReflection : " << nReflec << std::endl;
     }
 
     // reinitialize super event between loops.
