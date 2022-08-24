@@ -1,30 +1,25 @@
-# Minimizer config
+#Minimizer config
 [Minimizer]
 
 minimizer = "Minuit2"
 algorithm = "Migrad"
 likelihood = "Poisson"
 print_level = 2
-tolerance = 1E-6
+tolerance = 1E-8
 strategy = 1
 max_iter = 1E6
 max_fcn = 1E9
 # Poisson statistical fluctuation in data
 stat_fluc = false
-
 # Optional MCMC method to estimate the fit uncertainty, only useful when MCMCSteps>0
+# Tune step size to get a reasonable acceptance
 MCMCSteps = 0
-# Two step proposal options are available: "adaptive" and "fixed"
-# "adaptive" uses the TSimpleMCMC class and automatically adjusts the size size as the chain walks
-# "fixed" uses the step size defined by MCMCStepSize, may need to tune this number to get a reasonable acceptance
-MCMCProposal = "adaptive"
 MCMCStepSize = 0.3
-
 # Optional 1D parameter scan around the minimum point, only useful when ScanSteps>0
 # ParameterScans is the vector of integers corresponding to parameter indices to scan
 # Indices run from 0 according to the order of the fit parameters declared below
-ScanSteps = 0
-ParameterScans = []
+ScanSteps = 100
+ParameterScans = [1]
 
 # List of PMT samples input to the fitter
 # Each sample contains the PMT hits and geometry information of a particular source-PMT setup
@@ -32,7 +27,7 @@ ParameterScans = []
 
 # Names of samples
 names = [
-    "BnL_PMT",
+    #"BnL_PMT",
     "mPMT"
 ]
 
@@ -87,25 +82,29 @@ names = [
 # The example here specifies two samples, from the same input file, but with different pmt tree names
 # Three sets of cut are applied to the variables timetof, cosths, costh
 # PMT binning is defined by sample_binning.txt, on the variables {costh, R}
-BnL_PMT = [ 0, # pmt_type: 0 = B&L PMT, 1 = mPMT
-            "out.root", "hitRate_pmtType0", "pmt_type0", # input_file, pmt_hit_tree_name, pmt_geo_treename: input file and tree names
-            [["timetof",-950,-940], ["cosths",0.766,1], ["costh",0.5,1]], # [vectors of cut]
-            ["sample_binning.txt",["costh","R"]],  # [binning_file,[bin_vars]]
+#BnL_PMT = [ 0, # pmt_type: 0 = B&L PMT, 1 = mPMT
+#            "out.root", "hitRate_pmtType0", "pmt_type0", # input_file, pmt_hit_tree_name, pmt_geo_treename: input file and tree names
+#            [["timetof",0,1000], ["cosths",0.766,1], ["costh",0.5,1]], # [vectors of cut]
+#            ["sample_binning_WCTE.txt",["costh","R"]],  # [binning_file,[bin_vars]]
             #["sample_binning.txt",["unbinned"]],  # do not apply PMT binning
             #["norm",2.0],       # simply scale up statistics by a factor of 2
             #["z0", 3267.55]: Z-pos of top injector
-]
+#]
+#
+##here too change the 1 into a 0 so we are looking at the correct branch in the dataset
 mPMT    = [ 1, 
-            "out.root", "hitRate_pmtType1", "pmt_type1", 
-            [["timetof",-950,-940], ["cosths",0.766,1], ["costh",0.5,1]], 
-            ["sample_binning.txt",["costh","R"]],
-            ["mask", 2000], # masking to only use 2000 mPMT in fit
-            #["mask_mPMT", [0,12,18]] # masking to disable specific mPMT_id
+            "out.root", "hitRate_pmtType0", "pmt_type0", 
+            [["timetof",-2.5,5], ["cosths",-1.01,0.93], ["costh",0.5,1.01], ["nReflec", -0.5, 0.5], ["nRaySct", -0.5, 0.5]], 
+            ["binning_0.2_1.01_30_350.txt",["unbinned"]],
+            #["mask", 2000], # masking to only use 2000 mPMT in fit
+            ["mask_mPMT", [89, 95, 20, 19]] # masking to disable specific mPMT_id
 ]
+# masking to disable specific mPMT_id
+
 
 # Number of small PMTs per mPMT module
 nPMTpermPMT = 19
-#acraplet new total number of mPMT modules, WCTE deafult: 106
+#New acraplet for the 16cShort geometry
 nmPMT = 106
 
 
@@ -118,9 +117,9 @@ names = [
     "norm",
     "alpha",
     # "alphaZ",
-    "BnL_angular",
-    # "BnLPMT_angular_pol",
-    "mPMT_angular"
+    #"BnL_angular",
+    "BnLPMT_angular_pol",
+    #"mPMT_angular"
 ]
 
 # Entry for each parameter class
@@ -143,31 +142,43 @@ names = [
 # alpha is the light attenuation parameter which parameterizes the scale factor as exp(-R/alpha)*omega
 # BnL_angular and mPMT_angular are the angular response parameters. The parameter corresponding to costh={0.8,1} is fixed at 1.
 # In this example, number of PE = norm*exp(-R/alpha)*omega*angular_response
-norm         = [  -1,    # pmt_type: 0 = apply to B&L PMT only, 1 = apply to mPMT only, -1 = apply to both PMTs
+#acraplet change here to only have the norm of
+norm         = [  1,    # pmt_type: 0 = apply to B&L PMT only, 1 = apply to mPMT only, -1 = apply to both PMTs
                   "Identity",    # Identity is just a simple scale factor
-                  2,  # npar: number of parameters in this class
-                  [["BnL_norm", 1E6, 1E5, 0, 1E8, false], ["mPMT_norm", 1E6, 1E5, 0, 1E8, false]],  # [par_setup]: vector of fit parameter set
+                  1,  # npar: number of parameters in this class
+                  [["mPMT_norm", 2.473911E6, 1E6, 0, 1E8, true]],  # [par_setup]: vector of fit parameter set #[["BnL_norm", 1E6, 1E5, 0, 1E8, false],
                   ["sampleId_binning.txt", ["sample"]], # binning by sample id
                ]
-alpha        = [ -1, 
+alpha        = [ 1, #here too, only work on the mPMTs
                  "Attenuation", # exp(-R/alpha)*omega
                  1, [["alpha", 10000, 10000, 0, 100000, false]] , ["R_binning.txt", ["R"]] ] # binning by R which is dummy because there is only one bin
-BnL_angular  = [  0, "Identity",    6, [["BnL_angular1", 1, 0.1, 0, 10, false],  # 6 bins in costh
-                                        ["BnL_angular2", 1, 0.1, 0, 10, false],
-                                        ["BnL_angular3", 1, 0.1, 0, 10, false],
-                                        ["BnL_angular4", 1, 0.1, 0, 10, false],
-                                        ["BnL_angular5", 1, 0.1, 0, 10, false],
-                                        ["BnL_angular6", 1, 0.1, 0, 10, true]] , ["BnL_costh_binning.txt",["costh"]] ]
-mPMT_angular = [  1, "Identity",   10, [["mPMT_angular1",1, 0.1, 0, 10, false],  # 10 bins in costh
-                                        ["mPMT_angular2",1, 0.1, 0, 10, false],
-                                        ["mPMT_angular3",1, 0.1, 0, 10, false],
-                                        ["mPMT_angular4",1, 0.1, 0, 10, false],
-                                        ["mPMT_angular5",1, 0.1, 0, 10, false],
-                                        ["mPMT_angular6",1, 0.1, 0, 10, false],
-                                        ["mPMT_angular7",1, 0.1, 0, 10, false],
-                                        ["mPMT_angular8",1, 0.1, 0, 10, false],
-                                        ["mPMT_angular9",1, 0.1, 0, 10, false],
-                                        ["mPMT_angular10",1, 0.1, 0, 10, true]] , ["costh_binning.txt",["costh"]] ]
+#BnL_angular  = [  0, "Identity",    6, [["BnL_angular1", 1, 0.1, 0, 10, false],  # 6 bins in costh
+#                                        ["BnL_angular2", 1, 0.1, 0, 10, false],
+#                                        ["BnL_angular3", 1, 0.1, 0, 10, false],
+#                                        ["BnL_angular4", 1, 0.1, 0, 10, false],
+#                                        ["BnL_angular5", 1, 0.1, 0, 10, false],
+#                                        ["BnL_angular6", 1, 0.1, 0, 10, true]] , ["BnL_costh_binning.txt",["costh"]] ]
+#acraplet: note, changing 1 to 0 here so that it applies to the right branch of the Tree
+mPMT_angular = [  1, "Identity",   20, [["mPMT_angular1",1, 0.1, 0, 300, false],  # 20 bins in costh
+                                        ["mPMT_angular2",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular3",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular4",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular5",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular6",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular7",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular8",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular9",1, 0.1, 0, 300, false],
+					["mPMT_angular10",1, 0.1, 0, 300, false],
+					["mPMT_angular11",1, 0.1, 0, 300, false],
+					["mPMT_angular12",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular13",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular14",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular15",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular16",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular17",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular18",1, 0.1, 0, 300, false],
+                                        ["mPMT_angular19",1, 0.1, 0, 300, false],
+					["mPMT_angular20",1, 0.1, 0, 300, false]] , ["costh_binning_20bins_0.2_1.01.txt",["costh"]] ]
 
 # Special parameterization to fit angular response as piecewise continuous polynomial function of costh, similar to what fiTQun did
 # Do not use this with the simple angular response parameter together
@@ -175,11 +186,12 @@ mPMT_angular = [  1, "Identity",   10, [["mPMT_angular1",1, 0.1, 0, 10, false], 
 # each parameter now corresponds to the n-th order polynomial in the region {limit_low < costh < limit_high}
 # only the prior and step of the first polynomial is applied to the p0 coefficient of the first polynomial
 # example below consists of a 2nd order polynomial in [0.5,0.6], and a 3rd order polynomial in [0.6,1.0]
-BnLPMT_angular_pol = [  0, # only apply to B&L PMT
+BnLPMT_angular_pol = [  1, # only apply to B&L PMT
                         "PolynomialCosth", # piecewise continuous polynomial function of costh
-                        2, # number of segment
-                        [ ["pol2",0.25, 0.1, 0.5, 0.6, false], # 2nd order polynomial in [0.5,0.6], with prior p0 = 0.25, step = 0.1
-                          ["pol3",0.25, 0.1, 0.6, 1.0, false], # 3rd order polynomial in [0.6,1.0], prior is not used in fit
+                        3, # number of segment
+                        [ ["pol3",0.25, 0.1, 0.5, 0.6, false], # 2nd order polynomial in [0.5,0.6], with prior p0 = 0.25, step = 0.1
+                          ["pol3",0.25, 0.1, 0.6, 0.75, false], # 3rd order polynomial in [0.6,1.0], prior is not used in fit
+			  ["pol4", 0.25, 0.1, 0.75, 1.01, false],
                         ] , 
                         ["R_binning.txt",    ["R"]] ]
 
@@ -187,14 +199,4 @@ BnLPMT_angular_pol = [  0, # only apply to B&L PMT
 # first parameter is alpha at z=0, second parameter is slope => alpha(z) = alpha(0) + slope*z
 # the attenuation factor now takes a more complicated form than just exp(-R/alpha)
 alphaZ       = [ -1, "AttenuationZ", 2, [["alpha", 10650, 1000, 0, 100000, false],
-                                         ["slope", 0.15, 0.01, -1, 1, false]], ["R_binning.txt",    ["R"]]  
-
-# Second order correction to angular response of mPMTs
-# Dependency on the PMT position within the mPMTs, i.e. innermost, middle and outermost rings
-mPMT_id      = [  1, "Identity",   3,  [["mPMT_id_1",1, 0.1, 0, 10, true],
-                                        ["mPMT_id_2",1, 0.1, 0, 10, false],
-                                        ["mPMT_id_3",1, 0.1, 0, 10, false]] , ["mPMTid_binning.txt",["mPMT_id"]]]
-# Dependency on the photon incident angle relative to the central PMT
-phim         = [  1, "Identity",   11,  [["phim0",1, 0.1, 0, 10, true],
-                                         #["phim1",1, 0.1, 0, 10, true],
-                                         ["phim",1, 0.1, 0, 10, false]] , ["phim_binning.txt",["phim"]]]
+                                         ["slope", 0.15, 0.01, -1, 1, false]], ["R_binning.txt",    ["R"]]     ]

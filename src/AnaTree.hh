@@ -51,6 +51,10 @@ private:
     int mPMT_pmt_id;
     double weight;
 
+    double nReflec;
+    double nRaySct;
+    double nMieSct;
+
     // histogram that stores all the hits, to speed-up loading process
     TH2F* data_hist;
     bool use_hist;
@@ -71,7 +75,7 @@ public:
     void SetDataBranches();
     void SetPMTBranches();
     std::vector<AnaEvent> GetPMTs();
-    bool GetDataEntry(unsigned long entry, double& time, double& charge, int& pmtID);
+    bool GetDataEntry(unsigned long entry, double& time, double& charge, int& pmtID, double& num_Reflec, double& num_RaySct, double& num_MieSct);
     unsigned long GetDataEntries() const { return fChain->GetEntries(); }
     int GetPMTEntries() const { return t_pmt->GetEntries(); }
 
@@ -104,6 +108,12 @@ public:
             return mPMT_id;
         else if(var == "mPMT_pmt_id")
 	    return mPMT_pmt_id;
+        else if(var == "nReflec")
+	    return nReflec;
+	else if(var == "nRaySct")
+            return nRaySct;
+        else if(var == "nMieSct")
+            return nMieSct;
 	//else if (var == "nHits")
 	    //return nHits;
         else
