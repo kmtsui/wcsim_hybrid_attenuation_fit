@@ -192,6 +192,7 @@ void Fitter::InitFitter(std::vector<AnaFitParameters*>& fitpara)
         }
     }
 
+    last_results = par_prefit;
 
     m_dir->cd();
     h_prefit.Write();
@@ -350,6 +351,19 @@ bool Fitter::Fit(const std::vector<AnaSample*>& samples, bool stat_fluc)
     if(!did_converge)
         std::cout << TAG  << "Not valid fit result." << std::endl;
     std::cout << TAG << "Fit routine finished. Results saved." << std::endl;
+
+    if (did_converge)
+    {
+        last_results = par_postfit;
+    }
+    else
+    {
+        // reset to last result when the fit fails
+        for(int i = 0; i < m_npar; ++i)
+        {
+            m_fitter->SetVariableValue( i, last_results[i] );
+        }
+    }
 
     return did_converge;
 }

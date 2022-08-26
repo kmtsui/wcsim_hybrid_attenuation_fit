@@ -150,6 +150,8 @@ private:
     std::vector<AnaFitParameters*> m_fitpara;
     std::vector<AnaSample*> m_samples;
 
+    std::vector<double> last_results;
+
     TMatrixDSym cov_matrix;
     TMatrixDSym cor_matrix;
 
